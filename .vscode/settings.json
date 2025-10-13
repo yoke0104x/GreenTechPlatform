@@ -1,3 +1,10 @@
 {
-    "java.compile.nullAnalysis.mode": "automatic"
+    "java.compile.nullAnalysis.mode": "automatic",
+    "i18n-ally.localesPaths": [
+        "messages",
+        "src/i18n",
+        "src/app/admin/messages",
+        "src/app/api/messages",
+        "src/app/[locale]/user/messages"
+    ]
 }

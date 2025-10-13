@@ -97,6 +97,7 @@
 │   │       ├── search-results.tsx    # 搜索结果
 │   │       └── floating-actions.tsx  # 浮动操作按钮
 │   ├── lib/                  # 工具库
+│   │   ├── custom-auth.ts    # 自定义认证工具（密码哈希、JWT生成、令牌校验等）
 │   │   ├── utils.ts          # 通用工具函数
 │   │   ├── mock-data.ts      # Mock数据
 │   │   └── validators.ts     # 表单校验工具（邮箱/手机号）

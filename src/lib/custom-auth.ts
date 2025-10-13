@@ -86,9 +86,9 @@ export function generateToken(
   payload: Omit<CustomAuthPayload, 'iat' | 'exp' | 'type'>, 
   expiresIn: string = '7d'
 ): string {
-  const secret = process.env.JWT_SECRET
+  const secret = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET
   if (!secret) {
-    throw new Error('JWT_SECRET 环境变量未设置')
+    throw new Error('JWT_SECRET 或 SUPABASE_JWT_SECRET 环境变量未设置')
   }
   
   const now = Math.floor(Date.now() / 1000)
@@ -108,9 +108,9 @@ export function generateToken(
  * @returns 解码后的payload
  */
 export function verifyToken(token: string): CustomAuthPayload {
-  const secret = process.env.JWT_SECRET
+  const secret = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET
   if (!secret) {
-    throw new Error('JWT_SECRET 环境变量未设置')
+    throw new Error('JWT_SECRET 或 SUPABASE_JWT_SECRET 环境变量未设置')
   }
   
   try {
@@ -139,7 +139,7 @@ export function verifyToken(token: string): CustomAuthPayload {
  * @returns refresh token
  */
 export function generateRefreshToken(userId: string): string {
-  const secret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET
+  const secret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET
   if (!secret) {
     throw new Error('JWT refresh secret 未设置')
   }
@@ -159,7 +159,7 @@ export function generateRefreshToken(userId: string): string {
  * @returns 用户ID
  */
 export function verifyRefreshToken(token: string): string {
-  const secret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET
+  const secret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET
   if (!secret) {
     throw new Error('JWT refresh secret 未设置')
   }
