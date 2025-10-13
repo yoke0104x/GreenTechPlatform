@@ -10,6 +10,79 @@ export interface FileAttachment {
   type: string
 }
 
+interface SignedUploadPayload {
+  signedUrl: string
+  url: string
+  path: string
+  maxSize?: number
+  contentType?: string
+}
+
+const DEFAULT_CONTENT_TYPE = 'application/octet-stream'
+
+const isAdminUploadContext = () => {
+  if (typeof window === 'undefined') return false
+  return window.location.pathname.startsWith('/admin')
+}
+
+async function requestSignedUpload(
+  file: File,
+  bucket: string,
+  folder: string
+): Promise<SignedUploadPayload> {
+  const adminContext = isAdminUploadContext()
+  const targetUrl = adminContext ? '/api/admin/upload/sign' : '/api/upload/sign'
+
+  const response = await safeFetch(targetUrl, {
+    method: 'POST',
+    useAuth: !adminContext,
+    body: JSON.stringify({
+      bucket,
+      folder,
+      filename: file.name,
+      contentType: file.type || DEFAULT_CONTENT_TYPE,
+      size: file.size,
+    }),
+  })
+
+  const result = await handleApiResponse(response)
+  const payload = (result?.data ?? result) as SignedUploadPayload | null
+
+  if (!payload?.signedUrl || !payload.url) {
+    throw new Error('上传失败：未返回签名URL或文件URL')
+  }
+
+  if (typeof payload.maxSize === 'number' && file.size > payload.maxSize) {
+    throw new Error('文件大小超过允许的最大限制')
+  }
+
+  return payload
+}
+
+async function executeSignedUpload(file: File, payload: SignedUploadPayload): Promise<void> {
+  const uploadResponse = await fetch(payload.signedUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': file.type || payload.contentType || DEFAULT_CONTENT_TYPE,
+      'x-upsert': 'false',
+    },
+    body: file,
+  })
+
+  if (!uploadResponse.ok) {
+    let message = `上传失败，状态码: ${uploadResponse.status}`
+    try {
+      const text = await uploadResponse.text()
+      if (text) {
+        message = `${message}，信息: ${text}`
+      }
+    } catch (error) {
+      console.warn('读取签名上传失败响应时出错:', error)
+    }
+    throw new Error(message)
+  }
+}
+
 /**
  * 上传文件到 Supabase Storage
  * @param file 要上传的文件
@@ -26,28 +99,9 @@ export async function uploadFileToSupabase(
   console.log(`文件信息: ${file.name}, 大小: ${file.size}字节, 类型: ${file.type}`)
 
   try {
-    const formData = new FormData()
-    formData.append('file', file, file.name)
-    formData.append('bucket', bucket)
-    formData.append('folder', folder)
-
-    const isAdminPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')
-    const uploadUrl = isAdminPage ? '/api/admin/upload' : '/api/upload'
-
-    const response = await safeFetch(uploadUrl, {
-      method: 'POST',
-      useAuth: !isAdminPage,
-      body: formData,
-    })
-
-    const result = await handleApiResponse(response)
-    const payload = result?.data ?? result
-
-    if (!payload?.url) {
-      throw new Error('上传失败：未返回文件URL')
-    }
-
-    return payload.url as string
+    const payload = await requestSignedUpload(file, bucket, folder)
+    await executeSignedUpload(file, payload)
+    return payload.url
   } catch (error) {
     console.error('上传过程中发生错误:', error)
     if (error instanceof Error) throw error
@@ -126,31 +180,14 @@ export async function uploadFileWithInfo(
   console.log(`文件信息: ${file.name}, 大小: ${file.size}字节, 类型: ${file.type}`)
 
   try {
-    const formData = new FormData()
-    formData.append('file', file, file.name)
-    formData.append('bucket', bucket)
-    formData.append('folder', folder)
-
-    const isAdminPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')
-    const uploadUrl = isAdminPage ? '/api/admin/upload' : '/api/upload'
-    const response = await safeFetch(uploadUrl, {
-      method: 'POST',
-      useAuth: !isAdminPage,
-      body: formData,
-    })
-
-    const result = await handleApiResponse(response)
-    const payload = result?.data ?? result
-
-    if (!payload?.url) {
-      throw new Error('上传失败：未返回文件URL')
-    }
+    const payload = await requestSignedUpload(file, bucket, folder)
+    await executeSignedUpload(file, payload)
 
     return {
-      url: payload.url as string,
-      filename: payload.filename || file.name,
-      size: payload.size || file.size,
-      type: payload.type || file.type,
+      url: payload.url,
+      filename: file.name,
+      size: file.size,
+      type: file.type,
     }
   } catch (error) {
     console.error('上传过程中发生错误:', error)

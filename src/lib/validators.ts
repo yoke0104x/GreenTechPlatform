@@ -51,11 +51,18 @@ const ALLOWED_ATTACHMENT_MIME = [
   'image/jpeg'
 ]
 
-export function isAllowedTechAttachment(file: File): boolean {
-  const mimeOk = file.type ? ALLOWED_ATTACHMENT_MIME.includes(file.type) : false
+export function isAllowedTechAttachmentMeta(
+  filename: string | null | undefined,
+  mimeType?: string | null
+): boolean {
+  const mimeOk = mimeType ? ALLOWED_ATTACHMENT_MIME.includes(mimeType) : false
   if (mimeOk) return true
-  const name = (file.name || '').toLowerCase()
+  const name = (filename || '').toLowerCase()
   return ALLOWED_ATTACHMENT_EXTS.some(ext => name.endsWith(ext))
+}
+
+export function isAllowedTechAttachment(file: File): boolean {
+  return isAllowedTechAttachmentMeta(file.name, file.type)
 }
 
 export function allowedAttachmentHint(locale: 'en' | 'zh') {
