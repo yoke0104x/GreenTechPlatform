@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequestUser, serviceSupabase } from '@/app/api/_utils/auth'
 
-export const config = {
-  api: {
-    bodyParser: false,
-    sizeLimit: '12mb',
-  },
-}
-
 function getStorageClient() {
   if (serviceSupabase) {
     return serviceSupabase

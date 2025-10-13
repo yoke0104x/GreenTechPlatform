@@ -4,13 +4,6 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 import { isAllowedTechAttachment, allowedAttachmentHint } from '@/lib/validators'
 
-export const config = {
-  api: {
-    bodyParser: false,
-    sizeLimit: '12mb',
-  },
-}
-
 export async function POST(request: NextRequest) {
   try {
     // 检查管理员权限
