@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await serviceSupabase.storage
       .from(bucket)
-      .createSignedUploadUrl(storagePath, 300)
+      .createSignedUploadUrl(storagePath, { upsert: false })
 
     if (error || !data?.signedUrl) {
       console.error('❌ 生成签名上传URL失败:', error)
