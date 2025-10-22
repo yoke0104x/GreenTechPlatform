@@ -109,11 +109,28 @@ export async function GET(request: NextRequest) {
         })
       );
 
-      console.log('✅ 返回分类数据:', categoriesWithCount);
+      // 过滤掉没有任何技术的分类（例如误创建后删除的空分类）
+      const filteredCategories = categoriesWithCount.filter(category => {
+        if (category.count > 0) {
+          return true;
+        }
+
+        console.log('🧹 跳过没有技术数据的分类:', {
+          id: category.id,
+          name: category.name,
+          count: category.count
+        });
+
+        return false;
+      });
+
+      const categoriesToReturn = filteredCategories.length > 0 ? filteredCategories : categoriesWithCount;
+
+      console.log('✅ 返回分类数据:', categoriesToReturn);
 
       const response = NextResponse.json({
         success: true,
-        data: categoriesWithCount
+        data: categoriesToReturn
       });
 
       // 添加缓存控制头，确保数据实时性
