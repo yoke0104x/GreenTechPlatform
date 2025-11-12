@@ -67,7 +67,13 @@ export function QuaternaryCategoryManager({ tertiaryCategoryId, tertiaryName, on
                     <button onClick={() => { setEditing(item); setShowForm(true) }} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="编辑"><Edit className="w-4 h-4" /></button>
                     <button onClick={async () => {
                       if (!confirm(`确认删除四级分类“${item.name_zh}”？`)) return
-                      try { await deleteQuaternaryCategoryApi(item.id); await load() } catch (e) { alert('删除失败') }
+                      try {
+                        await deleteQuaternaryCategoryApi(item.id)
+                        await load()
+                      } catch (e) {
+                        const message = e instanceof Error ? e.message : '删除失败'
+                        alert(message)
+                      }
                     }} className="p-1 text-red-600 hover:bg-red-50 rounded" title="删除"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
@@ -88,4 +94,3 @@ export function QuaternaryCategoryManager({ tertiaryCategoryId, tertiaryName, on
     </div>
   )
 }
-

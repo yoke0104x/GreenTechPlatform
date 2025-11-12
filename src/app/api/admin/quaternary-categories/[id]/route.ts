@@ -38,20 +38,39 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const { id } = params
-    const { error } = await supabase
-      .from('admin_quaternary_categories')
-      .delete()
-      .eq('id', id)
-    if (error) {
-      console.error('删除四级分类失败:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-    return NextResponse.json({ success: true })
-  } catch (e) {
-    console.error('API错误:', e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+	try {
+		const { id } = params
 
+		// 检查是否仍有技术关联该四级分类
+		const { count: techCount, error: techError } = await supabase
+			.from('admin_technologies')
+			.select('id', { count: 'exact', head: true })
+			.eq('quaternary_category_id', id)
+
+		if (techError) {
+			console.error('检查四级分类关联技术失败:', techError)
+			return NextResponse.json({ error: techError.message }, { status: 500 })
+		}
+
+		if ((techCount ?? 0) > 0) {
+			return NextResponse.json({ error: `仍有 ${techCount} 条技术关联此四级分类，请先解除关联后再删除。` }, { status: 400 })
+		}
+
+		const { error } = await supabase
+			.from('admin_quaternary_categories')
+			.delete()
+			.eq('id', id)
+		if (error) {
+			console.error('删除四级分类失败:', error)
+			const message =
+				error.code === '23503'
+					? '仍有技术或下级数据关联此四级分类，请先解除关联后再删除。'
+					: error.message
+			return NextResponse.json({ error: message }, { status: error.code === '23503' ? 400 : 500 })
+		}
+		return NextResponse.json({ success: true })
+	} catch (e) {
+		console.error('API错误:', e)
+		return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+	}
+}
