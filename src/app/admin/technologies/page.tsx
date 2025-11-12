@@ -1,11 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2, Lightbulb, Tag, FileText, Image as ImageIcon, Download, Check, X, MessageSquare, Eye } from 'lucide-react'
-import { AdminTechnology, AdminCategory, AdminSubcategory, AdminCountry, AdminProvince, AdminDevelopmentZone, AdminCompany, TechnologyAttachment, PaginationParams, TECH_SOURCE_OPTIONS, TECH_REVIEW_STATUS_OPTIONS, TechReviewStatus, TECH_ACQUISITION_METHOD_OPTIONS } from '@/lib/types/admin'
+import { Plus, Edit, Trash2, Lightbulb, Tag, FileText, Image as ImageIcon, Download, Check, X, MessageSquare, Eye, Filter } from 'lucide-react'
+import { AdminTechnology, AdminCategory, AdminSubcategory, AdminCountry, AdminProvince, AdminDevelopmentZone, AdminCompany, TechnologyAttachment, PaginationParams, TECH_SOURCE_OPTIONS, TECH_REVIEW_STATUS_OPTIONS, TechReviewStatus, TECH_ACQUISITION_METHOD_OPTIONS, AdminTertiaryCategory, AdminQuaternaryCategory } from '@/lib/types/admin'
 import { DataTable } from '@/components/admin/data-table/data-table'
 import { TechnologyForm } from './components/technology-form'
 import { getTechnologiesApi, deleteTechnologyApi, reviewTechnologyApi } from '@/lib/api/admin-technologies'
+import { getCategoriesApi, getSubcategoriesApi } from '@/lib/api/admin-categories'
+import { getProvincesApi } from '@/lib/api/admin-provinces'
+import { getDevelopmentZonesApi } from '@/lib/api/admin-development-zones'
 
 export default function TechnologiesPage() {
   const [technologies, setTechnologies] = useState<AdminTechnology[]>([])
@@ -35,11 +38,159 @@ export default function TechnologiesPage() {
     rejected: 0
   })
 
+  // 筛选相关状态
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [categoryId, setCategoryId] = useState('')
+  const [subcategoryId, setSubcategoryId] = useState('')
+  const [tertiaryCategoryId, setTertiaryCategoryId] = useState('')
+  const [quaternaryCategoryId, setQuaternaryCategoryId] = useState('')
+  const [countryId, setCountryId] = useState('')
+  const [provinceId, setProvinceId] = useState('')
+  const [developmentZoneId, setDevelopmentZoneId] = useState('')
+
+  // 筛选选项数据
+  const [categories, setCategories] = useState<AdminCategory[]>([])
+  const [subcategories, setSubcategories] = useState<AdminSubcategory[]>([])
+  const [tertiaryCategories, setTertiaryCategories] = useState<AdminTertiaryCategory[]>([])
+  const [quaternaryCategories, setQuaternaryCategories] = useState<AdminQuaternaryCategory[]>([])
+  const [countries, setCountries] = useState<AdminCountry[]>([])
+  const [provinces, setProvinces] = useState<AdminProvince[]>([])
+  const [developmentZones, setDevelopmentZones] = useState<AdminDevelopmentZone[]>([])
+
   useEffect(() => {
     loadTechnologies()
     loadStats()
     loadReviewStatusCounts()
   }, [pagination.current, pagination.pageSize, reviewStatusFilter])
+
+  // 初始化加载筛选项（分类、国别）
+  useEffect(() => {
+    const initFilters = async () => {
+      try {
+        const [categoryList, countryRes] = await Promise.all([
+          getCategoriesApi(),
+          fetch('/api/admin/countries').then(r => r.json())
+        ])
+        setCategories(Array.isArray(categoryList) ? categoryList : [])
+        const countryData = countryRes?.data || countryRes || []
+        setCountries(Array.isArray(countryData) ? countryData : [])
+      } catch (e) {
+        console.warn('加载筛选项失败:', e)
+      }
+    }
+    initFilters()
+  }, [])
+
+  // 类别变化时加载子分类
+  useEffect(() => {
+    const loadSubs = async () => {
+      if (!categoryId) {
+        setSubcategories([])
+        setSubcategoryId('')
+        setTertiaryCategories([])
+        setTertiaryCategoryId('')
+        setQuaternaryCategories([])
+        setQuaternaryCategoryId('')
+        return
+      }
+      try {
+        const subs = await getSubcategoriesApi(categoryId)
+        setSubcategories(Array.isArray(subs) ? subs : [])
+      } catch (e) {
+        console.warn('加载子分类失败:', e)
+        setSubcategories([])
+      }
+    }
+    loadSubs()
+  }, [categoryId])
+
+  // 子分类变化时加载三级分类
+  useEffect(() => {
+    const loadTertiary = async () => {
+      if (!subcategoryId) {
+        setTertiaryCategories([])
+        setTertiaryCategoryId('')
+        setQuaternaryCategories([])
+        setQuaternaryCategoryId('')
+        return
+      }
+      try {
+        const response = await fetch(`/api/admin/tertiary-categories?subcategory_id=${subcategoryId}`)
+        if (response.ok) {
+          const data = await response.json()
+          setTertiaryCategories(Array.isArray(data) ? data : [])
+        } else {
+          setTertiaryCategories([])
+        }
+      } catch (error) {
+        console.warn('加载三级分类失败:', error)
+        setTertiaryCategories([])
+      }
+    }
+    loadTertiary()
+  }, [subcategoryId])
+
+  // 三级分类变化时加载四级分类
+  useEffect(() => {
+    const loadQuaternary = async () => {
+      if (!tertiaryCategoryId) {
+        setQuaternaryCategories([])
+        setQuaternaryCategoryId('')
+        return
+      }
+      try {
+        const response = await fetch(`/api/admin/quaternary-categories?tertiary_category_id=${tertiaryCategoryId}`)
+        if (response.ok) {
+          const data = await response.json()
+          setQuaternaryCategories(Array.isArray(data) ? data : [])
+        } else {
+          setQuaternaryCategories([])
+        }
+      } catch (error) {
+        console.warn('加载四级分类失败:', error)
+        setQuaternaryCategories([])
+      }
+    }
+    loadQuaternary()
+  }, [tertiaryCategoryId])
+
+  // 国别变化时加载省份
+  useEffect(() => {
+    const loadProv = async () => {
+      if (!countryId) {
+        setProvinces([])
+        setProvinceId('')
+        return
+      }
+      try {
+        const provs = await getProvincesApi(countryId)
+        setProvinces(Array.isArray(provs) ? provs : [])
+      } catch (e) {
+        console.warn('加载省份失败:', e)
+        setProvinces([])
+      }
+    }
+    loadProv()
+  }, [countryId])
+
+  // 省份变化时加载经开区
+  useEffect(() => {
+    const loadZones = async () => {
+      if (!provinceId) {
+        setDevelopmentZones([])
+        setDevelopmentZoneId('')
+        return
+      }
+      try {
+        const zones = await getDevelopmentZonesApi(provinceId)
+        setDevelopmentZones(Array.isArray(zones) ? zones : [])
+      } catch (e) {
+        console.warn('加载经开区失败:', e)
+        setDevelopmentZones([])
+      }
+    }
+    loadZones()
+  }, [provinceId])
 
   const loadStats = async () => {
     try {
@@ -156,6 +307,13 @@ export default function TechnologiesPage() {
         page: pagination.current,
         pageSize: pagination.pageSize,
         reviewStatus: reviewStatusFilter,
+        categoryId: categoryId || undefined,
+        subcategoryId: subcategoryId || undefined,
+        tertiaryCategoryId: tertiaryCategoryId || undefined,
+        quaternaryCategoryId: quaternaryCategoryId || undefined,
+        countryId: countryId || undefined,
+        provinceId: provinceId || undefined,
+        developmentZoneId: developmentZoneId || undefined,
         ...params
       })
       
@@ -170,6 +328,25 @@ export default function TechnologiesPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const applyFilters = () => {
+    setPagination(prev => ({ ...prev, current: 1 }))
+    loadTechnologies({})
+  }
+
+  const clearFilters = () => {
+    setCategoryId('')
+    setSubcategoryId('')
+    setTertiaryCategoryId('')
+    setQuaternaryCategoryId('')
+    setCountryId('')
+    setProvinceId('')
+    setDevelopmentZoneId('')
+    setTertiaryCategories([])
+    setQuaternaryCategories([])
+    setPagination(prev => ({ ...prev, current: 1 }))
+    loadTechnologies({})
   }
 
   const handleSearch = (search: string) => {
@@ -339,6 +516,58 @@ export default function TechnologiesPage() {
     }
   }
 
+  // 导出当前页数据为CSV（Excel可直接打开）
+  const handleExportCsv = () => {
+    if (!technologies || technologies.length === 0) {
+      alert('当前无可导出的数据')
+      return
+    }
+
+    const headers = [
+      '技术名称','一级分类','二级分类','三级分类','四级分类','国别','省份','经开区','企业名称','获取方式','审核状态','创建时间','技术网址','中文描述'
+    ]
+
+    const rows = technologies.map(t => [
+      t.name_zh || '',
+      t.category?.name_zh || '',
+      t.subcategory?.name_zh || '',
+      t.tertiary_category?.name_zh || '',
+      t.quaternary_category?.name_zh || '',
+      t.company_country?.name_zh || '',
+      t.company_province?.name_zh || '',
+      t.company_development_zone?.name_zh || '',
+      t.company_name_zh || '',
+      getTechAcquisitionMethodLabel(t.acquisition_method),
+      getReviewStatusLabel(t.review_status),
+      t.created_at ? new Date(t.created_at).toLocaleString('zh-CN') : '',
+      t.website_url || '',
+      t.description_zh || ''
+    ])
+
+    const escapeCell = (val: string) => {
+      const s = (val ?? '').toString().replace(/"/g, '""')
+      return `"${s}"`
+    }
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(escapeCell).join(','))
+      .join('\n')
+
+    // 添加UTF-8 BOM，保证Excel中中文不乱码
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    const ts = new Date()
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    const fileName = `技术列表_${ts.getFullYear()}${pad(ts.getMonth()+1)}${pad(ts.getDate())}${pad(ts.getHours())}${pad(ts.getMinutes())}.csv`
+    a.href = url
+    a.download = fileName
+    a.style.display = 'none'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   const columns: import('@/components/admin/data-table/data-table').Column<AdminTechnology>[] = [
     {
       key: 'image_url',
@@ -401,6 +630,16 @@ export default function TechnologiesPage() {
           {record.subcategory && (
             <div className="text-gray-500 ml-4 text-xs">
               {record.subcategory.name_zh}
+            </div>
+          )}
+          {record.tertiary_category && (
+            <div className="text-gray-500 ml-6 text-xs">
+              {record.tertiary_category.name_zh}
+            </div>
+          )}
+          {record.quaternary_category && (
+            <div className="text-gray-500 ml-8 text-xs">
+              {record.quaternary_category.name_zh}
             </div>
           )}
           {!record.category && !record.subcategory && (
@@ -744,8 +983,143 @@ export default function TechnologiesPage() {
               })}
             </div>
             
-            {/* 右侧搜索框 */}
-            <div className="flex items-center space-x-3">
+            {/* 右侧筛选/导出/搜索 */}
+            <div className="flex items-center space-x-3 relative">
+              {/* 筛选按钮与面板 */}
+              <div className="relative">
+                <button
+                  onClick={() => setFiltersOpen(v => !v)}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
+                >
+                  <Filter className="w-4 h-4 mr-2" /> 筛选
+                </button>
+                {filtersOpen && (
+                  <div className="absolute right-0 mt-2 w-[720px] bg-white border border-gray-200 rounded-lg shadow-lg z-10 p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {/* 一级分类 */}
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">一级分类</label>
+                        <select
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          value={categoryId}
+                          onChange={(e) => { setCategoryId(e.target.value); setSubcategoryId(''); }}
+                        >
+                          <option value="">全部</option>
+                          {categories.map(c => (
+                            <option key={c.id} value={c.id}>{c.name_zh}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {/* 二级分类 */}
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">二级分类</label>
+                        <select
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          value={subcategoryId}
+                          onChange={(e) => setSubcategoryId(e.target.value)}
+                          disabled={!categoryId}
+                        >
+                          <option value="">全部</option>
+                          {subcategories.map(sc => (
+                            <option key={sc.id} value={sc.id}>{sc.name_zh}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {/* 三级分类 */}
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">三级分类</label>
+                        <select
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100"
+                          value={tertiaryCategoryId}
+                          onChange={(e) => setTertiaryCategoryId(e.target.value)}
+                          disabled={!subcategoryId || tertiaryCategories.length === 0}
+                        >
+                          <option value="">全部</option>
+                          {tertiaryCategories.map(tc => (
+                            <option key={tc.id} value={tc.id}>{tc.name_zh}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {/* 四级分类 */}
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">四级分类</label>
+                        <select
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100"
+                          value={quaternaryCategoryId}
+                          onChange={(e) => setQuaternaryCategoryId(e.target.value)}
+                          disabled={!tertiaryCategoryId || quaternaryCategories.length === 0}
+                        >
+                          <option value="">全部</option>
+                          {quaternaryCategories.map(qc => (
+                            <option key={qc.id} value={qc.id}>{qc.name_zh}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {/* 国别 */}
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">国别</label>
+                        <select
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          value={countryId}
+                          onChange={(e) => { setCountryId(e.target.value); setProvinceId(''); setDevelopmentZoneId(''); }}
+                        >
+                          <option value="">全部</option>
+                          {countries.map(ct => (
+                            <option key={ct.id} value={ct.id}>{ct.name_zh}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* 省份 */}
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">省份</label>
+                        <select
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100"
+                          value={provinceId}
+                          onChange={(e) => { setProvinceId(e.target.value); setDevelopmentZoneId(''); }}
+                          disabled={!countryId}
+                        >
+                          <option value="">全部</option>
+                          {provinces.map(p => (
+                            <option key={p.id} value={p.id}>{p.name_zh}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* 经开区 */}
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">经开区</label>
+                        <select
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100"
+                          value={developmentZoneId}
+                          onChange={(e) => setDevelopmentZoneId(e.target.value)}
+                          disabled={!provinceId}
+                        >
+                          <option value="">全部</option>
+                          {developmentZones.map(z => (
+                            <option key={z.id} value={z.id}>{z.name_zh}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end space-x-2 mt-4">
+                      <button onClick={clearFilters} className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">清空</button>
+                      <button onClick={() => { setFiltersOpen(false); applyFilters() }} className="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700">应用筛选</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 导出 */}
+              <button
+                onClick={handleExportCsv}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
+                title="导出当前页为Excel(CSV)"
+              >
+                <Download className="w-4 h-4 mr-2" /> 导出
+              </button>
+
               <div className="relative">
                 <input
                   type="text"

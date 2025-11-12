@@ -1,7 +1,17 @@
 import { AdminTechnology, PaginationParams, PaginatedResponse, TechReviewStatus } from '@/lib/types/admin'
 
 // 获取技术列表
-export async function getTechnologiesApi(params?: Partial<PaginationParams & { userId?: string, reviewStatus?: TechReviewStatus }>): Promise<PaginatedResponse<AdminTechnology>> {
+export async function getTechnologiesApi(params?: Partial<PaginationParams & {
+  userId?: string,
+  reviewStatus?: TechReviewStatus,
+  categoryId?: string,
+  subcategoryId?: string,
+  tertiaryCategoryId?: string,
+  quaternaryCategoryId?: string,
+  countryId?: string,
+  provinceId?: string,
+  developmentZoneId?: string,
+}>): Promise<PaginatedResponse<AdminTechnology>> {
   const searchParams = new URLSearchParams()
   
   if (params?.page) searchParams.append('page', String(params.page))
@@ -11,6 +21,13 @@ export async function getTechnologiesApi(params?: Partial<PaginationParams & { u
   if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder)
   if (params?.userId) searchParams.append('userId', params.userId)
   if (params?.reviewStatus) searchParams.append('reviewStatus', params.reviewStatus)
+  if (params?.categoryId) searchParams.append('categoryId', params.categoryId)
+  if (params?.subcategoryId) searchParams.append('subcategoryId', params.subcategoryId)
+  if (params?.tertiaryCategoryId) searchParams.append('tertiaryCategoryId', params.tertiaryCategoryId)
+  if (params?.quaternaryCategoryId) searchParams.append('quaternaryCategoryId', params.quaternaryCategoryId)
+  if (params?.countryId) searchParams.append('countryId', params.countryId)
+  if (params?.provinceId) searchParams.append('provinceId', params.provinceId)
+  if (params?.developmentZoneId) searchParams.append('developmentZoneId', params.developmentZoneId)
 
   const response = await fetch(`/api/admin/technologies?${searchParams}`)
   

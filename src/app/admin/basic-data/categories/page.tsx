@@ -7,6 +7,7 @@ import { getCategoriesApi, deleteCategoryApi, deleteSubcategoryApi } from '@/lib
 import { getMockCategories } from '@/lib/supabase/admin-categories-mock'
 import { CategoryForm } from './components/category-form'
 import { SubcategoryForm } from './components/subcategory-form'
+import { TertiaryCategoryManager } from './components/tertiary-category-manager'
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<AdminCategory[]>([])
@@ -18,6 +19,7 @@ export default function CategoriesPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('')
   const [expandedCategories, setExpandedCategories] = useState<string[]>([])
   const [isUsingMockData, setIsUsingMockData] = useState(false)
+  const [openTertiaryFor, setOpenTertiaryFor] = useState<{ id: string, name: string } | null>(null)
 
   useEffect(() => {
     loadCategories()
@@ -288,6 +290,12 @@ export default function CategoriesPage() {
                             <Edit className="w-3 h-3" />
                           </button>
                           <button
+                            onClick={() => setOpenTertiaryFor({ id: subcategory.id, name: subcategory.name_zh })}
+                            className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
+                          >
+                            管理三级分类
+                          </button>
+                          <button
                             onClick={() => handleDeleteSubcategory(subcategory)}
                             className="p-1 text-red-600 hover:bg-red-50 rounded"
                             title="删除子分类"
@@ -326,6 +334,15 @@ export default function CategoriesPage() {
           subcategory={editingSubcategory}
           onSuccess={handleFormSuccess}
           onCancel={() => setShowSubcategoryForm(false)}
+        />
+      )}
+
+      {/* 三级分类管理弹窗 */}
+      {openTertiaryFor && (
+        <TertiaryCategoryManager
+          subcategoryId={openTertiaryFor.id}
+          subcategoryName={openTertiaryFor.name}
+          onClose={() => setOpenTertiaryFor(null)}
         />
       )}
     </div>

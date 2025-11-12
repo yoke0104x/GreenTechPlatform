@@ -72,6 +72,12 @@
 │   │       │       └── delete/route.ts       # 批量删除站内信
 │   │       │   └── contact/route.ts          # 用户联系咨询/问题反馈的创建与查询
 │   │       └── admin/        # 管理后台API
+│   │           ├── tertiary-categories/   # 三级分类管理API（新增）
+│   │           │   ├── route.ts           # GET/POST 三级分类
+│   │           │   └── [id]/route.ts      # PUT/DELETE 三级分类
+│   │           ├── quaternary-categories/ # 四级分类管理API（新增）
+│   │           │   ├── route.ts           # GET/POST 四级分类
+│   │           │   └── [id]/route.ts      # PUT/DELETE 四级分类
 │   │           ├── upload/             # 管理端上传接口
 │   │           │   ├── route.ts        # 管理端文件上传（支持图片与技术资料文档）
 │   │           │   └── delete/route.ts # 管理端删除上传文件
@@ -140,6 +146,11 @@
 ### 数据处理脚本
 
 ```
+
+### 新增/更新
+- 管理端新增 三级/四级 分类管理 API 与前端表单组件：支持在“产业分类管理”中对每个子分类继续维护两级子类目（无需图片）。
+- 管理端技术管理表单支持选择三级/四级分类；用户端上传不涉及此两项，无需改动。
+- 新增 SQL 脚本 `add-tertiary-quaternary-categories.sql`：创建 `admin_tertiary_categories`、`admin_quaternary_categories` 表，并为 `admin_technologies` 增加对应外键列。
 middle_process_scripts/      # 中间处理脚本暂存目录（可按需迁移脚本）
 ```
 ```

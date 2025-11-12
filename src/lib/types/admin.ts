@@ -42,6 +42,27 @@ export interface AdminSubcategory extends BaseEntity, MultiLanguageField {
 }
 
 /**
+ * 三级分类（隶属于二级子分类）
+ */
+export interface AdminTertiaryCategory extends BaseEntity, MultiLanguageField {
+  subcategory_id: string
+  slug: string
+  sort_order: number
+  technology_count?: number
+  subcategory?: AdminSubcategory
+}
+
+/**
+ * 四级分类（隶属于三级分类）
+ */
+export interface AdminQuaternaryCategory extends BaseEntity, MultiLanguageField {
+  tertiary_category_id: string
+  slug: string
+  sort_order: number
+  technology_count?: number
+}
+
+/**
  * 国别
  */
 export interface AdminCountry extends BaseEntity, MultiLanguageField {
@@ -163,6 +184,8 @@ export interface AdminTechnology extends BaseEntity {
   brief_en?: string
   category_id?: string
   subcategory_id?: string
+  tertiary_category_id?: string
+  quaternary_category_id?: string
   custom_label?: string // 自定义标签，不超过20字符
   featured_weight?: number // 精选排序权重，数值越大越靠前
   attachment_urls?: string[] // 为了向后兼容保留
@@ -185,6 +208,8 @@ export interface AdminTechnology extends BaseEntity {
   // 关联数据
   category?: AdminCategory
   subcategory?: AdminSubcategory
+  tertiary_category?: AdminTertiaryCategory
+  quaternary_category?: AdminQuaternaryCategory
   company?: AdminCompany
   company_country?: AdminCountry
   company_province?: AdminProvince

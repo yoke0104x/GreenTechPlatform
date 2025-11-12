@@ -29,6 +29,8 @@ export function TechnologyForm({ technology, onSuccess, onCancel }: TechnologyFo
     acquisition_method: '' as TechAcquisitionMethod,
     category_id: '',
     subcategory_id: '',
+    tertiary_category_id: '',
+    quaternary_category_id: '',
     custom_label: '', // 自定义标签
     featured_weight: 0,
     attachment_urls: [] as string[], // 技术资料（为了向后兼容）
@@ -54,6 +56,8 @@ export function TechnologyForm({ technology, onSuccess, onCancel }: TechnologyFo
   // 分类数据状态
   const [categories, setCategories] = useState<AdminCategory[]>([])
   const [subcategories, setSubcategories] = useState<AdminSubcategory[]>([])
+  const [tertiaryCategories, setTertiaryCategories] = useState<any[]>([])
+  const [quaternaryCategories, setQuaternaryCategories] = useState<any[]>([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(false)
   
   // 企业相关数据状态
@@ -107,6 +111,8 @@ export function TechnologyForm({ technology, onSuccess, onCancel }: TechnologyFo
   const loadSubcategories = async (categoryId: string) => {
     if (!categoryId) {
       setSubcategories([])
+      setTertiaryCategories([])
+      setQuaternaryCategories([])
       return
     }
     
@@ -120,10 +126,55 @@ export function TechnologyForm({ technology, onSuccess, onCancel }: TechnologyFo
       } else {
         console.error('❌ 加载子分类数据失败:', response.status)
         setSubcategories([])
+        setTertiaryCategories([])
+        setQuaternaryCategories([])
       }
     } catch (error) {
       console.error('加载子分类数据失败:', error)
       setSubcategories([])
+      setTertiaryCategories([])
+      setQuaternaryCategories([])
+    }
+  }
+
+  // 加载三级分类
+  const loadTertiaryCategories = async (subcategoryId: string) => {
+    if (!subcategoryId) {
+      setTertiaryCategories([])
+      setQuaternaryCategories([])
+      return
+    }
+    try {
+      const res = await fetch(`/api/admin/tertiary-categories?subcategory_id=${subcategoryId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setTertiaryCategories(Array.isArray(data) ? data : [])
+      } else {
+        setTertiaryCategories([])
+      }
+    } catch (e) {
+      console.error('加载三级分类失败:', e)
+      setTertiaryCategories([])
+    }
+  }
+
+  // 加载四级分类
+  const loadQuaternaryCategories = async (tertiaryId: string) => {
+    if (!tertiaryId) {
+      setQuaternaryCategories([])
+      return
+    }
+    try {
+      const res = await fetch(`/api/admin/quaternary-categories?tertiary_category_id=${tertiaryId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setQuaternaryCategories(Array.isArray(data) ? data : [])
+      } else {
+        setQuaternaryCategories([])
+      }
+    } catch (e) {
+      console.error('加载四级分类失败:', e)
+      setQuaternaryCategories([])
     }
   }
 
@@ -289,6 +340,8 @@ export function TechnologyForm({ technology, onSuccess, onCancel }: TechnologyFo
         acquisition_method: (technology.acquisition_method || '') as TechAcquisitionMethod,
         category_id: technology.category_id || '',
         subcategory_id: technology.subcategory_id || '',
+        tertiary_category_id: (technology as any).tertiary_category_id || '',
+        quaternary_category_id: (technology as any).quaternary_category_id || '',
         custom_label: technology.custom_label || '',
         featured_weight: technology.featured_weight ?? 0,
         attachment_urls: technology.attachment_urls || [],
@@ -308,6 +361,14 @@ export function TechnologyForm({ technology, onSuccess, onCancel }: TechnologyFo
       // 如果编辑时有分类ID，加载对应的子分类
       if (technology.category_id) {
         loadSubcategories(technology.category_id)
+      }
+      // 如果有子分类，加载三级分类
+      if (technology.subcategory_id) {
+        loadTertiaryCategories(technology.subcategory_id)
+      }
+      // 如果有三级分类，加载四级分类
+      if ((technology as any).tertiary_category_id) {
+        loadQuaternaryCategories((technology as any).tertiary_category_id)
       }
       
       // 如果编辑时有企业国家ID，加载对应的省份
@@ -331,6 +392,8 @@ export function TechnologyForm({ technology, onSuccess, onCancel }: TechnologyFo
         acquisition_method: '' as TechAcquisitionMethod,
         category_id: '',
         subcategory_id: '',
+        tertiary_category_id: '',
+        quaternary_category_id: '',
         custom_label: '',
         featured_weight: 0,
         attachment_urls: [],
@@ -353,7 +416,7 @@ export function TechnologyForm({ technology, onSuccess, onCancel }: TechnologyFo
 
   // 处理主分类变化
   const handleCategoryChange = (categoryId: string) => {
-    setFormData(prev => ({ ...prev, category_id: categoryId, subcategory_id: '' }))
+    setFormData(prev => ({ ...prev, category_id: categoryId, subcategory_id: '', tertiary_category_id: '', quaternary_category_id: '' }))
     loadSubcategories(categoryId)
   }
 
@@ -448,7 +511,7 @@ export function TechnologyForm({ technology, onSuccess, onCancel }: TechnologyFo
       newErrors.name_zh = '技术中文名称不能为空'
     }
 
-    // 子分类必填
+    // 子分类必填；三级/四级为选填
     if (!formData.subcategory_id) {
       newErrors.subcategory_id = '技术子分类不能为空'
     }
@@ -544,6 +607,8 @@ export function TechnologyForm({ technology, onSuccess, onCancel }: TechnologyFo
         acquisition_method: formData.acquisition_method || undefined,
         category_id: formData.category_id || undefined,
         subcategory_id: formData.subcategory_id || undefined,
+        tertiary_category_id: formData.tertiary_category_id || undefined,
+        quaternary_category_id: formData.quaternary_category_id || undefined,
         custom_label: formData.custom_label.trim() || undefined,
         featured_weight: Number.isFinite(formData.featured_weight) ? Math.max(0, Math.floor(formData.featured_weight)) : 0,
         attachment_urls: formData.attachment_urls.length > 0 ? formData.attachment_urls : undefined,
@@ -754,7 +819,7 @@ export function TechnologyForm({ technology, onSuccess, onCancel }: TechnologyFo
                 </label>
                 <select
                   value={formData.subcategory_id}
-                  onChange={(e) => setFormData(prev => ({ ...prev, subcategory_id: e.target.value }))}
+                  onChange={(e) => { const v = e.target.value; setFormData(prev => ({ ...prev, subcategory_id: v, tertiary_category_id: '', quaternary_category_id: '' })); loadTertiaryCategories(v) }}
                   disabled={!formData.category_id}
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 ${
                     errors.subcategory_id ? 'border-red-500' : 'border-gray-300'
@@ -771,6 +836,38 @@ export function TechnologyForm({ technology, onSuccess, onCancel }: TechnologyFo
                 {errors.subcategory_id && (
                   <p className="mt-1 text-xs text-red-600">{errors.subcategory_id}</p>
                 )}
+              </div>
+
+              {/* 三级分类（可选） */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">技术类型（三级，选填）</label>
+                <select
+                  value={formData.tertiary_category_id}
+                  onChange={(e) => { const v = e.target.value; setFormData(prev => ({ ...prev, tertiary_category_id: v, quaternary_category_id: '' })); loadQuaternaryCategories(v) }}
+                  disabled={!formData.subcategory_id || tertiaryCategories.length === 0}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100"
+                >
+                  <option value="">不选择</option>
+                  {tertiaryCategories.map((t: any) => (
+                    <option key={t.id} value={t.id}>{t.name_zh}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 四级分类（可选） */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">技术类型（四级，选填）</label>
+                <select
+                  value={formData.quaternary_category_id}
+                  onChange={(e) => setFormData(prev => ({ ...prev, quaternary_category_id: e.target.value }))}
+                  disabled={!formData.tertiary_category_id || quaternaryCategories.length === 0}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100"
+                >
+                  <option value="">不选择</option>
+                  {quaternaryCategories.map((q: any) => (
+                    <option key={q.id} value={q.id}>{q.name_zh}</option>
+                  ))}
+                </select>
               </div>
             </div>
             

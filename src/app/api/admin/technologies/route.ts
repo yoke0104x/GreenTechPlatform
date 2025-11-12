@@ -76,6 +76,14 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get('sortOrder') || 'desc'
     const userId = searchParams.get('userId')
     const reviewStatus = searchParams.get('reviewStatus')
+    // 筛选参数
+    const categoryId = searchParams.get('categoryId')
+    const subcategoryId = searchParams.get('subcategoryId')
+    const tertiaryCategoryId = searchParams.get('tertiaryCategoryId')
+    const quaternaryCategoryId = searchParams.get('quaternaryCategoryId')
+    const countryId = searchParams.get('countryId')
+    const provinceId = searchParams.get('provinceId')
+    const developmentZoneId = searchParams.get('developmentZoneId')
 
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
@@ -108,6 +116,29 @@ export async function GET(request: NextRequest) {
       query = query.eq('review_status', 'published')
     }
 
+    // 应用筛选条件
+    if (categoryId) {
+      query = query.eq('category_id', categoryId)
+    }
+    if (subcategoryId) {
+      query = query.eq('subcategory_id', subcategoryId)
+    }
+    if (tertiaryCategoryId) {
+      query = query.eq('tertiary_category_id', tertiaryCategoryId)
+    }
+    if (quaternaryCategoryId) {
+      query = query.eq('quaternary_category_id', quaternaryCategoryId)
+    }
+    if (countryId) {
+      query = query.eq('company_country_id', countryId)
+    }
+    if (provinceId) {
+      query = query.eq('company_province_id', provinceId)
+    }
+    if (developmentZoneId) {
+      query = query.eq('company_development_zone_id', developmentZoneId)
+    }
+
     const { data, error, count } = await query
       .order(sortBy, { ascending: sortOrder === 'asc' })
       .range(from, to)
@@ -123,6 +154,8 @@ export async function GET(request: NextRequest) {
         let company_country = null
         let company_province = null
         let company_development_zone = null
+        let tertiary_category = null
+        let quaternary_category = null
 
         // 查询国家信息
         if (tech.company_country_id) {
@@ -154,11 +187,31 @@ export async function GET(request: NextRequest) {
           company_development_zone = zoneData
         }
 
+        // 查询三级/四级分类信息
+        if (tech.tertiary_category_id) {
+          const { data: t3 } = await supabase
+            .from('admin_tertiary_categories')
+            .select('id, name_zh, name_en, slug, subcategory_id')
+            .eq('id', tech.tertiary_category_id)
+            .single()
+          tertiary_category = t3
+        }
+        if (tech.quaternary_category_id) {
+          const { data: t4 } = await supabase
+            .from('admin_quaternary_categories')
+            .select('id, name_zh, name_en, slug, tertiary_category_id')
+            .eq('id', tech.quaternary_category_id)
+            .single()
+          quaternary_category = t4
+        }
+
         return {
           ...tech,
           company_country,
           company_province,
-          company_development_zone
+          company_development_zone,
+          tertiary_category,
+          quaternary_category
         }
       })
     )
@@ -320,6 +373,8 @@ export async function POST(request: NextRequest) {
       acquisition_method: technologyData.acquisition_method, // 添加技术获取方式字段
       category_id: technologyData.category_id,
       subcategory_id: technologyData.subcategory_id,
+      tertiary_category_id: technologyData.tertiary_category_id,
+      quaternary_category_id: technologyData.quaternary_category_id,
       custom_label: technologyData.custom_label,
       featured_weight: technologyData.featured_weight ?? 0,
       attachment_urls: technologyData.attachment_urls,

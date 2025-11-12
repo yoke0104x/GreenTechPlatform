@@ -59,6 +59,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       acquisition_method: technologyData.acquisition_method, // 添加技术获取方式字段
       category_id: technologyData.category_id,
       subcategory_id: technologyData.subcategory_id,
+      tertiary_category_id: technologyData.tertiary_category_id,
+      quaternary_category_id: technologyData.quaternary_category_id,
       custom_label: technologyData.custom_label,
       featured_weight: technologyData.featured_weight,
       attachment_urls: technologyData.attachment_urls,
