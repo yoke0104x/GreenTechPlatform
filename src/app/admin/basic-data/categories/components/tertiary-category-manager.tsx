@@ -34,6 +34,32 @@ export function TertiaryCategoryManager({ subcategoryId, subcategoryName, onClos
 
   useEffect(() => { load() }, [subcategoryId])
 
+  const handleDelete = async (item: AdminTertiaryCategory) => {
+    if (!confirm(`确认删除三级分类“${item.name_zh}”？`)) return
+    try {
+      await deleteTertiaryCategoryApi(item.id)
+      await load()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '删除失败'
+      if (message.includes('仍有')) {
+        const confirmForce = confirm(`${message}\n\n是否强制删除？系统将自动解除所有关联的技术与四级分类再删除。`)
+        if (!confirmForce) {
+          alert(message)
+          return
+        }
+        try {
+          await deleteTertiaryCategoryApi(item.id, { force: true })
+          await load()
+        } catch (forceError) {
+          const forceMessage = forceError instanceof Error ? forceError.message : '删除失败'
+          alert(forceMessage)
+        }
+      } else {
+        alert(message)
+      }
+    }
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg w-full max-w-2xl">
@@ -68,16 +94,7 @@ export function TertiaryCategoryManager({ subcategoryId, subcategoryName, onClos
                   <div className="flex items-center space-x-2">
                     <button onClick={() => setOpenQuaternaryFor(item)} className="px-2 py-1 text-sm border rounded">管理四级分类</button>
                     <button onClick={() => { setEditing(item); setShowForm(true) }} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="编辑"><Edit className="w-4 h-4" /></button>
-                    <button onClick={async () => {
-                      if (!confirm(`确认删除三级分类“${item.name_zh}”？`)) return
-                      try {
-                        await deleteTertiaryCategoryApi(item.id)
-                        await load()
-                      } catch (e) {
-                        const message = e instanceof Error ? e.message : '删除失败'
-                        alert(message)
-                      }
-                    }} className="p-1 text-red-600 hover:bg-red-50 rounded" title="删除"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => handleDelete(item)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="删除"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
               ))}

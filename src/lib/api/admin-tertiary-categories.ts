@@ -46,11 +46,11 @@ export async function updateTertiaryCategoryApi(id: string, payload: Partial<Adm
   return data
 }
 
-export async function deleteTertiaryCategoryApi(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/${id}`, { method: 'DELETE' })
+export async function deleteTertiaryCategoryApi(id: string, options?: { force?: boolean }): Promise<void> {
+  const query = options?.force ? '?force=true' : ''
+  const res = await fetch(`${API_BASE_URL}/${id}${query}`, { method: 'DELETE' })
   if (!res.ok) {
     const data = await res.json()
     throw new Error(data?.error || 'Failed to delete tertiary category')
   }
 }
-

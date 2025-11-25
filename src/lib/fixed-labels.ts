@@ -1,0 +1,268 @@
+export type FixedLabelCategoryId =
+  | 'infrastructure'
+  | 'industrialDecarbon'
+  | 'parkGovernance'
+  | 'greenIndustry'
+
+export interface LabelColorScheme {
+  bgClass: string
+  textClass: string
+}
+
+export interface FixedLabelCategory {
+  id: FixedLabelCategoryId
+  name: string
+  color: LabelColorScheme
+  tags: string[]
+}
+
+export interface FixedLabelOption {
+  label: string
+  categoryId: FixedLabelCategoryId
+  categoryName: string
+  color: LabelColorScheme
+}
+
+export const FIXED_LABEL_CATEGORIES: FixedLabelCategory[] = [
+  {
+    id: 'infrastructure',
+    name: '基础设施类',
+    color: {
+      bgClass: 'bg-blue-100',
+      textClass: 'text-blue-800'
+    },
+    tags: [
+      '生态环境设施',
+      '固体废物处理处置',
+      '一般工业固废处理',
+      '大宗固体废物处理',
+      '废金属处理',
+      '废塑料处理',
+      '废玻璃处理设施',
+      '废纸张处理',
+      '废橡胶处理',
+      '废纺织品处理',
+      '废弃电子电子产品处理',
+      '废木材处理',
+      '废石材处理',
+      '废纤维及复合材料',
+      '废电池级电池废料',
+      '报废机械设备及零件',
+      '报废交通运输工具',
+      '污泥处理',
+      '废液处理',
+      '其他固体废物',
+      '一般工业固废处置',
+      '固体废物填埋',
+      '固废废物焚烧',
+      '危险废物处理',
+      '危险废物处置',
+      '工业危废处置',
+      '生活有害垃圾处置',
+      '医疗危废处置',
+      '生活垃圾处理处置',
+      '厨余/餐厨垃圾处理处置',
+      '农林园林处理处置',
+      '大件家具处理处置',
+      '建筑垃圾处理处置',
+      '水资源利用设施',
+      '自来水生产',
+      '污水处理',
+      '再生水回用',
+      '水利设施',
+      '环境监测及治理',
+      '大气监测及治理',
+      '空气质量监测及治理',
+      '工业污染源监测及治理',
+      '机动车尾气监测及治理',
+      '水质监测及治理',
+      '土壤监测及治理',
+      '噪声监测及治理',
+      '能源基础设施',
+      '火力发电设施',
+      '燃煤发电',
+      '燃油发电',
+      '燃气发电',
+      '余热发电',
+      '可再生能源发电',
+      '太阳能发电',
+      '光伏发电',
+      '光热发电',
+      '风力发电',
+      '陆上风电',
+      '海上风电',
+      '水力发电',
+      '常规水电',
+      '抽水蓄能发电',
+      '生物质发电',
+      '直燃发电',
+      '气化发电',
+      '沼气发电',
+      '垃圾焚烧发电',
+      '核电',
+      '核聚变核电',
+      '核裂变核电',
+      '供配电设施',
+      '供配电线路',
+      '变电站所',
+      '工业微电网',
+      '智能电网',
+      '储能系统',
+      '工商业储能',
+      '大型电网储能',
+      '绿色交通设施',
+      '公共交通设施',
+      '公交场站设施',
+      '公共交通工具',
+      '轨道交通设施',
+      '轨道交通工具',
+      '新能源车交通配套',
+      '电动汽车充电桩',
+      '换电站',
+      '氢燃料电池汽车加氢站',
+      '建筑节能与绿色建筑',
+      '装配式建筑',
+      '建筑节能'
+    ]
+  },
+  {
+    id: 'industrialDecarbon',
+    name: '工业节能降碳',
+    color: {
+      bgClass: 'bg-emerald-100',
+      textClass: 'text-emerald-800'
+    },
+    tags: [
+      '公辅设备节能降碳',
+      '变配电系统',
+      '变压器',
+      '高压开关设备',
+      '低压开关设备',
+      '空压机系统',
+      '供热制冷系统',
+      '制冷空调',
+      '泵和风机',
+      '照明系统',
+      '电梯系统',
+      '叉车运输设备',
+      '工艺设备节能降碳',
+      '炼油行业设备',
+      '乙烯行业设备',
+      '对二甲苯行业设备',
+      '现代煤化工行业设备',
+      '合成氨行业设备',
+      '电石行业设备',
+      '烧碱行业设备',
+      '纯碱行业设备',
+      '磷铵行业设备',
+      '黄磷行业设备',
+      '水泥行业设备',
+      '平板玻璃行业设备',
+      '建筑、卫生陶瓷行业设备',
+      '钢铁行业设备',
+      '焦化行业设备',
+      '铁合金行业设备',
+      '有色金属冶炼业设备',
+      '通用行业设备',
+      '生产管理技术',
+      '自动控制与数字化'
+    ]
+  },
+  {
+    id: 'parkGovernance',
+    name: '园区治理',
+    color: {
+      bgClass: 'bg-amber-100',
+      textClass: 'text-amber-800'
+    },
+    tags: [
+      '智慧园区系统',
+      '监控系统',
+      '智慧交通系统',
+      '智慧物流系统',
+      '能耗监管系统',
+      '能耗碳排放平台',
+      '能源系统运维平台',
+      '生态环保系统',
+      '环境管控平台',
+      '应急智慧平台',
+      '第三方服务机构',
+      '节能降碳服务',
+      '节能降碳咨询',
+      '节能降碳工程',
+      '生态环境服务机构',
+      '生态环境咨询',
+      '生态环境工程'
+    ]
+  },
+  {
+    id: 'greenIndustry',
+    name: '绿色产业',
+    color: {
+      bgClass: 'bg-violet-100',
+      textClass: 'text-violet-800'
+    },
+    tags: [
+      '氢能产业',
+      '制氢',
+      '储氢',
+      '用氢',
+      '氢燃料电池',
+      '氢能设备',
+      '新能源汽车产业',
+      '动力电池',
+      '配套设备',
+      '清洁生产产业',
+      '清洁生产原料'
+    ]
+  }
+]
+
+interface FixedLabelOptionInternal extends FixedLabelOption {
+  labelLower: string
+}
+
+const FLATTENED_LABELS: FixedLabelOptionInternal[] = FIXED_LABEL_CATEGORIES.flatMap(category =>
+  category.tags.map(label => ({
+    label,
+    labelLower: label.toLowerCase(),
+    categoryId: category.id,
+    categoryName: category.name,
+    color: category.color
+  }))
+)
+
+const LABEL_LOOKUP = new Map<string, FixedLabelOptionInternal>()
+FLATTENED_LABELS.forEach(option => {
+  LABEL_LOOKUP.set(option.label, option)
+})
+
+export function getFixedLabelMeta(label?: string | null): FixedLabelOption | null {
+  if (!label) {
+    return null
+  }
+  const trimmed = label.trim()
+  if (!trimmed) {
+    return null
+  }
+  const match = LABEL_LOOKUP.get(trimmed)
+  return match ? { ...match } : null
+}
+
+export function matchFixedLabels(query: string, limit = 5): FixedLabelOption[] {
+  const normalized = query.trim().toLowerCase()
+  if (!normalized) {
+    return []
+  }
+
+  const matches: FixedLabelOption[] = []
+  for (const option of FLATTENED_LABELS) {
+    if (option.labelLower.includes(normalized)) {
+      matches.push({ ...option })
+    }
+    if (matches.length >= limit) {
+      break
+    }
+  }
+  return matches
+}

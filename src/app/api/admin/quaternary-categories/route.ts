@@ -29,11 +29,50 @@ export async function GET(request: NextRequest) {
   }
 }
 
+const CODE_REGEX = /^[0-9*]{4}$/
+
+type MappingPayload = { code: string; name: string }
+
+function normalizeMappings(input: any): MappingPayload[] {
+  if (!Array.isArray(input)) return []
+  return input
+    .map(item => ({
+      code: typeof item?.code === 'string' ? item.code.trim() : '',
+      name: typeof item?.name === 'string' ? item.name.trim() : '',
+    }))
+    .filter(item => item.code || item.name)
+}
+
+function validateMappings(mappings: MappingPayload[]) {
+  if (!mappings.length) {
+    return '国民经济行业映射至少需要一条数据'
+  }
+  for (const mapping of mappings) {
+    if (!mapping.code || !CODE_REGEX.test(mapping.code)) {
+      return '国民经济行业代码需为4位数字或以*补足的4位字符'
+    }
+    if (!mapping.name) {
+      return '国民经济行业名称不能为空'
+    }
+  }
+  return null
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { name_zh, name_en, slug, sort_order, is_active, tertiary_category_id } = await request.json()
+    const { name_zh, name_en, slug, sort_order, is_active, tertiary_category_id, national_economy_code, national_economy_name, national_economy_mappings } = await request.json()
     if (!name_zh || !name_en || !slug || !tertiary_category_id) {
       return NextResponse.json({ error: '名称、标识符和所属三级分类不能为空' }, { status: 400 })
+    }
+
+    let mappings = normalizeMappings(national_economy_mappings)
+    if (!mappings.length && national_economy_code && national_economy_name) {
+      mappings = [{ code: national_economy_code, name: national_economy_name }]
+    }
+
+    const mappingError = validateMappings(mappings)
+    if (mappingError) {
+      return NextResponse.json({ error: mappingError }, { status: 400 })
     }
 
     // 检查父级是否存在
@@ -65,7 +104,10 @@ export async function POST(request: NextRequest) {
         slug,
         sort_order: sort_order || 0,
         is_active: is_active ?? true,
-        tertiary_category_id
+        tertiary_category_id,
+        national_economy_code: mappings[0].code,
+        national_economy_name: mappings[0].name,
+        national_economy_mappings: mappings
       })
       .select()
       .single()
@@ -79,4 +121,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-

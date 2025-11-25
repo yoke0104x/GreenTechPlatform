@@ -84,6 +84,7 @@ export async function GET(request: NextRequest) {
     const countryId = searchParams.get('countryId')
     const provinceId = searchParams.get('provinceId')
     const developmentZoneId = searchParams.get('developmentZoneId')
+    const sceneLabel = searchParams.get('sceneLabel')
 
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
@@ -137,6 +138,9 @@ export async function GET(request: NextRequest) {
     }
     if (developmentZoneId) {
       query = query.eq('company_development_zone_id', developmentZoneId)
+    }
+    if (sceneLabel) {
+      query = query.eq('custom_label', sceneLabel)
     }
 
     const { data, error, count } = await query
@@ -199,7 +203,7 @@ export async function GET(request: NextRequest) {
         if (tech.quaternary_category_id) {
           const { data: t4 } = await supabase
             .from('admin_quaternary_categories')
-            .select('id, name_zh, name_en, slug, tertiary_category_id')
+            .select('id, name_zh, name_en, slug, tertiary_category_id, national_economy_code, national_economy_name, national_economy_mappings')
             .eq('id', tech.quaternary_category_id)
             .single()
           quaternary_category = t4

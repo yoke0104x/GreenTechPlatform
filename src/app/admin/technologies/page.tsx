@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Plus, Edit, Trash2, Lightbulb, Tag, FileText, Image as ImageIcon, Download, Check, X, MessageSquare, Eye, Filter } from 'lucide-react'
 import { AdminTechnology, AdminCategory, AdminSubcategory, AdminCountry, AdminProvince, AdminDevelopmentZone, AdminCompany, TechnologyAttachment, PaginationParams, TECH_SOURCE_OPTIONS, TECH_REVIEW_STATUS_OPTIONS, TechReviewStatus, TECH_ACQUISITION_METHOD_OPTIONS, AdminTertiaryCategory, AdminQuaternaryCategory } from '@/lib/types/admin'
 import { DataTable } from '@/components/admin/data-table/data-table'
@@ -9,6 +9,7 @@ import { getTechnologiesApi, deleteTechnologyApi, reviewTechnologyApi } from '@/
 import { getCategoriesApi, getSubcategoriesApi } from '@/lib/api/admin-categories'
 import { getProvincesApi } from '@/lib/api/admin-provinces'
 import { getDevelopmentZonesApi } from '@/lib/api/admin-development-zones'
+import { getFixedLabelMeta, FIXED_LABEL_CATEGORIES } from '@/lib/fixed-labels'
 
 export default function TechnologiesPage() {
   const [technologies, setTechnologies] = useState<AdminTechnology[]>([])
@@ -37,6 +38,9 @@ export default function TechnologiesPage() {
     pending_review: 0,
     rejected: 0
   })
+  const viewingTechnologyLabelMeta = viewingTechnology?.custom_label
+    ? getFixedLabelMeta(viewingTechnology.custom_label)
+    : null
 
   // 筛选相关状态
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -47,7 +51,12 @@ export default function TechnologiesPage() {
   const [countryId, setCountryId] = useState('')
   const [provinceId, setProvinceId] = useState('')
   const [developmentZoneId, setDevelopmentZoneId] = useState('')
+  const [sceneLabelFilter, setSceneLabelFilter] = useState('')
 
+  const sceneLabelFilterMeta = useMemo(
+    () => (sceneLabelFilter ? getFixedLabelMeta(sceneLabelFilter) : null),
+    [sceneLabelFilter]
+  )
   // 筛选选项数据
   const [categories, setCategories] = useState<AdminCategory[]>([])
   const [subcategories, setSubcategories] = useState<AdminSubcategory[]>([])
@@ -314,6 +323,7 @@ export default function TechnologiesPage() {
         countryId: countryId || undefined,
         provinceId: provinceId || undefined,
         developmentZoneId: developmentZoneId || undefined,
+        sceneLabel: sceneLabelFilter || undefined,
         ...params
       })
       
@@ -343,6 +353,7 @@ export default function TechnologiesPage() {
     setCountryId('')
     setProvinceId('')
     setDevelopmentZoneId('')
+    setSceneLabelFilter('')
     setTertiaryCategories([])
     setQuaternaryCategories([])
     setPagination(prev => ({ ...prev, current: 1 }))
@@ -748,6 +759,29 @@ export default function TechnologiesPage() {
       }
     },
     {
+      key: 'custom_label',
+      title: '场景标签',
+      width: '160px',
+      render: (_: unknown, record: AdminTechnology) => {
+        if (!record.custom_label) {
+          return <span className="text-gray-400 text-sm">-</span>
+        }
+        const meta = getFixedLabelMeta(record.custom_label)
+        if (meta) {
+          return (
+            <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${meta.color.bgClass} ${meta.color.textClass}`}>
+              {meta.label}
+            </span>
+          )
+        }
+        return (
+          <span className="text-sm text-gray-700">
+            {record.custom_label}
+          </span>
+        )
+      }
+    },
+    {
       key: 'attachments',
       title: '附件',
       width: '160px',
@@ -1101,6 +1135,36 @@ export default function TechnologiesPage() {
                           ))}
                         </select>
                       </div>
+                      {/* 场景标签 */}
+                      <div className="md:col-span-3">
+                        <label className="block text-xs text-gray-600 mb-1">场景标签（固定标签）</label>
+                        <select
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          value={sceneLabelFilter}
+                          onChange={(e) => setSceneLabelFilter(e.target.value)}
+                        >
+                          <option value="">全部</option>
+                          {FIXED_LABEL_CATEGORIES.map(category => (
+                            <optgroup key={category.id} label={category.name}>
+                              {category.tags.map(tag => (
+                                <option key={`${category.id}-${tag}`} value={tag}>
+                                  {tag}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
+                        {sceneLabelFilterMeta ? (
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${sceneLabelFilterMeta.color.bgClass} ${sceneLabelFilterMeta.color.textClass}`}>
+                              {sceneLabelFilterMeta.label}
+                            </span>
+                            <span className="text-xs text-gray-500">{sceneLabelFilterMeta.categoryName}</span>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-500 mt-1">选择后可筛选匹配的固定场景标签</p>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-end space-x-2 mt-4">
@@ -1308,9 +1372,15 @@ export default function TechnologiesPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">自定义标签</label>
                         <div className="bg-gray-50 p-3 rounded-lg">
                           {viewingTechnology.custom_label ? (
-                            <span className="inline-flex items-center px-2 py-1 text-xs text-blue-600 bg-blue-50 border border-blue-400 rounded">
-                              {viewingTechnology.custom_label}
-                            </span>
+                            viewingTechnologyLabelMeta ? (
+                              <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${viewingTechnologyLabelMeta.color.bgClass} ${viewingTechnologyLabelMeta.color.textClass}`}>
+                                {viewingTechnologyLabelMeta.label}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-gray-900">
+                                {viewingTechnology.custom_label}
+                              </span>
+                            )
                           ) : (
                             <span className="text-sm text-gray-500">-</span>
                           )}

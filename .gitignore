@@ -37,6 +37,7 @@ next-env.d.ts
 
 # data
 /data
+data/
 
 #scripts
 /middle_process_scripts

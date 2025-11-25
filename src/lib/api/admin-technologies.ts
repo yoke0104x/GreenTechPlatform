@@ -11,6 +11,7 @@ export async function getTechnologiesApi(params?: Partial<PaginationParams & {
   countryId?: string,
   provinceId?: string,
   developmentZoneId?: string,
+  sceneLabel?: string
 }>): Promise<PaginatedResponse<AdminTechnology>> {
   const searchParams = new URLSearchParams()
   
@@ -28,6 +29,7 @@ export async function getTechnologiesApi(params?: Partial<PaginationParams & {
   if (params?.countryId) searchParams.append('countryId', params.countryId)
   if (params?.provinceId) searchParams.append('provinceId', params.provinceId)
   if (params?.developmentZoneId) searchParams.append('developmentZoneId', params.developmentZoneId)
+  if (params?.sceneLabel) searchParams.append('sceneLabel', params.sceneLabel)
 
   const response = await fetch(`/api/admin/technologies?${searchParams}`)
   

@@ -55,11 +55,19 @@ export interface AdminTertiaryCategory extends BaseEntity, MultiLanguageField {
 /**
  * 四级分类（隶属于三级分类）
  */
+export interface NationalEconomyMapping {
+  code: string
+  name: string
+}
+
 export interface AdminQuaternaryCategory extends BaseEntity, MultiLanguageField {
   tertiary_category_id: string
   slug: string
   sort_order: number
   technology_count?: number
+  national_economy_code?: string
+  national_economy_name?: string
+  national_economy_mappings?: NationalEconomyMapping[]
 }
 
 /**

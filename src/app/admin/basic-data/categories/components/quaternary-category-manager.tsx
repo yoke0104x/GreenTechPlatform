@@ -62,6 +62,17 @@ export function QuaternaryCategoryManager({ tertiaryCategoryId, tertiaryName, on
                   <div>
                     <div className="font-medium">{item.name_zh}</div>
                     <div className="text-xs text-gray-500">{item.name_en}</div>
+                    {(item.national_economy_mappings && item.national_economy_mappings.length > 0) ? (
+                      <div className="text-xs text-gray-500 mt-1">
+                        {item.national_economy_mappings.map((mapping, idx) => (
+                          <div key={`${item.id}-mapping-${idx}`}>代码：{mapping.code} · {mapping.name}</div>
+                        ))}
+                      </div>
+                    ) : (
+                      item.national_economy_code && item.national_economy_name && (
+                        <div className="text-xs text-gray-500 mt-1">行业代码：{item.national_economy_code} · {item.national_economy_name}</div>
+                      )
+                    )}
                   </div>
                   <div className="flex items-center space-x-2">
                     <button onClick={() => { setEditing(item); setShowForm(true) }} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="编辑"><Edit className="w-4 h-4" /></button>

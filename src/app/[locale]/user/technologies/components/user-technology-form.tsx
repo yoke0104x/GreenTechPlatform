@@ -12,6 +12,7 @@ import { uploadMultipleFilesWithInfo, FileAttachment } from '@/lib/supabase-stor
 import { isAllowedTechAttachment, allowedAttachmentHint } from '@/lib/validators'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { safeFetch, handleApiResponse } from '@/lib/safe-fetch'
+import { useFixedLabelSuggestions } from '@/hooks/use-fixed-label-suggestions'
 
 interface UserTechnologyFormProps {
   technology?: AdminTechnology | null
@@ -58,6 +59,16 @@ export function UserTechnologyForm({ technology, onSuccess, onCancel }: UserTech
     company_province_id: '',
     company_development_zone_id: ''
   })
+
+  const {
+    suggestions: labelSuggestions,
+    isOpen: showLabelSuggestions,
+    setIsOpen: setShowLabelSuggestions,
+    containerRef: suggestionContainerRef,
+    matchedLabel: customLabelMeta,
+    handleFocus: handleLabelInputFocus,
+    handleSelect: handleSelectFixedLabel
+  } = useFixedLabelSuggestions(formData.custom_label, (label) => handleInputChange('custom_label', label))
 
   useEffect(() => {
     loadCategories()
@@ -126,6 +137,7 @@ export function UserTechnologyForm({ technology, onSuccess, onCancel }: UserTech
       loadSubcategories(value)
     }
   }
+
 
 
   const handleAttachmentUpload = async (files: File[]) => {
@@ -504,7 +516,7 @@ export function UserTechnologyForm({ technology, onSuccess, onCancel }: UserTech
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {locale === 'en' ? 'Custom Label ' : '自定义标签'} <span className="text-gray-400 text-xs">{locale === 'en' ? '(Optional)' : '（可选）'}</span>
                 </label>
-                <div className="relative">
+                <div className="relative" ref={suggestionContainerRef}>
                   <input
                     type="text"
                     value={formData.custom_label}
@@ -512,8 +524,10 @@ export function UserTechnologyForm({ technology, onSuccess, onCancel }: UserTech
                       const value = e.target.value
                       if (value.length <= 20) {
                         handleInputChange('custom_label', value)
+                        setShowLabelSuggestions(value.trim().length > 0)
                       }
                     }}
+                    onFocus={handleLabelInputFocus}
                     placeholder={locale === 'en' 
                       ? 'Enter custom label, e.g.: Energy Saving, Smart Manufacturing...'
                       : '输入自定义标签，如：节能环保、智能制造...'
@@ -524,7 +538,37 @@ export function UserTechnologyForm({ technology, onSuccess, onCancel }: UserTech
                   <div className="absolute right-3 top-2 text-xs text-gray-400">
                     {formData.custom_label.length}/20
                   </div>
+                  {showLabelSuggestions && labelSuggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto z-10">
+                      {labelSuggestions.map(option => (
+                        <button
+                          type="button"
+                          key={`${option.categoryId}-${option.label}`}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => handleSelectFixedLabel(option)}
+                          className="w-full px-3 py-2 flex items-center justify-between text-left hover:bg-gray-50"
+                        >
+                          <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${option.color.bgClass} ${option.color.textClass}`}>
+                            {option.label}
+                          </span>
+                          <span className="ml-3 text-xs text-gray-500">{option.categoryName}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
+                {customLabelMeta && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${customLabelMeta.color.bgClass} ${customLabelMeta.color.textClass}`}>
+                      {customLabelMeta.label}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {locale === 'en'
+                        ? `Matched fixed label (${customLabelMeta.categoryName})`
+                        : `匹配到${customLabelMeta.categoryName}固定标签`}
+                    </span>
+                  </div>
+                )}
                 <p className="text-xs text-gray-500 mt-1">
                   {locale === 'en' 
                     ? 'Custom labels for display on technology showcase pages, maximum 20 characters'

@@ -20,6 +20,7 @@ export function QuaternaryCategoryForm({ tertiaryCategoryId, category, onSuccess
     sort_order: 0,
     is_active: true,
   })
+  const [mappings, setMappings] = useState([{ code: '', name: '' }])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -32,6 +33,16 @@ export function QuaternaryCategoryForm({ tertiaryCategoryId, category, onSuccess
         sort_order: category.sort_order,
         is_active: category.is_active,
       })
+      if (category.national_economy_mappings && category.national_economy_mappings.length > 0) {
+        setMappings(category.national_economy_mappings.map(m => ({ code: m.code, name: m.name })))
+      } else {
+        setMappings([{
+          code: category.national_economy_code || '',
+          name: category.national_economy_name || '',
+        }])
+      }
+    } else {
+      setMappings([{ code: '', name: '' }])
     }
   }, [category])
 
@@ -50,8 +61,38 @@ export function QuaternaryCategoryForm({ tertiaryCategoryId, category, onSuccess
     if (!formData.slug.trim()) e.slug = '标识符不能为空'
     if (formData.slug && !/^[a-z0-9-]+$/.test(formData.slug)) e.slug = '仅限小写字母、数字、连字符'
     if (formData.sort_order < 0) e.sort_order = '排序值不能为负'
+    const sanitizedMappings = mappings.map(m => ({
+      code: m.code.trim(),
+      name: m.name.trim()
+    }))
+    if (!sanitizedMappings.length || sanitizedMappings.every(m => !m.code && !m.name)) {
+      e.mappings = '至少添加一条国民经济行业映射'
+    } else {
+      sanitizedMappings.forEach((mapping, index) => {
+        if (!mapping.code) {
+          e[`mapping-${index}-code`] = '行业代码不能为空'
+        } else if (!/^[0-9*]{4}$/.test(mapping.code)) {
+          e[`mapping-${index}-code`] = '请输入4位数字，若不足可在末尾补*'
+        }
+        if (!mapping.name) {
+          e[`mapping-${index}-name`] = '行业名称不能为空'
+        }
+      })
+    }
     setErrors(e)
     return Object.keys(e).length === 0
+  }
+
+  const updateMapping = (index: number, field: 'code' | 'name', value: string) => {
+    setMappings(prev => prev.map((m, i) => i === index ? { ...m, [field]: field === 'code' ? value.replace(/[^0-9*]/g, '').slice(0, 4) : value } : m))
+  }
+
+  const addMapping = () => {
+    setMappings(prev => [...prev, { code: '', name: '' }])
+  }
+
+  const removeMapping = (index: number) => {
+    setMappings(prev => prev.length <= 1 ? prev : prev.filter((_, i) => i !== index))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,11 +105,13 @@ export function QuaternaryCategoryForm({ tertiaryCategoryId, category, onSuccess
         await updateQuaternaryCategoryApi(category.id, {
           ...formData,
           tertiary_category_id: tertiaryCategoryId,
+          national_economy_mappings: mappings.map(m => ({ code: m.code.trim(), name: m.name.trim() })),
         })
       } else {
         await createQuaternaryCategoryApi({
           ...formData,
           tertiary_category_id: tertiaryCategoryId,
+          national_economy_mappings: mappings.map(m => ({ code: m.code.trim(), name: m.name.trim() })),
         })
       }
       onSuccess()
@@ -122,6 +165,40 @@ export function QuaternaryCategoryForm({ tertiaryCategoryId, category, onSuccess
             {errors.slug && <p className="text-xs text-red-600 mt-1">{errors.slug}</p>}
           </div>
           <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium">国民经济行业映射</label>
+              <button type="button" className="text-sm text-green-600" onClick={addMapping}>+ 新增映射</button>
+            </div>
+            {errors.mappings && <p className="text-xs text-red-600 mb-2">{errors.mappings}</p>}
+            <div className="space-y-3">
+              {mappings.map((mapping, index) => (
+                <div key={`mapping-${index}`} className="flex items-start gap-2">
+                  <div className="w-24">
+                    <input
+                      value={mapping.code}
+                      onChange={(e) => updateMapping(index, 'code', e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-lg ${errors[`mapping-${index}-code`] ? 'border-red-300' : 'border-gray-300'}`}
+                      placeholder="3411"
+                    />
+                    {errors[`mapping-${index}-code`] && <p className="text-xs text-red-600 mt-1">{errors[`mapping-${index}-code`]}</p>}
+                  </div>
+                  <div className="flex-1">
+                    <input
+                      value={mapping.name}
+                      onChange={(e) => updateMapping(index, 'name', e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-lg ${errors[`mapping-${index}-name`] ? 'border-red-300' : 'border-gray-300'}`}
+                      placeholder="行业名称"
+                    />
+                    {errors[`mapping-${index}-name`] && <p className="text-xs text-red-600 mt-1">{errors[`mapping-${index}-name`]}</p>}
+                  </div>
+                  {mappings.length > 1 && (
+                    <button type="button" className="text-sm text-red-600" onClick={() => removeMapping(index)}>删除</button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
             <label className="block text-sm font-medium mb-1">排序值</label>
             <input
               type="number"
@@ -146,4 +223,3 @@ export function QuaternaryCategoryForm({ tertiaryCategoryId, category, onSuccess
     </div>
   )
 }
-

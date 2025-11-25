@@ -10,6 +10,7 @@ import { uploadMultipleFilesWithInfo } from '@/lib/supabase-storage'
 import { isAllowedTechAttachment, allowedAttachmentHint } from '@/lib/validators'
 import { generateCompanyLogo } from '@/lib/logoGenerator'
 import { FileText, Trash2, Upload } from 'lucide-react'
+import { useFixedLabelSuggestions } from '@/hooks/use-fixed-label-suggestions'
 
 interface TechnologyFormProps {
   technology?: AdminTechnology | null
@@ -66,6 +67,17 @@ export function TechnologyForm({ technology, onSuccess, onCancel }: TechnologyFo
   const [provinces, setProvinces] = useState<AdminProvince[]>([])
   const [developmentZones, setDevelopmentZones] = useState<AdminDevelopmentZone[]>([])
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(false)
+  const {
+    suggestions: labelSuggestions,
+    isOpen: showLabelSuggestions,
+    setIsOpen: setShowLabelSuggestions,
+    containerRef: suggestionContainerRef,
+    matchedLabel: customLabelMeta,
+    handleFocus: handleLabelInputFocus,
+    handleSelect: handleSelectFixedLabel
+  } = useFixedLabelSuggestions(formData.custom_label, (label) =>
+    setFormData(prev => ({ ...prev, custom_label: label }))
+  )
 
   // 生成企业logo预览
   const generateLogoPreview = async (companyName: string) => {
@@ -897,30 +909,58 @@ export function TechnologyForm({ technology, onSuccess, onCancel }: TechnologyFo
 
           {/* 自定义标签 */}
           <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                自定义标签（可选）
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={formData.custom_label}
-                  onChange={(e) => {
-                    const value = e.target.value
-                    if (value.length <= 20) {
-                      setFormData(prev => ({ ...prev, custom_label: value }))
-                    }
-                  }}
-                  placeholder="输入自定义标签，如：节能环保、智能制造..."
-                  maxLength={20}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent pr-16"
-                />
-                <div className="absolute right-3 top-2 text-xs text-gray-400">
-                  {formData.custom_label.length}/20
-                </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              自定义标签（可选）
+            </label>
+            <div className="relative" ref={suggestionContainerRef}>
+              <input
+                type="text"
+                value={formData.custom_label}
+                onChange={(e) => {
+                  const value = e.target.value
+                  if (value.length <= 20) {
+                    setFormData(prev => ({ ...prev, custom_label: value }))
+                    setShowLabelSuggestions(value.trim().length > 0)
+                  }
+                }}
+                onFocus={handleLabelInputFocus}
+                placeholder="输入自定义标签，如：节能环保、智能制造..."
+                maxLength={20}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent pr-16"
+              />
+              <div className="absolute right-3 top-2 text-xs text-gray-400">
+                {formData.custom_label.length}/20
               </div>
-              <p className="text-xs text-gray-500 mt-1">用于在技术展示页面显示的自定义标签，最多20个字符</p>
+              {showLabelSuggestions && labelSuggestions.length > 0 && (
+                <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto z-10">
+                  {labelSuggestions.map(option => (
+                    <button
+                      type="button"
+                      key={`${option.categoryId}-${option.label}`}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => handleSelectFixedLabel(option)}
+                      className="w-full px-3 py-2 flex items-center justify-between text-left hover:bg-gray-50"
+                    >
+                      <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${option.color.bgClass} ${option.color.textClass}`}>
+                        {option.label}
+                      </span>
+                      <span className="ml-3 text-xs text-gray-500">{option.categoryName}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
+            {customLabelMeta && (
+              <div className="flex items-center gap-2 mt-2">
+                <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${customLabelMeta.color.bgClass} ${customLabelMeta.color.textClass}`}>
+                  {customLabelMeta.label}
+                </span>
+                <span className="text-xs text-gray-500">已匹配至{customLabelMeta.categoryName}固定标签</span>
+              </div>
+            )}
+            <p className="text-xs text-gray-500 mt-1">用于在技术展示页面显示的自定义标签，最多20个字符</p>
           </div>
+        </div>
 
           {/* 技术网址（可选） */}
           <div className="mt-4">

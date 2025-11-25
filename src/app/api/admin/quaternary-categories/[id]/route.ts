@@ -4,11 +4,50 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://qpeanozckghazlzzhrni.supabase.co'
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwZWFub3pja2doYXpsenpocm5pIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDI4NTg1MCwiZXhwIjoyMDY5ODYxODUwfQ.wE2j1kNbMKkQgZSkzLR7z6WFft6v90VfWkSd5SBi2P8'
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
+const CODE_REGEX = /^[0-9*]{4}$/
+
+type MappingPayload = { code: string; name: string }
+
+function normalizeMappings(input: any): MappingPayload[] {
+  if (!Array.isArray(input)) return []
+  return input
+    .map(item => ({
+      code: typeof item?.code === 'string' ? item.code.trim() : '',
+      name: typeof item?.name === 'string' ? item.name.trim() : '',
+    }))
+    .filter(item => item.code || item.name)
+}
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params
     const payload = await request.json()
+
+    let mappings: MappingPayload[] | undefined
+    if (payload.national_economy_mappings !== undefined) {
+      mappings = normalizeMappings(payload.national_economy_mappings)
+      if (!mappings.length) {
+        return NextResponse.json({ error: '国民经济行业映射至少需要一条数据' }, { status: 400 })
+      }
+      for (const mapping of mappings) {
+        if (!mapping.code || !CODE_REGEX.test(mapping.code)) {
+          return NextResponse.json({ error: '国民经济行业代码需为4位数字或以*补足的4位字符' }, { status: 400 })
+        }
+        if (!mapping.name) {
+          return NextResponse.json({ error: '国民经济行业名称不能为空' }, { status: 400 })
+        }
+      }
+    } else if (payload.national_economy_code !== undefined || payload.national_economy_name !== undefined) {
+      const code = typeof payload.national_economy_code === 'string' ? payload.national_economy_code.trim() : ''
+      const name = typeof payload.national_economy_name === 'string' ? payload.national_economy_name.trim() : ''
+      if (!code || !CODE_REGEX.test(code)) {
+        return NextResponse.json({ error: '国民经济行业代码需为4位数字或以*补足的4位字符' }, { status: 400 })
+      }
+      if (!name) {
+        return NextResponse.json({ error: '国民经济行业名称不能为空' }, { status: 400 })
+      }
+      mappings = [{ code, name }]
+    }
 
     const updateData = {
       name_zh: payload.name_zh,
@@ -16,7 +55,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       slug: payload.slug,
       sort_order: payload.sort_order,
       is_active: payload.is_active,
-      tertiary_category_id: payload.tertiary_category_id
+      tertiary_category_id: payload.tertiary_category_id,
+      national_economy_code: mappings?.[0]?.code ?? payload.national_economy_code,
+      national_economy_name: mappings?.[0]?.name ?? payload.national_economy_name,
+      national_economy_mappings: mappings
     }
     const filtered = Object.fromEntries(Object.entries(updateData).filter(([, v]) => v !== undefined))
 

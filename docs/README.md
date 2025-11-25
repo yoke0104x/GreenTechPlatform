@@ -105,10 +105,12 @@
 │   ├── lib/                  # 工具库
 │   │   ├── custom-auth.ts    # 自定义认证工具（密码哈希、JWT生成、令牌校验等）
 │   │   ├── utils.ts          # 通用工具函数
+│   │   ├── fixed-labels.ts   # 152个固定场景标签配置与匹配工具
 │   │   ├── mock-data.ts      # Mock数据
 │   │   └── validators.ts     # 表单校验工具（邮箱/手机号）
 │   ├── hooks/                # 自定义Hooks
-│   │   └── useFavoritesData.ts # 收藏数据加载与状态同步
+│   │   ├── useFavoritesData.ts # 收藏数据加载与状态同步
+│   │   └── use-fixed-label-suggestions.ts # 自定义/固定标签智能匹配
 │   └── api/                  # API调用封装
 │       ├── index.ts          # API客户端基础配置
 │       ├── auth.ts           # 用户认证API（包含验证码登录）
@@ -118,6 +120,11 @@
 │       └── company.ts        # 企业信息API
 ├── package.json              # 项目依赖配置
 ├── scripts/
+│   ├── parse-green-taxonomy.js   # 解析 docs/green-taxo.md，生成结构化产业分类JSON
+│   ├── import-green-taxonomy.js  # 调用管理端API批量创建新的四级技术分类体系
+│   ├── cleanup-old-taxonomy.js   # 批量解绑技术旧标签并删除遗留分类树
+│   ├── sql/
+│   │   └── update-taxonomy-translations.sql # 批量更新三级/四级分类英文名+默认图片
 │   ├── playwright/
 │   │   ├── crawl-nbc-business.js     # 示例：使用 Playwright 抓取 NBC Business
 │   │   └── scrape-wipo-article.js    # 使用 Playwright 抓取 WIPO Green 技术详情页
