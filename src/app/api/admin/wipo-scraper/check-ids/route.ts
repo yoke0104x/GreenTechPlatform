@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const ids = Array.isArray(body?.ids) ? body.ids : []
-    const cleaned = Array.from(
+    const cleaned: string[] = Array.from(
       new Set(
         ids
           .map((id: any) => String(id || '').trim())
