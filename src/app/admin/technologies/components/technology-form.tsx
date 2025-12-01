@@ -32,7 +32,7 @@ export function TechnologyForm({ technology, onSuccess, onCancel }: TechnologyFo
     subcategory_id: '',
     tertiary_category_id: '',
     quaternary_category_id: '',
-    custom_label: '', // 自定义标签
+    custom_label: '', // 应用场景标签
     featured_weight: 0,
     attachment_urls: [] as string[], // 技术资料（为了向后兼容）
     attachments: [] as TechnologyAttachment[], // 新的附件结构
@@ -907,10 +907,10 @@ export function TechnologyForm({ technology, onSuccess, onCancel }: TechnologyFo
             )}
           </div>
 
-          {/* 自定义标签 */}
+          {/* 应用场景标签 */}
           <div className="mt-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              自定义标签（可选）
+              应用场景标签（可选）
             </label>
             <div className="relative" ref={suggestionContainerRef}>
               <input
@@ -924,7 +924,7 @@ export function TechnologyForm({ technology, onSuccess, onCancel }: TechnologyFo
                   }
                 }}
                 onFocus={handleLabelInputFocus}
-                placeholder="输入自定义标签，如：节能环保、智能制造..."
+                placeholder="输入应用场景标签，如：节能环保、智能制造..."
                 maxLength={20}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent pr-16"
               />
@@ -958,7 +958,7 @@ export function TechnologyForm({ technology, onSuccess, onCancel }: TechnologyFo
                 <span className="text-xs text-gray-500">已匹配至{customLabelMeta.categoryName}固定标签</span>
               </div>
             )}
-            <p className="text-xs text-gray-500 mt-1">用于在技术展示页面显示的自定义标签，最多20个字符</p>
+            <p className="text-xs text-gray-500 mt-1">用于在技术展示页面显示的应用场景标签，最多20个字符</p>
           </div>
         </div>
 

@@ -153,6 +153,37 @@ function sanitizeTechPayload(payload: any) {
   return payload
 }
 
+async function upsertWipoId(supabase: any, wipoId: string, techId: string) {
+  if (!wipoId) return
+  await supabase
+    .from('wipo_technology_ids')
+    .upsert({ wipo_id: wipoId, tech_id: techId }, { onConflict: 'wipo_id' })
+}
+
+async function findExistingTechIdByWipoId(supabase: any, wipoId: string) {
+  if (!wipoId) return null
+  const { data: mapped, error: mapErr } = await supabase
+    .from('wipo_technology_ids')
+    .select('tech_id')
+    .eq('wipo_id', wipoId)
+    .maybeSingle()
+  if (mapErr && mapErr.code !== 'PGRST116') throw mapErr
+  if (mapped?.tech_id) return mapped.tech_id
+
+  // 兼容旧数据：回退到描述模糊匹配
+  const { data: fallback, error } = await supabase
+    .from('admin_technologies')
+    .select('id')
+    .ilike('description_en', `%ID: ${wipoId}%`)
+    .limit(1)
+  if (error) throw error
+  if (fallback && fallback.length) {
+    await upsertWipoId(supabase, wipoId, fallback[0].id)
+    return fallback[0].id
+  }
+  return null
+}
+
 interface ProcessedItem {
   id: string
   technologyNameEN?: string
@@ -212,6 +243,7 @@ export async function POST(req: NextRequest) {
       try {
         console.log(`💾 正在导入 (${progress}) ID=${item.id}`)
 
+        const wipoId = String(item.id || '').trim()
         // Upload tech image to storage (best-effort)
         let imageUrl: string | null = null
         if (item.technologyImageUrl) {
@@ -285,17 +317,14 @@ export async function POST(req: NextRequest) {
         // Enforce DB length constraints to avoid "value too long" errors
         payload = sanitizeTechPayload(payload)
 
-        // Upsert by matching ID in description_en (ID: <id>)
-        const { data: existing, error: findErr } = await supabase
-          .from('admin_technologies')
-          .select('id, image_url, review_status')
-          .ilike('description_en', `%ID: ${item.id}%`)
-          .limit(1)
-        if (findErr) {
-          console.warn(`⚠️ 查找已存在记录失败 ID=${item.id}:`, findErr.message)
-        }
-        if (existing && existing.length) {
-          const targetId = existing[0].id
+        const existingTechId = await findExistingTechIdByWipoId(supabase, wipoId)
+        if (existingTechId) {
+          const targetId = existingTechId
+          const { data: existingMeta } = await supabase
+            .from('admin_technologies')
+            .select('image_url')
+            .eq('id', targetId)
+            .maybeSingle()
           const decision = decisions?.[String(item.id)] || onDuplicate || 'overwrite'
           if (decision === 'skip') {
             results.push({ id: item.id, skipped: true, db_id: targetId, progress })
@@ -311,7 +340,7 @@ export async function POST(req: NextRequest) {
             company_country_id: payload.company_country_id,
             company_name_zh: payload.company_name_zh,
             company_name_en: payload.company_name_en,
-            image_url: existing[0].image_url || payload.image_url,
+            image_url: existingMeta?.image_url || payload.image_url,
             company_logo_url: payload.company_logo_url || null,
             custom_label: payload.custom_label,
             category_id: payload.category_id,
@@ -322,6 +351,7 @@ export async function POST(req: NextRequest) {
             .update(updateData)
             .eq('id', targetId)
           if (upErr) throw upErr
+          await upsertWipoId(supabase, wipoId, targetId)
           results.push({ id: item.id, updated: true, db_id: targetId, progress })
         } else {
           const { data, error } = await supabase
@@ -330,6 +360,7 @@ export async function POST(req: NextRequest) {
             .select('id')
             .single()
           if (error) throw error
+          await upsertWipoId(supabase, wipoId, data.id)
           results.push({ id: item.id, created: true, db_id: data.id, progress })
         }
         

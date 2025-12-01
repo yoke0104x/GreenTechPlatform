@@ -42,7 +42,7 @@ export function UserTechnologyForm({ technology, onSuccess, onCancel }: UserTech
     acquisition_method: (technology?.acquisition_method || 'enterprise_report') as TechAcquisitionMethod,
     category_id: technology?.category_id || '',
     subcategory_id: technology?.subcategory_id || '',
-    custom_label: technology?.custom_label || '', // 自定义标签
+    custom_label: technology?.custom_label || '', // 应用场景标签
     image_url: technology?.image_url || '',
     attachment_urls: technology?.attachment_urls || [],
     attachments: technology?.attachments || [],
@@ -511,10 +511,10 @@ export function UserTechnologyForm({ technology, onSuccess, onCancel }: UserTech
                 {/* 技术获取方式字段已隐藏，用户创建的技术自动设置为"企业上报" */}
               </div>
               
-              {/* 自定义标签 */}
+              {/* 应用场景标签 */}
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {locale === 'en' ? 'Custom Label ' : '自定义标签'} <span className="text-gray-400 text-xs">{locale === 'en' ? '(Optional)' : '（可选）'}</span>
+                  {locale === 'en' ? 'Application Scenario Tags ' : '应用场景标签'} <span className="text-gray-400 text-xs">{locale === 'en' ? '(Optional)' : '（可选）'}</span>
                 </label>
                 <div className="relative" ref={suggestionContainerRef}>
                   <input
@@ -529,8 +529,8 @@ export function UserTechnologyForm({ technology, onSuccess, onCancel }: UserTech
                     }}
                     onFocus={handleLabelInputFocus}
                     placeholder={locale === 'en' 
-                      ? 'Enter custom label, e.g.: Energy Saving, Smart Manufacturing...'
-                      : '输入自定义标签，如：节能环保、智能制造...'
+                      ? 'Enter application scenario tags, e.g.: Energy Saving, Smart Manufacturing...'
+                      : '输入应用场景标签，如：节能环保、智能制造...'
                     }
                     maxLength={20}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 pr-16"
@@ -571,8 +571,8 @@ export function UserTechnologyForm({ technology, onSuccess, onCancel }: UserTech
                 )}
                 <p className="text-xs text-gray-500 mt-1">
                   {locale === 'en' 
-                    ? 'Custom labels for display on technology showcase pages, maximum 20 characters'
-                    : '用于在技术展示页面显示的自定义标签，最多20个字符'
+                    ? 'Application scenario tags for display on technology showcase pages, maximum 20 characters'
+                    : '用于在技术展示页面显示的应用场景标签，最多20个字符'
                   }
                 </p>
               </div>

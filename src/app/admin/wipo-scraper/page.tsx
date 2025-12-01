@@ -40,6 +40,28 @@ export default function WipoScraperPage() {
 
   const parseIds = (text: string) => Array.from(new Set(text.split(/[\s,]+/).map(s => s.trim()).filter(Boolean)))
 
+  const filterKnownIds = async (candidateIds: string[]) => {
+    if (!candidateIds.length) return { toFetch: [], skipped: [] }
+    try {
+      const res = await fetch('/api/admin/wipo-scraper/check-ids', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: candidateIds })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || res.statusText)
+      const existingIds: string[] = Array.isArray(data.existingIds) ? data.existingIds : []
+      const missingIds: string[] = Array.isArray(data.missingIds) ? data.missingIds : candidateIds
+      if (existingIds.length) {
+        setLogs(prev => [...prev, `⏭️ 已在数据库中，跳过抓取: ${existingIds.join(', ')}`])
+      }
+      return { toFetch: missingIds, skipped: existingIds }
+    } catch (e: any) {
+      setLogs(prev => [...prev, `⚠️ ID校验失败，按原输入继续：${e?.message || e}`])
+      return { toFetch: candidateIds, skipped: [] }
+    }
+  }
+
   // 抓取+处理工作流（不自动导入）
   const handleScrapeAndProcess = async () => {
     const ids = parseIds(idsInput)
@@ -47,11 +69,22 @@ export default function WipoScraperPage() {
     setProcessing(true)
     setPaused(false)
     setProgress(0)
+    const { toFetch: idsToProcess, skipped } = await filterKnownIds(ids)
+    if (!idsToProcess.length) {
+      setLogs(prev => [...prev, '✅ 输入的ID均已存在于数据库，已全部跳过抓取'])
+      setProcessing(false)
+      setProgress(100)
+      return
+    }
     const started = Date.now()
-    setLogs(prev => [...prev, `🚀 开始抓取+处理工作流，共 ${ids.length} 条，间隔 ${intervalSec}s ...`])
+    if (skipped.length) {
+      setLogs(prev => [...prev, `（提示）已跳过 ${skipped.length} 条已存在的ID，开始处理剩余 ${idsToProcess.length} 条`])
+    } else {
+      setLogs(prev => [...prev, `🚀 开始抓取+处理工作流，共 ${idsToProcess.length} 条，间隔 ${intervalSec}s ...`])
+    }
     
-    for (let i = 0; i < ids.length; i++) {
-      const id = ids[i]
+    for (let i = 0; i < idsToProcess.length; i++) {
+      const id = idsToProcess[i]
       // 支持暂停/继续
       while (paused) {
         await new Promise(r => setTimeout(r, 200))
@@ -89,11 +122,11 @@ export default function WipoScraperPage() {
       } catch (e: any) {
         const isAbort = e?.name === 'AbortError'
         const message = isAbort ? '请求超时（超过 3 分钟未完成）' : e?.message || String(e)
-        setLogs(prev => [...prev, `❌ 异常 ID=${id}：${message}`])
+          setLogs(prev => [...prev, `❌ 异常 ID=${id}：${message}`])
         setFailedIds(prev => Array.from(new Set([...prev, String(id)])))
       }
-      setProgress(Math.round(((i+1)/ids.length)*100))
-      if (i !== ids.length-1) await new Promise(r => setTimeout(r, Math.max(0, intervalSec)*1000))
+      setProgress(Math.round(((i+1)/idsToProcess.length)*100))
+      if (i !== idsToProcess.length-1) await new Promise(r => setTimeout(r, Math.max(0, intervalSec)*1000))
     }
     const elapsed = Math.round((Date.now()-started)/1000)
     setLogs(prev => [...prev, `🎉 抓取+处理工作流完成，用时 ${elapsed}s，请验证数据后点击批量导入`])
@@ -106,11 +139,22 @@ export default function WipoScraperPage() {
     setProcessing(true)
     setPaused(false)
     setProgress(0)
+    const { toFetch: idsToScrape, skipped } = await filterKnownIds(ids)
+    if (!idsToScrape.length) {
+      setLogs(prev => [...prev, '✅ 输入的ID均已存在于数据库，已全部跳过抓取'])
+      setProcessing(false)
+      setProgress(100)
+      return
+    }
     const results: any[] = []
     const started = Date.now()
-    setLogs(prev => [...prev, `开始批量抓取，共 ${ids.length} 条，间隔 ${intervalSec}s ...`])
-    for (let i = 0; i < ids.length; i++) {
-      const id = ids[i]
+    if (skipped.length) {
+      setLogs(prev => [...prev, `（提示）已跳过 ${skipped.length} 条已存在的ID，开始抓取剩余 ${idsToScrape.length} 条`])
+    } else {
+      setLogs(prev => [...prev, `开始批量抓取，共 ${idsToScrape.length} 条，间隔 ${intervalSec}s ...`])
+    }
+    for (let i = 0; i < idsToScrape.length; i++) {
+      const id = idsToScrape[i]
       while (paused) { await new Promise(r => setTimeout(r, 200)) }
       try {
         // fetch with client-side timeout guard
@@ -133,8 +177,8 @@ export default function WipoScraperPage() {
         setLogs(prev => [...prev, `抓取异常 ID=${id}：${message}`])
         setFailedIds(prev => Array.from(new Set([...prev, String(id)])))
       }
-      setProgress(Math.round(((i+1)/ids.length)*100))
-      if (i !== ids.length-1) await new Promise(r => setTimeout(r, Math.max(0, intervalSec)*1000))
+      setProgress(Math.round(((i+1)/idsToScrape.length)*100))
+      if (i !== idsToScrape.length-1) await new Promise(r => setTimeout(r, Math.max(0, intervalSec)*1000))
     }
     const elapsed = Math.round((Date.now()-started)/1000)
     setLogs(prev => [...prev, `批量抓取完成，用时 ${elapsed}s`])
@@ -542,7 +586,7 @@ export default function WipoScraperPage() {
                 <input className="w-full border rounded p-2" value={Array.isArray(it.deployedInCountry)?it.deployedInCountry.join(', '):(it.deployedInCountry||'')} onChange={e=>{const n=[...items]; n[idx].deployedInCountry=e.target.value; setItems(n)}} />
               </div>
               <div>
-                <label className="text-xs text-gray-500">自定义标签（|分隔）</label>
+                <label className="text-xs text-gray-500">应用场景标签（|分隔）</label>
                 <input className="w-full border rounded p-2" value={(it.customLabels||[]).join('|')} onChange={e=>{const n=[...items]; n[idx].customLabels=e.target.value.split('|').map((s:string)=>s.trim()).filter(Boolean); setItems(n)}} />
               </div>
               <div className="md:col-span-3">

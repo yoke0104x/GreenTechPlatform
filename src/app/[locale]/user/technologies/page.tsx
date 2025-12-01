@@ -584,7 +584,7 @@ export default function UserTechnologiesPage() {
                         <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-lg">{getTechAcquisitionMethodLabel(viewingTechnology.acquisition_method)}</p>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">{locale === 'en' ? 'Custom Label' : '自定义标签'}</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{locale === 'en' ? 'Application Scenario Tags' : '应用场景标签'}</label>
                         <div className="bg-gray-50 p-3 rounded-lg">
                           {viewingTechnology.custom_label ? (
                             <span className="inline-flex items-center px-2 py-1 text-xs text-blue-600 bg-blue-50 border border-blue-400 rounded">

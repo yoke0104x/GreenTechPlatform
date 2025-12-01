@@ -17,6 +17,45 @@ export function ProductCategories({
   onCategorySelect,
   locale 
 }: ProductCategoriesProps) {
+  // 英文副标题兜底映射，确保第二行始终为英文
+  const englishTitleMap: Record<string, string> = {
+    'energy-saving': 'ENERGY SAVING',
+    'clean-energy': 'CLEAN ENERGY',
+    'clean-production': 'CLEAN PRODUCTION',
+    'new-energy-vehicle': 'NEW ENERGY VEHICLE',
+    '节能': 'ENERGY SAVING',
+    '节能环保技术': 'ENERGY SAVING',
+    '清洁能源': 'CLEAN ENERGY',
+    '清洁能源技术': 'CLEAN ENERGY',
+    '清洁生产': 'CLEAN PRODUCTION',
+    '清洁生产技术': 'CLEAN PRODUCTION',
+    '新能源汽车': 'NEW ENERGY VEHICLE',
+    '新能源汽车技术': 'NEW ENERGY VEHICLE'
+  };
+
+  const getEnglishSubtitle = (category: ProductCategory) => {
+    // 优先使用接口返回的英文名称，且与中文不同
+    if (category.nameEn && category.nameEn.trim() && category.nameEn.trim() !== category.name?.trim()) {
+      return category.nameEn;
+    }
+    // 其次用 id/slug 或中文名映射
+    const keyCandidates = [
+      category.id,
+      (category as any).slug,
+      category.name
+    ].filter(Boolean) as string[];
+    for (const key of keyCandidates) {
+      if (englishTitleMap[key]) return englishTitleMap[key];
+    }
+    // 最后兜底：直接返回已有英文或中文
+    const candidate = category.nameEn || category.name || '';
+    // 如果仍然是中文，则回退到映射或通用英文标题，避免出现中文副标题
+    if (/[\u4e00-\u9fa5]/.test(candidate)) {
+      return englishTitleMap[category.id] || englishTitleMap[category.name || ''] || englishTitleMap[(category as any).slug] || 'ENERGY SAVING';
+    }
+    return candidate;
+  };
+
   const [loadedImages, setLoadedImages] = useState<{[key: number]: string}>({});
   const t = useTranslations('home');
 
@@ -127,7 +166,7 @@ export function ProductCategories({
                   height: '300px',
                   backgroundImage: loadedImages[index] 
                     ? `url('${loadedImages[index]}')`
-                    : 'none',
+                   : 'none',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   backgroundRepeat: 'no-repeat',
@@ -145,16 +184,18 @@ export function ProductCategories({
                    <div className="absolute inset-0 border-3 border-yellow-400"></div>
                  )}
 
-                                 {/* 内容区域 */}
-                <div className="relative p-6 h-full flex flex-col justify-center text-white text-center">
+                   {/* 内容区域 */}
+               <div className="relative p-6 h-full flex flex-col justify-center text-white text-center">
                    {/* 顶部标题区域 - 固定高度以对齐下方统计 */}
                    <div className="mt-4 mb-2 flex-none h-24 md:h-28 flex flex-col justify-center overflow-hidden">
-                     <h3 className="text-xl lg:text-2xl font-bold mb-1 text-center leading-tight">
-                       {locale === 'en' ? category.nameEn : category.name}
-                     </h3>
-                     <p className="text-sm text-white/80 uppercase tracking-wider font-medium text-center">
-                       {locale === 'en' ? category.name : category.nameEn}
-                     </p>
+                      <h3 className="text-xl lg:text-2xl font-bold mb-1 text-center leading-tight">
+                        {/* 始终用中文作为主标题，保持中英文页面一致 */}
+                        {category.name || category.nameEn}
+                      </h3>
+                      <p className="text-sm text-white/80 uppercase tracking-wider font-medium text-center">
+                       {/* 次行固定使用英文名称（接口英文或本地映射兜底），中英文页面均保持英文副标题 */}
+                       {getEnglishSubtitle(category)}
+                      </p>
                    </div>
 
                    {/* 数字统计区域 - 贴近卡片底部，跨卡水平对齐 */}

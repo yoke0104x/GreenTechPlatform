@@ -13,16 +13,41 @@ export async function GET(req: NextRequest) {
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    const { data, error } = await supabase
-      .from('admin_technologies')
-      .select('id, name_en, name_zh, description_en, description_zh, image_url, website_url, company_name_en, company_name_zh, company_country_id, category_id, subcategory_id, review_status, created_at, updated_at')
-      .ilike('description_en', `%ID: ${id}%`)
-      .limit(1)
+    // 先在专用ID表中查找映射
+    const { data: idRow, error: idError } = await supabase
+      .from('wipo_technology_ids')
+      .select('wipo_id, tech_id')
+      .eq('wipo_id', id)
+      .maybeSingle()
+    if (idError && idError.code !== 'PGRST116') throw idError
 
-    if (error) throw error
-    if (!data || data.length === 0) return NextResponse.json({ exists: false })
+    let record: any = null
+    if (idRow?.tech_id) {
+      const { data: tech } = await supabase
+        .from('admin_technologies')
+        .select('id, name_en, name_zh, description_en, description_zh, image_url, website_url, company_name_en, company_name_zh, company_country_id, category_id, subcategory_id, review_status, created_at, updated_at')
+        .eq('id', idRow.tech_id)
+        .maybeSingle()
+      if (tech) record = tech
+    }
 
-    const record = data[0]
+    // 兼容旧数据：如果ID表没有映射，退回到描述字段模糊匹配
+    if (!record) {
+      const { data, error } = await supabase
+        .from('admin_technologies')
+        .select('id, name_en, name_zh, description_en, description_zh, image_url, website_url, company_name_en, company_name_zh, company_country_id, category_id, subcategory_id, review_status, created_at, updated_at')
+        .ilike('description_en', `%ID: ${id}%`)
+        .limit(1)
+      if (error) throw error
+      if (data && data.length) {
+        record = data[0]
+        // 将旧数据补回映射表，便于后续快速查询
+        await supabase.from('wipo_technology_ids').upsert({ wipo_id: id, tech_id: record.id }, { onConflict: 'wipo_id' })
+      }
+    }
+
+    if (!record) return NextResponse.json({ exists: false })
+
     // Fetch category/subcategory names for better UI display
     let category_name_zh: string | null = null
     let subcategory_name_zh: string | null = null

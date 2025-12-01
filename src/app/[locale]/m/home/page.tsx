@@ -4,14 +4,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { useTranslations } from 'next-intl'
-import { Search, SlidersHorizontal, Clock, ArrowDownAZ, ArrowUpAZ, ArrowUpDown } from 'lucide-react'
+import { Search, SlidersHorizontal, Clock, ArrowDownAZ, ArrowUpAZ, ArrowUpDown, Leaf, Zap, Factory, Car } from 'lucide-react'
 import { ContactUsModal } from '@/components/contact/contact-us-modal'
 import { LanguageSwitcher } from '@/components/common/language-switcher'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { useLoadingOverlay } from '@/components/common/loading-overlay'
 import { getPublicCarouselApi } from '@/lib/api/public-carousel'
 import type { AdminCarouselImage } from '@/lib/types/admin'
-import { searchTechProducts, type SearchParams, type TechProduct, type SortType } from '@/api/tech'
+import { searchTechProducts, getProductCategories, type ProductCategory, type SearchParams, type TechProduct, type SortType } from '@/api/tech'
 import { useFilterData, transformFilterDataForComponents } from '@/hooks/admin/use-filter-data'
 // Local type matching /api/tech/filter-options response
 type H5FilterData = {
@@ -53,6 +53,15 @@ export default function MobileHomePage() {
   const pageSize = 10
   const [searchLoading, setSearchLoading] = useState(false)
   const [companyCount, setCompanyCount] = useState<number>(0)
+  const [homeCategories, setHomeCategories] = useState<ProductCategory[]>([])
+  const categoryIconBg = ['#e5fff2', '#e7f2ff', '#f1edff', '#fff3e8']
+  const categoryIconColor = ['#00a26d', '#1991eb', '#7b5bf2', '#e67639']
+  const categoryIconMap: Record<string, React.ReactNode> = {
+    'energy-saving': <Leaf className="w-5 h-5" />,
+    'clean-energy': <Zap className="w-5 h-5" />,
+    'clean-production': <Factory className="w-5 h-5" />,
+    'new-energy-vehicle': <Car className="w-5 h-5" />
+  }
   const [currentSort, setCurrentSort] = useState<SortType>('updateTime')
   const [sortOpen, setSortOpen] = useState(false)
   // UI state
@@ -92,6 +101,22 @@ export default function MobileHomePage() {
       hideLoading()
     }
   }, [hideLoading, showLoading])
+
+  // Load home categories (same API as Web, but独立渲染)
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      try {
+        const res = await getProductCategories()
+        if (alive && res.success && Array.isArray(res.data)) {
+          setHomeCategories(res.data)
+        }
+      } catch (e) {
+        console.warn('Load mobile home categories failed', e)
+      }
+    })()
+    return () => { alive = false }
+  }, [])
 
   // Auto-play
   useEffect(() => {
@@ -238,6 +263,84 @@ export default function MobileHomePage() {
             </>
           ) : (
             <div className="absolute inset-0 bg-gray-100" />
+          )}
+        </div>
+      </div>
+
+      {/* Category summary bar (H5 only, unified tile) */}
+      <div className="px-3 mt-4">
+        <div className="relative rounded-xl bg-white shadow-sm ring-1 ring-gray-100 overflow-hidden">
+          {/* vertical separators with top/bottom padding */}
+          <div className="absolute inset-y-[10px] left-1/4 w-px bg-gray-100 pointer-events-none" />
+          <div className="absolute inset-y-[10px] left-2/4 w-px bg-gray-100 pointer-events-none" />
+          <div className="absolute inset-y-[10px] left-3/4 w-px bg-gray-100 pointer-events-none" />
+          {homeCategories.length > 0 ? (
+            <div className="grid grid-cols-4 min-h-[78px]">
+              {homeCategories.slice(0, 4).map((cat, idx) => (
+                // locale-aware labels
+                (() => {
+                  const displayNameEn = (() => {
+                    const map: Record<string, string> = {
+                      'energy-saving': 'ENERGY SAVING',
+                      'clean-energy': 'CLEAN ENERGY',
+                      'clean-production': 'CLEAN PRODUCTION',
+                      'new-energy-vehicle': 'NEW ENERGY VEHICLE',
+                      '节能环保': 'ENERGY SAVING',
+                      '清洁能源': 'CLEAN ENERGY',
+                      '清洁生产': 'CLEAN PRODUCTION',
+                      '新能源汽车': 'NEW ENERGY VEHICLE'
+                    }
+                    return map[cat.id] || map[(cat as any).slug] || map[cat.name || ''] || cat.nameEn || cat.name || ''
+                  })()
+                  const displayNameZh = cat.name || cat.nameEn || ''
+                  const unitLabel = locale === 'en' ? '' : '项'
+                  const titleLabel = locale === 'en' ? displayNameEn : `${displayNameZh}技术`
+                  return (
+                <button
+                  key={cat.id}
+                  onClick={() => {
+                    setSelectedCategory(cat.id)
+                    setSelectedSubcategory('')
+                    performSearch(true)
+                  }}
+                  className="flex flex-col items-center justify-center py-3 active:opacity-90"
+                >
+                  <div className="flex items-center justify-center w-full px-2 gap-2">
+                    <span
+                      className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{
+                      backgroundColor: categoryIconBg[idx % categoryIconBg.length],
+                      color: categoryIconColor[idx % categoryIconColor.length],
+                    }}
+                    >
+                      <span className="block scale-[0.65] origin-center">
+                        {categoryIconMap[cat.id]
+                          || categoryIconMap[(cat as any).slug]
+                          || categoryIconMap[Object.keys(categoryIconMap)[idx % Object.keys(categoryIconMap).length]]
+                          || <Leaf className="w-3 h-3" />}
+                      </span>
+                    </span>
+                    <div className="flex items-end gap-1 leading-tight">
+                      <span className="text-[18px] font-semibold text-gray-900 tabular-nums">{cat.count ?? 0}</span>
+                      {unitLabel ? (
+                        <span className="text-[10px] text-gray-500 font-normal pb-[1px]">{unitLabel}</span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="mt-2 text-[11px] text-gray-500 leading-tight text-center px-2" style={{ wordBreak: 'break-word', whiteSpace: 'normal' }}>
+                    {titleLabel}
+                  </div>
+                </button>
+                  )
+                })()
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-4">
+              {[0,1,2,3].map(i => (
+                <div key={i} className={`h-[64px] animate-pulse bg-gray-50 ${i!==3?'border-r border-gray-100':''}`} />
+              ))}
+            </div>
           )}
         </div>
       </div>

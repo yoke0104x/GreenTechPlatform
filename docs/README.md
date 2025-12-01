@@ -82,6 +82,8 @@
 │   │           │   ├── route.ts        # 管理端文件上传（支持图片与技术资料文档）
 │   │           │   └── delete/route.ts # 管理端删除上传文件
 │   │           └── wipo-scraper/   # WIPO数据抓取与导入
+│   │               ├── check-ids/route.ts     # 批量校验输入ID是否已存在
+│   │               ├── check-existing/route.ts# 单条重复校验（导入前对比）
 │   │               ├── scrape/route.ts        # 单条抓取
 │   │               ├── process/route.ts       # 本地处理与拼装
 │   │               ├── import/route.ts        # 单条导入（包含图片、国家、公司Logo处理）
@@ -123,6 +125,7 @@
 │   ├── parse-green-taxonomy.js   # 解析 docs/green-taxo.md，生成结构化产业分类JSON
 │   ├── import-green-taxonomy.js  # 调用管理端API批量创建新的四级技术分类体系
 │   ├── cleanup-old-taxonomy.js   # 批量解绑技术旧标签并删除遗留分类树
+│   ├── backfill-wipo-check-ids.js # 根据现有技术描述提取WIPO ID并批量调用 check-ids 触发回填
 │   ├── sql/
 │   │   └── update-taxonomy-translations.sql # 批量更新三级/四级分类英文名+默认图片
 │   ├── playwright/

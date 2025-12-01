@@ -967,7 +967,7 @@ export default function TechnologiesPage() {
               <span className="text-purple-600 font-bold">国</span>
             </div>
             <div>
-              <p className="text-sm text-gray-600">涉及国别数量</p>
+              <p className="text-sm text-gray-600">所属国别数量</p>
               <p className="text-2xl font-bold text-gray-900">{stats.uniqueCountryCount}</p>
             </div>
           </div>
@@ -978,7 +978,7 @@ export default function TechnologiesPage() {
               <span className="text-orange-600 font-bold">区</span>
             </div>
             <div>
-              <p className="text-sm text-gray-600">涉及经开区数量</p>
+              <p className="text-sm text-gray-600">所属园区数量</p>
               <p className="text-2xl font-bold text-gray-900">{stats.uniqueDevZoneCount}</p>
             </div>
           </div>
@@ -1367,9 +1367,9 @@ export default function TechnologiesPage() {
                         </p>
                       </div>
 
-                      {/* 自定义标签 */}
+                      {/* 应用场景标签 */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">自定义标签</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">应用场景标签</label>
                         <div className="bg-gray-50 p-3 rounded-lg">
                           {viewingTechnology.custom_label ? (
                             viewingTechnologyLabelMeta ? (

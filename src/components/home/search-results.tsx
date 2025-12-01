@@ -456,7 +456,7 @@ export function SearchResults({
                       </span>
                     )}
                     
-                    {/* 自定义标签 */}
+                    {/* 应用场景标签 */}
                     {product.custom_label && (
                       <span className="inline-flex items-center px-2 py-1 text-xs text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-400 transition-colors cursor-pointer">
                         {product.custom_label}

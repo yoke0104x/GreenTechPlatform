@@ -125,6 +125,13 @@ function sanitizeTechPayload(payload: any) {
   return payload
 }
 
+async function upsertWipoId(supabase: any, wipoId: string, techId: string) {
+  if (!wipoId) return
+  await supabase
+    .from('wipo_technology_ids')
+    .upsert({ wipo_id: wipoId, tech_id: techId }, { onConflict: 'wipo_id' })
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -202,22 +209,44 @@ export async function POST(req: NextRequest) {
     }
     payload = sanitizeTechPayload(payload)
 
-    // Upsert by matching ID in description_en
-    const { data: existing } = await supabase
-      .from('admin_technologies')
-      .select('id')
-      .ilike('description_en', `%ID: ${item.id}%`)
-      .limit(1)
-    if (existing && existing.length) {
-      if (onDuplicate === 'skip') {
-        return NextResponse.json({ success: true, skipped: true, reason: 'duplicate', id: existing[0].id })
+    const wipoId = String(item.id || '').trim()
+
+    // 优先使用专用ID表查找已存在的技术
+    let existingTechId: string | null = null
+    if (wipoId) {
+      const { data: mapped } = await supabase
+        .from('wipo_technology_ids')
+        .select('tech_id')
+        .eq('wipo_id', wipoId)
+        .maybeSingle()
+      if (mapped?.tech_id) existingTechId = mapped.tech_id
+    }
+
+    // 兼容旧数据：退回到描述字段匹配
+    if (!existingTechId && wipoId) {
+      const { data: fallback } = await supabase
+        .from('admin_technologies')
+        .select('id')
+        .ilike('description_en', `%ID: ${wipoId}%`)
+        .limit(1)
+      if (fallback && fallback.length) {
+        existingTechId = fallback[0].id
+        await upsertWipoId(supabase, wipoId, existingTechId)
       }
-      const { error: upErr } = await supabase.from('admin_technologies').update(payload).eq('id', existing[0].id)
+    }
+
+    if (existingTechId) {
+      if (onDuplicate === 'skip') {
+        return NextResponse.json({ success: true, skipped: true, reason: 'duplicate', id: existingTechId })
+      }
+      const { error: upErr } = await supabase.from('admin_technologies').update(payload).eq('id', existingTechId)
       if (upErr) throw upErr
-      return NextResponse.json({ success: true, id: existing[0].id, updated: true })
+      await upsertWipoId(supabase, wipoId, existingTechId)
+      return NextResponse.json({ success: true, id: existingTechId, updated: true })
     } else {
       const { data, error } = await supabase.from('admin_technologies').insert(payload).select('id').single()
       if (error) throw error
+      await upsertWipoId(supabase, wipoId, data.id)
       return NextResponse.json({ success: true, id: data.id, updated: false })
     }
   } catch (e: any) {
