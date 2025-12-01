@@ -231,7 +231,9 @@ export async function POST(req: NextRequest) {
         .limit(1)
       if (fallback && fallback.length) {
         existingTechId = fallback[0].id
-        await upsertWipoId(supabase, wipoId, existingTechId)
+        if (existingTechId) {
+          await upsertWipoId(supabase, wipoId, existingTechId)
+        }
       }
     }
 
