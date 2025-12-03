@@ -335,6 +335,53 @@ export const TECH_REVIEW_STATUS_OPTIONS = [
 ] as const
 
 /**
+ * 政策级别（与 policy.level 枚举保持一致）
+ */
+export type AdminPolicyLevel = 'national' | 'ministry' | 'local' | 'park'
+
+export const POLICY_LEVEL_OPTIONS = [
+  { value: 'national', label_zh: '中央政策', label_en: 'Central' },
+  { value: 'ministry', label_zh: '部委政策', label_en: 'Ministry' },
+  { value: 'local', label_zh: '地方政策', label_en: 'Local' },
+  { value: 'park', label_zh: '园区政策', label_en: 'Park' },
+] as const
+
+/**
+ * 管理端政策实体
+ */
+export interface AdminPolicy {
+  id: string
+  level: AdminPolicyLevel
+  name: string
+  summary?: string | null
+  status: string
+  data_source?: string | null
+  issuer?: string | null
+  doc_number?: string | null
+  publish_date?: string | null
+  effective_date?: string | null
+  source_url?: string | null
+  region_id?: string | null
+  park_id?: string | null
+  uploaded_at?: string | null
+  modified_at?: string | null
+  created_at: string
+  updated_at: string
+  // 关联信息（可选）
+  tags?: { id: string; name: string }[]
+}
+
+export interface AdminPolicyTag {
+  id: string
+  code?: string | null
+  name: string
+  status: string
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+/**
  * 语言类型
  */
 export type Language = 'zh' | 'en'

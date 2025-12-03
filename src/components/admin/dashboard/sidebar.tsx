@@ -14,7 +14,9 @@ import {
   ChevronRight,
   Home,
   Users,
-  MessageSquare
+  MessageSquare,
+  FileText,
+  Tag
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAdminStats } from '@/hooks/use-admin-stats'
@@ -88,8 +90,19 @@ const menuItems: MenuItem[] = [
     label: '技术管理',
     icon: Lightbulb,
     href: '/admin/technologies'
-  }
-  ,
+  },
+  {
+    id: 'policies',
+    label: '政策管理',
+    icon: FileText,
+    href: '/admin/policies',
+  },
+  {
+    id: 'policy-tags',
+    label: '政策标签管理',
+    icon: Tag,
+    href: '/admin/policy-tags',
+  },
   {
     id: 'wipo-scraper',
     label: 'WIPO数据爬虫',

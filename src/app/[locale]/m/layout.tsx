@@ -18,7 +18,7 @@ function MobileLayoutInner({
   const { unreadCount } = useUnreadMessage()
   const tabs = useMemo(
     () => [
-      { key: 'home', labelZh: '首页', labelEn: 'Home', href: `/${locale}/m/home`, Icon: Home },
+      { key: 'home', labelZh: '首页', labelEn: 'Home', href: `/${locale}/m/policy`, Icon: Home },
       { key: 'publish', labelZh: '技术发布', labelEn: 'Publish', href: `/${locale}/m/me/technologies`, Icon: Upload },
       { key: 'messages', labelZh: '消息', labelEn: 'Messages', href: `/${locale}/m/chat`, Icon: MessageSquare },
       { key: 'me', labelZh: '我的', labelEn: 'Me', href: `/${locale}/m/me`, Icon: User },
@@ -29,7 +29,7 @@ function MobileLayoutInner({
   const activeKey = useMemo(() => {
     if (!pathname) return ''
     if (pathname.startsWith(`/${locale}/m/me/technologies`)) return 'publish'
-    if (pathname.startsWith(`/${locale}/m/home`)) return 'home'
+    if (pathname.startsWith(`/${locale}/m/policy`)) return 'home'
     if (pathname.startsWith(`/${locale}/m/chat`)) return 'messages'
     if (pathname.startsWith(`/${locale}/m/me`)) return 'me'
     return ''

@@ -82,7 +82,7 @@ export default function MobileMePage() {
           <OptionTile icon={<User className="w-5 h-5" />} label={locale==='en'?'Basic Info':'基本信息'} onClick={()=>router.push(`${locale==='en'?'/en':'/zh'}/m/me/basic`)} />
           <OptionTile icon={<Shield className="w-5 h-5" />} label={locale==='en'?'Account Security':'账户安全'} onClick={()=>router.push(`${locale==='en'?'/en':'/zh'}/m/me/security`)} />
           <OptionTile icon={<Building className="w-5 h-5" />} label={locale==='en'?'Company Info':'企业信息'} onClick={()=>router.push(`${locale==='en'?'/en':'/zh'}/m/me/company`)} />
-          <OptionTile icon={<Heart className="w-5 h-5" />} label={locale==='en'?'My Favorites':'我的收藏'} onClick={()=>router.push(`${locale==='en'?'/en':'/zh'}/m/me/favorites`)} />
+          <OptionTile icon={<Heart className="w-5 h-5" />} label={locale==='en'?'My Policy Favorites':'我的政策收藏'} onClick={()=>router.push(`${locale==='en'?'/en':'/zh'}/m/policy/favorites`)} />
           <OptionTile icon={<MessageSquare className="w-5 h-5" />} label={locale==='en'?'Feedback':'问题反馈'} onClick={()=>router.push(`${locale==='en'?'/en':'/zh'}/m/me/feedback`)} />
           <OptionTile icon={<LogOut className="w-5 h-5" />} label={locale==='en'?'Sign Out':'退出登录'} danger onClick={async()=>{ try { await logout(); router.push(`${locale==='en'?'/en':'/zh'}/m/login`) } catch { router.push(`${locale==='en'?'/en':'/zh'}/m/login`) } }} />
         </div>
