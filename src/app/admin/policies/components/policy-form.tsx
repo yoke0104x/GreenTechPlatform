@@ -7,6 +7,7 @@ import {
   AdminPolicyLevel,
   AdminPolicyTag,
   POLICY_LEVEL_OPTIONS,
+  POLICY_MINISTRY_UNIT_OPTIONS,
   AdminProvince,
   AdminDevelopmentZone,
 } from '@/lib/types/admin'
@@ -20,6 +21,8 @@ export interface PolicyFormValues {
   level: AdminPolicyLevel
   status: string
   issuer?: string
+   // 部委单位，仅当 level = 'ministry' 时使用
+  ministryUnit?: string
   docNumber?: string
   publishDate?: string
   effectiveDate?: string
@@ -44,6 +47,7 @@ export function PolicyForm({ open, onClose, onSubmit, initial }: PolicyFormProps
     level: (initial?.level as AdminPolicyLevel) || 'national',
     status: initial?.status || 'active',
     issuer: initial?.issuer || '',
+    ministryUnit: initial?.ministry_unit || '',
     docNumber: initial?.doc_number || '',
     publishDate: initial?.publish_date || '',
     effectiveDate: initial?.effective_date || '',
@@ -89,6 +93,7 @@ export function PolicyForm({ open, onClose, onSubmit, initial }: PolicyFormProps
       level: (initial?.level as AdminPolicyLevel) || 'national',
       status: initial?.status || 'active',
       issuer: initial?.issuer || '',
+      ministryUnit: initial?.ministry_unit || '',
       docNumber: initial?.doc_number || '',
       publishDate: initial?.publish_date || '',
       effectiveDate: initial?.effective_date || '',
@@ -214,15 +219,36 @@ export function PolicyForm({ open, onClose, onSubmit, initial }: PolicyFormProps
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                发布机构
-              </label>
-              <input
-                type="text"
-                value={values.issuer}
-                onChange={(e) => handleChange('issuer', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  发布机构
+                </label>
+                <input
+                  type="text"
+                  value={values.issuer}
+                  onChange={(e) => handleChange('issuer', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              {values.level === 'ministry' && (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    部委单位（仅部委政策）
+                  </label>
+                  <select
+                    value={values.ministryUnit || ''}
+                    onChange={(e) => handleChange('ministryUnit', e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="">未设置</option>
+                    {POLICY_MINISTRY_UNIT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label_zh}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
 

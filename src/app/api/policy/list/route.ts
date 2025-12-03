@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const keyword = searchParams.get('keyword')?.trim() || ''
     const level = searchParams.get('level') as 'national' | 'ministry' | 'local' | 'park' | null
     const tagsParam = searchParams.get('tags') || ''
+    const ministryUnitParam = searchParams.get('ministryUnit') || null
     const provinceParam = searchParams.get('province') || null
     const developmentZoneParam = searchParams.get('developmentZone') || null
     const publishDateFrom = searchParams.get('publishDateFrom') || null
@@ -42,6 +43,7 @@ export async function GET(request: NextRequest) {
       keyword,
       level,
       tagIdsCount: tagIds.length,
+      ministryUnitParam,
       provinceParam,
       developmentZoneParam,
       publishDateFrom,
@@ -64,6 +66,13 @@ export async function GET(request: NextRequest) {
 
     if (level && ['national', 'ministry', 'local', 'park'].includes(level)) {
       query = query.eq('level', level)
+    }
+
+    // 部委单位筛选：仅针对部委政策
+    if (ministryUnitParam) {
+      query = query.eq('ministry_unit', ministryUnitParam)
+      // 如果未显式指定 level，这里不强制写死 level = 'ministry'，
+      // 但当前前端约定仅在部委政策筛选场景下传入该参数。
     }
 
     // 解析省份 -> admin_provinces.id -> policy.region_id
@@ -293,6 +302,7 @@ export async function GET(request: NextRequest) {
         id: p.id,
         name: p.name,
         level: p.level,
+        ministryUnit: p.ministry_unit,
         issuer: p.issuer,
         docNumber: p.doc_number,
         publishDate: p.publish_date,

@@ -127,6 +127,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       summary: policy.summary,
       status: policy.status,
       dataSource: policy.data_source,
+      ministryUnit: policy.ministry_unit,
       issuer: policy.issuer,
       docNumber: policy.doc_number,
       publishDate: policy.publish_date,

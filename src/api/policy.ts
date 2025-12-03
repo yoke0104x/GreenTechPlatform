@@ -13,6 +13,7 @@ export interface PolicyListItem {
   id: string
   name: string
   level: PolicyLevel
+  ministryUnit?: string | null
   issuer?: string | null
   docNumber?: string | null
   publishDate?: string | null
@@ -38,6 +39,7 @@ export interface PolicyListParams {
   keyword?: string
   level?: PolicyLevel
   tags?: string[] // tag ids
+  ministryUnit?: string
   province?: string
   developmentZone?: string
   publishDateFrom?: string
@@ -126,6 +128,9 @@ export async function getPolicyList(
     if (params.level) query.append('level', params.level)
     if (params.tags && params.tags.length) {
       query.append('tags', params.tags.join(','))
+    }
+    if (params.ministryUnit) {
+      query.append('ministryUnit', params.ministryUnit)
     }
     if (params.province) query.append('province', params.province)
     if (params.developmentZone) {

@@ -71,6 +71,7 @@ export async function PUT(
       status,
       dataSource,
       issuer,
+      ministryUnit,
       docNumber,
       publishDate,
       effectiveDate,
@@ -87,6 +88,7 @@ export async function PUT(
       status,
       data_source: dataSource ?? 'admin',
       issuer: issuer ?? null,
+      ministry_unit: ministryUnit ?? null,
       doc_number: docNumber ?? null,
       publish_date: publishDate ?? null,
       effective_date: effectiveDate ?? null,
@@ -174,4 +176,3 @@ export async function DELETE(
     )
   }
 }
-

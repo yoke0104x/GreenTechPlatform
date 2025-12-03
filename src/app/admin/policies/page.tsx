@@ -96,6 +96,7 @@ export default function AdminPoliciesPage() {
         level: values.level,
         status: values.status,
         issuer: values.issuer,
+        ministryUnit: values.ministryUnit,
         docNumber: values.docNumber,
         publishDate: values.publishDate,
         effectiveDate: values.effectiveDate,
@@ -111,6 +112,7 @@ export default function AdminPoliciesPage() {
         level: values.level,
         status: values.status,
         issuer: values.issuer,
+        ministryUnit: values.ministryUnit,
         docNumber: values.docNumber,
         publishDate: values.publishDate,
         effectiveDate: values.effectiveDate,
@@ -164,11 +166,25 @@ export default function AdminPoliciesPage() {
       key: 'issuer',
       title: '发布机构',
       width: '12%',
-      render: (value) => (
-        <span className="text-sm text-gray-700 line-clamp-1 max-w-[140px] inline-block truncate">
-          {(value as string) || '-'}
-        </span>
-      ),
+      render: (value, record) => {
+        const issuer = (value as string) || '-'
+        const ministryUnit =
+          record.level === 'ministry'
+            ? ((record as any).ministry_unit as string | null)
+            : null
+        return (
+          <div className="text-sm text-gray-700 max-w-[160px]">
+            <div className="line-clamp-1 truncate">{issuer}</div>
+            {ministryUnit && (
+              <div className="mt-1">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full border border-purple-200 bg-purple-50 text-purple-700 text-[11px]">
+                  {ministryUnit}
+                </span>
+              </div>
+            )}
+          </div>
+        )
+      },
     },
     {
       key: 'doc_number',
@@ -339,6 +355,7 @@ export default function AdminPoliciesPage() {
           setSearch(value.trim())
         }}
         searchPlaceholder="按名称 / 发布机构 / 文号搜索..."
+        searchMode="enter"
         actions={
           <button
             type="button"

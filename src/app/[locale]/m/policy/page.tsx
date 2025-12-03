@@ -8,6 +8,7 @@ import { LanguageSwitcher } from '@/components/common/language-switcher'
 import { useLoadingOverlay } from '@/components/common/loading-overlay'
 import { getPolicyList, getPolicyTags, type PolicyLevel, type PolicyTag, type PolicyListItem } from '@/api/policy'
 import { useFilterData, transformFilterDataForComponents } from '@/hooks/admin/use-filter-data'
+import { POLICY_MINISTRY_UNIT_OPTIONS } from '@/lib/types/admin'
 
 const PAGE_SIZE = 10
 
@@ -36,6 +37,7 @@ export default function MobilePolicyHomePage() {
   const [keyword, setKeyword] = useState('')
   const [level, setLevel] = useState<PolicyLevel | ''>('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [selectedMinistryUnit, setSelectedMinistryUnit] = useState<string>('')
   const [selectedProvince, setSelectedProvince] = useState<string>('')
   const [selectedZone, setSelectedZone] = useState<string>('')
 
@@ -78,6 +80,7 @@ export default function MobilePolicyHomePage() {
     keyword?: string
     level?: PolicyLevel | ''
     tags?: string[]
+    ministryUnit?: string
     province?: string
     zone?: string
   }) => {
@@ -85,6 +88,7 @@ export default function MobilePolicyHomePage() {
       const common = {
         keyword: (overrides?.keyword ?? keyword).trim() || undefined,
         tags: (overrides?.tags ?? selectedTags).length ? (overrides?.tags ?? selectedTags) : undefined,
+        ministryUnit: (overrides?.ministryUnit ?? selectedMinistryUnit) || undefined,
         province: (overrides?.province ?? selectedProvince) || undefined,
         developmentZone: (overrides?.zone ?? selectedZone) || undefined,
         page: 1,
@@ -93,7 +97,11 @@ export default function MobilePolicyHomePage() {
       const levels: (PolicyLevel | '')[] = ['', 'national', 'ministry', 'local', 'park']
       const results = await Promise.all(
         levels.map(async (lv) => {
-          const res = await getPolicyList({ ...common, level: lv || undefined })
+          const res = await getPolicyList({
+            ...common,
+            level: lv || undefined,
+            ministryUnit: lv === 'ministry' ? common.ministryUnit : undefined,
+          })
           const total = res.success && res.data ? res.data.total : 0
           return { key: lv || 'all', total }
         }),
@@ -133,6 +141,7 @@ export default function MobilePolicyHomePage() {
       keyword?: string
       level?: PolicyLevel | ''
       tags?: string[]
+      ministryUnit?: string
       province?: string
       zone?: string
       force?: boolean
@@ -154,6 +163,10 @@ export default function MobilePolicyHomePage() {
       hasOverrides && Object.prototype.hasOwnProperty.call(overrides!, 'tags')
         ? (overrides!.tags ?? [])
         : selectedTags
+    const effectiveMinistryUnit =
+      hasOverrides && Object.prototype.hasOwnProperty.call(overrides!, 'ministryUnit')
+        ? (overrides!.ministryUnit ?? '')
+        : selectedMinistryUnit
     const effectiveProvince =
       hasOverrides && Object.prototype.hasOwnProperty.call(overrides!, 'province')
         ? (overrides!.province ?? '')
@@ -171,6 +184,10 @@ export default function MobilePolicyHomePage() {
         keyword: effectiveKeyword.trim() || undefined,
         level: effectiveLevel || undefined,
         tags: effectiveTags.length ? effectiveTags : undefined,
+        ministryUnit:
+          (effectiveLevel || level) === 'ministry' && effectiveMinistryUnit
+            ? effectiveMinistryUnit
+            : undefined,
         province: effectiveProvince || undefined,
         developmentZone: effectiveZone || undefined,
         page: nextPage,
@@ -190,6 +207,7 @@ export default function MobilePolicyHomePage() {
       fetchLevelCounts({
         keyword: effectiveKeyword,
         tags: effectiveTags,
+        ministryUnit: effectiveMinistryUnit,
         province: effectiveProvince,
         zone: effectiveZone,
       })
@@ -278,10 +296,14 @@ export default function MobilePolicyHomePage() {
                 onClick={() => {
                   const newLevel = opt.value
                   setLevel(newLevel)
+                  if (newLevel !== 'ministry') {
+                    setSelectedMinistryUnit('')
+                  }
                   fetchPolicies(true, {
                     keyword,
                     level: newLevel,
                     tags: selectedTags,
+                    ministryUnit: selectedMinistryUnit,
                     province: selectedProvince,
                     zone: selectedZone,
                     force: true,
@@ -346,11 +368,13 @@ export default function MobilePolicyHomePage() {
             <SlidersHorizontal className="w-4 h-4" />
             <span>{locale === 'en' ? 'Filters' : '筛选'}</span>
             {((selectedTags.length ? 1 : 0) +
+              (selectedMinistryUnit ? 1 : 0) +
               (selectedProvince ? 1 : 0) +
               (selectedZone ? 1 : 0) +
               (level ? 1 : 0)) > 0 && (
               <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#00b899] text-white text-[10px] flex items-center justify-center">
                 {(selectedTags.length ? 1 : 0) +
+                  (selectedMinistryUnit ? 1 : 0) +
                   (selectedProvince ? 1 : 0) +
                   (selectedZone ? 1 : 0) +
                   (level ? 1 : 0)}
@@ -366,7 +390,7 @@ export default function MobilePolicyHomePage() {
           <div className="rounded-2xl bg-white border border-gray-100 p-3 space-y-3">
             {/* Level */}
             <div>
-              <div className="text-[13px] text-gray-700 mb-1">
+              <div className="text-[13px] text-gray-900 mb-1">
                 {locale === 'en' ? 'Level' : '政策级别'}
               </div>
               <div className="flex flex-wrap gap-2">
@@ -374,7 +398,12 @@ export default function MobilePolicyHomePage() {
                   <button
                     key={opt.value || 'all'}
                     type="button"
-                    onClick={() => setLevel(opt.value)}
+                    onClick={() => {
+                      setLevel(opt.value)
+                      if (opt.value !== 'ministry') {
+                        setSelectedMinistryUnit('')
+                      }
+                    }}
                     className={`px-3 h-8 rounded-full border text-[12px] ${
                       level === opt.value
                         ? 'bg-[#e6fffa] border-[#00b899] text-[#007f66]'
@@ -387,10 +416,49 @@ export default function MobilePolicyHomePage() {
               </div>
             </div>
 
+            {/* Ministry unit - only when filtering ministry level */}
+            {level === 'ministry' && (
+              <div>
+                <div className="text-[13px] text-gray-900 mb-1">
+                  {locale === 'en' ? 'Ministry unit' : '部委单位'}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMinistryUnit('')}
+                    className={`px-3 h-8 rounded-full border text-[12px] ${
+                      selectedMinistryUnit === ''
+                        ? 'bg-[#e6fffa] border-[#00b899] text-[#007f66]'
+                        : 'bg-white border-gray-200 text-gray-600'
+                    }`}
+                  >
+                    {locale === 'en' ? 'All' : '全部'}
+                  </button>
+                  {POLICY_MINISTRY_UNIT_OPTIONS.map((opt) => {
+                    const active = selectedMinistryUnit === opt.value
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setSelectedMinistryUnit(opt.value)}
+                        className={`px-3 h-8 rounded-full border text-[12px] ${
+                          active
+                            ? 'bg-[#eef2ff] border-[#6b6ee2] text-[#4b50d4]'
+                            : 'bg-white border-gray-200 text-gray-600'
+                        }`}
+                      >
+                        {locale === 'en' ? opt.label_en : opt.label_zh}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Tags */}
             {tags.length > 0 && (
               <div>
-                <div className="text-[13px] text-gray-700 mb-1">
+                <div className="text-[13px] text-gray-900 mb-1">
                   {locale === 'en' ? 'Tags' : '政策标签'}
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -415,99 +483,101 @@ export default function MobilePolicyHomePage() {
               </div>
             )}
 
-            {/* Province & development zone */}
-            <div className="grid grid-cols-1 gap-3">
-              <div>
-                <div className="text-[13px] text-gray-700 mb-1">
-                  {locale === 'en' ? 'Province' : '省份'}
-                </div>
-                {fdLoading ? (
-                  <div className="flex flex-wrap gap-2">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-8 w-20 bg-gray-100 rounded-full animate-pulse"
-                      />
-                    ))}
+            {/* Province & development zone - only for all/local/park */}
+            {(level === '' || level === 'local' || level === 'park') && (
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <div className="text-[13px] text-gray-900 mb-1">
+                    {locale === 'en' ? 'Province' : '省份'}
                   </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedProvince('')
-                        setSelectedZone('')
-                      }}
-                      className={`px-3 h-8 rounded-full border text-[12px] ${
-                        selectedProvince === ''
-                          ? 'bg-[#e6fffa] border-[#00b899] text-[#007f66]'
-                          : 'bg-white border-gray-200 text-gray-600'
-                      }`}
-                    >
-                      {locale === 'en' ? 'All' : '全部'}
-                    </button>
-                    {(transformed.provinces || []).map((p: any) => (
+                  {fdLoading ? (
+                    <div className="flex flex-wrap gap-2">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="h-8 w-20 bg-gray-100 rounded-full animate-pulse"
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
                       <button
-                        key={p.value}
                         type="button"
-                        onClick={() => handleProvinceChange(p.code || p.value)}
+                        onClick={() => {
+                          setSelectedProvince('')
+                          setSelectedZone('')
+                        }}
                         className={`px-3 h-8 rounded-full border text-[12px] ${
-                          selectedProvince === (p.code || p.value)
+                          selectedProvince === ''
                             ? 'bg-[#e6fffa] border-[#00b899] text-[#007f66]'
                             : 'bg-white border-gray-200 text-gray-600'
                         }`}
                       >
-                        {p.label}
+                        {locale === 'en' ? 'All' : '全部'}
                       </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      {(transformed.provinces || []).map((p: any) => (
+                        <button
+                          key={p.value}
+                          type="button"
+                          onClick={() => handleProvinceChange(p.code || p.value)}
+                          className={`px-3 h-8 rounded-full border text-[12px] ${
+                            selectedProvince === (p.code || p.value)
+                              ? 'bg-[#e6fffa] border-[#00b899] text-[#007f66]'
+                              : 'bg-white border-gray-200 text-gray-600'
+                          }`}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-              <div>
-                <div className="text-[13px] text-gray-700 mb-1">
-                  {locale === 'en' ? 'Development Zone' : '经开区 / 园区'}
-                </div>
-                {fdLoading ? (
-                  <div className="flex flex-wrap gap-2">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-8 w-24 bg-gray-100 rounded-full animate-pulse"
-                      />
-                    ))}
+                <div>
+                  <div className="text-[13px] text-gray-900 mb-1">
+                    {locale === 'en' ? 'Development Zone' : '经开区 / 园区'}
                   </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedZone('')}
-                      className={`px-3 h-8 rounded-full border text-[12px] ${
-                        selectedZone === ''
-                          ? 'bg-[#e6fffa] border-[#00b899] text-[#007f66]'
-                          : 'bg-white border-gray-200 text-gray-600'
-                      }`}
-                    >
-                      {locale === 'en' ? 'All' : '全部'}
-                    </button>
-                    {(transformed.developmentZones || []).map((z: any) => (
+                  {fdLoading ? (
+                    <div className="flex flex-wrap gap-2">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="h-8 w-24 bg-gray-100 rounded-full animate-pulse"
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
                       <button
-                        key={z.value}
                         type="button"
-                        onClick={() => setSelectedZone(z.code || z.value)}
+                        onClick={() => setSelectedZone('')}
                         className={`px-3 h-8 rounded-full border text-[12px] ${
-                          selectedZone === (z.code || z.value)
+                          selectedZone === ''
                             ? 'bg-[#e6fffa] border-[#00b899] text-[#007f66]'
                             : 'bg-white border-gray-200 text-gray-600'
                         }`}
                       >
-                        {z.label}
+                        {locale === 'en' ? 'All' : '全部'}
                       </button>
-                    ))}
-                  </div>
-                )}
-            </div>
-          </div>
+                      {(transformed.developmentZones || []).map((z: any) => (
+                        <button
+                          key={z.value}
+                          type="button"
+                          onClick={() => setSelectedZone(z.code || z.value)}
+                          className={`px-3 h-8 rounded-full border text-[12px] ${
+                            selectedZone === (z.code || z.value)
+                              ? 'bg-[#e6fffa] border-[#00b899] text-[#007f66]'
+                              : 'bg-white border-gray-200 text-gray-600'
+                          }`}
+                        >
+                          {z.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
           <div className="flex justify-end gap-2 pt-1">
             <button
@@ -526,6 +596,7 @@ export default function MobilePolicyHomePage() {
                 setKeyword('')
                 setLevel('')
                 setSelectedTags([])
+                setSelectedMinistryUnit('')
                 setSelectedProvince('')
                 setSelectedZone('')
                 setPolicies([])
@@ -537,6 +608,7 @@ export default function MobilePolicyHomePage() {
                     keyword: '',
                     level: '',
                     tags: [],
+                    ministryUnit: '',
                     province: '',
                     zone: '',
                     force: true,
@@ -622,6 +694,9 @@ export default function MobilePolicyHomePage() {
           const locationChips: string[] = []
           const lvl = levelLabel(p.level)
           if (lvl) locationChips.push(lvl)
+          if (p.level === 'ministry' && p.ministryUnit) {
+            locationChips.push(p.ministryUnit)
+          }
           if (p.province?.name) locationChips.push(p.province.name)
           if (p.developmentZone?.name) locationChips.push(p.developmentZone.name)
 

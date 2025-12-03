@@ -347,6 +347,85 @@ export const POLICY_LEVEL_OPTIONS = [
 ] as const
 
 /**
+ * 部委单位选项（仅针对部委政策）
+ */
+export const POLICY_MINISTRY_UNIT_OPTIONS = [
+  { value: '外交部', label_zh: '外交部', label_en: 'Ministry of Foreign Affairs' },
+  { value: '国防部', label_zh: '国防部', label_en: 'Ministry of National Defense' },
+  {
+    value: '国家发展和改革委员会',
+    label_zh: '国家发展和改革委员会',
+    label_en: 'National Development and Reform Commission',
+  },
+  { value: '教育部', label_zh: '教育部', label_en: 'Ministry of Education' },
+  { value: '科学技术部', label_zh: '科学技术部', label_en: 'Ministry of Science and Technology' },
+  {
+    value: '工业和信息化部',
+    label_zh: '工业和信息化部',
+    label_en: 'Ministry of Industry and Information Technology',
+  },
+  {
+    value: '国家民族事务委员会',
+    label_zh: '国家民族事务委员会',
+    label_en: 'National Ethnic Affairs Commission',
+  },
+  { value: '公安部', label_zh: '公安部', label_en: 'Ministry of Public Security' },
+  { value: '国家安全部', label_zh: '国家安全部', label_en: 'Ministry of State Security' },
+  { value: '民政部', label_zh: '民政部', label_en: 'Ministry of Civil Affairs' },
+  { value: '司法部', label_zh: '司法部', label_en: 'Ministry of Justice' },
+  { value: '财政部', label_zh: '财政部', label_en: 'Ministry of Finance' },
+  {
+    value: '人力资源和社会保障部',
+    label_zh: '人力资源和社会保障部',
+    label_en: 'Ministry of Human Resources and Social Security',
+  },
+  { value: '自然资源部', label_zh: '自然资源部', label_en: 'Ministry of Natural Resources' },
+  {
+    value: '生态环境部',
+    label_zh: '生态环境部',
+    label_en: 'Ministry of Ecology and Environment',
+  },
+  {
+    value: '住房和城乡建设部',
+    label_zh: '住房和城乡建设部',
+    label_en: 'Ministry of Housing and Urban-Rural Development',
+  },
+  { value: '交通运输部', label_zh: '交通运输部', label_en: 'Ministry of Transport' },
+  { value: '水利部', label_zh: '水利部', label_en: 'Ministry of Water Resources' },
+  {
+    value: '农业农村部',
+    label_zh: '农业农村部',
+    label_en: 'Ministry of Agriculture and Rural Affairs',
+  },
+  { value: '商务部', label_zh: '商务部', label_en: 'Ministry of Commerce' },
+  {
+    value: '文化和旅游部',
+    label_zh: '文化和旅游部',
+    label_en: 'Ministry of Culture and Tourism',
+  },
+  {
+    value: '国家卫生健康委员会',
+    label_zh: '国家卫生健康委员会',
+    label_en: 'National Health Commission',
+  },
+  {
+    value: '退役军人事务部',
+    label_zh: '退役军人事务部',
+    label_en: 'Ministry of Veterans Affairs',
+  },
+  {
+    value: '应急部',
+    label_zh: '应急部',
+    label_en: 'Ministry of Emergency Management',
+  },
+  {
+    value: '中国人民银行',
+    label_zh: '中国人民银行',
+    label_en: 'People\'s Bank of China',
+  },
+] as const
+
+/**
  * 管理端政策实体
  */
 export interface AdminPolicy {
@@ -357,6 +436,7 @@ export interface AdminPolicy {
   status: string
   data_source?: string | null
   issuer?: string | null
+  ministry_unit?: string | null
   doc_number?: string | null
   publish_date?: string | null
   effective_date?: string | null
