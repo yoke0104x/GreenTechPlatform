@@ -286,8 +286,8 @@ export async function GET(request: NextRequest) {
         .filter(Boolean)
         .map((t: any) => ({ id: t.id, name: t.name }))
 
-      const province = p.region_id ? provincesMap.get(p.region_id) : null
-      const zone = p.park_id ? zonesMap.get(p.park_id) : null
+      const province = p.region_id ? (provincesMap.get(p.region_id) as any) : null
+      const zone = p.park_id ? (zonesMap.get(p.park_id) as any) : null
 
       return {
         id: p.id,
