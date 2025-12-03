@@ -175,7 +175,7 @@ export default function MobilePolicyHomePage() {
         developmentZone: effectiveZone || undefined,
         page: nextPage,
         pageSize: PAGE_SIZE,
-        sortBy: currentSort,
+        sortBy: currentSort as any, // 前端扩展了 nameAsc/nameDesc，后端仅识别部分字段
       })
       if (token !== fetchTokenRef.current) return
       if (res.success && res.data) {
