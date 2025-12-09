@@ -8,8 +8,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     console.log('📷 获取公开轮播图数据...')
-    
-    const images = await getCarouselImages()
+    const { searchParams } = new URL(request.url)
+    const scene = searchParams.get('scene') || undefined
+    const images = await getCarouselImages(scene)
     
     console.log('📷 轮播图数据获取成功:', images.length)
     

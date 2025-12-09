@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
-import { Search, SlidersHorizontal, ArrowUpDown, ArrowUpAZ, ArrowDownAZ, Clock, ChevronUp } from 'lucide-react'
+import { Search, SlidersHorizontal, ArrowUpDown, ArrowUpAZ, ArrowDownAZ, Clock, ChevronUp, RotateCcw } from 'lucide-react'
 import { LanguageSwitcher } from '@/components/common/language-switcher'
 import { useLoadingOverlay } from '@/components/common/loading-overlay'
 import { getPolicyList, getPolicyTags, type PolicyLevel, type PolicyTag, type PolicyListItem } from '@/api/policy'
@@ -28,6 +28,17 @@ const LEVEL_COLORS: Record<string, string> = {
   park: '#facc15',
 }
 
+const PRIORITY_MINISTRY_UNITS = [
+  '国家发展和改革委员会',
+  '生态环境部',
+  '商务部',
+  '工业和信息化部',
+  '自然资源部',
+  '财政部',
+  '交通运输部',
+  '科学技术部',
+] as const
+
 export default function MobilePolicyHomePage() {
   const pathname = usePathname()
   const router = useRouter()
@@ -40,6 +51,7 @@ export default function MobilePolicyHomePage() {
   const [selectedMinistryUnit, setSelectedMinistryUnit] = useState<string>('')
   const [selectedProvince, setSelectedProvince] = useState<string>('')
   const [selectedZone, setSelectedZone] = useState<string>('')
+  const [showAllMinistryUnits, setShowAllMinistryUnits] = useState(false)
 
   const [tags, setTags] = useState<PolicyTag[]>([])
   const [policies, setPolicies] = useState<PolicyListItem[]>([])
@@ -308,6 +320,9 @@ export default function MobilePolicyHomePage() {
                     zone: selectedZone,
                     force: true,
                   })
+                  if (newLevel !== 'ministry') {
+                    setShowAllMinistryUnits(false)
+                  }
                 }}
                 className={`relative rounded-lg border pl-3 pr-2 py-1 text-left bg-white transition shadow-sm flex flex-col items-center justify-center min-h-[64px] overflow-hidden ${
                   active
@@ -402,6 +417,7 @@ export default function MobilePolicyHomePage() {
                       setLevel(opt.value)
                       if (opt.value !== 'ministry') {
                         setSelectedMinistryUnit('')
+                        setShowAllMinistryUnits(false)
                       }
                     }}
                     className={`px-3 h-8 rounded-full border text-[12px] ${
@@ -434,7 +450,10 @@ export default function MobilePolicyHomePage() {
                   >
                     {locale === 'en' ? 'All' : '全部'}
                   </button>
-                  {POLICY_MINISTRY_UNIT_OPTIONS.map((opt) => {
+                  {POLICY_MINISTRY_UNIT_OPTIONS.filter((opt) => {
+                    const isPriority = PRIORITY_MINISTRY_UNITS.includes(opt.value as typeof PRIORITY_MINISTRY_UNITS[number])
+                    return showAllMinistryUnits || isPriority || selectedMinistryUnit === opt.value
+                  }).map((opt) => {
                     const active = selectedMinistryUnit === opt.value
                     return (
                       <button
@@ -451,6 +470,21 @@ export default function MobilePolicyHomePage() {
                       </button>
                     )
                   })}
+                </div>
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    className="text-[12px] text-[#4b50d4]"
+                    onClick={() => setShowAllMinistryUnits((v) => !v)}
+                  >
+                    {showAllMinistryUnits
+                      ? locale === 'en'
+                        ? 'Collapse'
+                        : '收起'
+                      : locale === 'en'
+                        ? 'More...'
+                        : '更多...'}
+                  </button>
                 </div>
               </div>
             )}
@@ -615,8 +649,9 @@ export default function MobilePolicyHomePage() {
                   })
                 }, 0)
               }}
-              className="h-8 px-3 rounded-full text-[12px] border border-gray-200 text-gray-600 bg-white"
+              className="h-8 px-3 rounded-full text-[12px] border border-gray-200 text-gray-600 bg-white inline-flex items-center gap-1"
             >
+              <RotateCcw className="w-3.5 h-3.5" />
               {locale === 'en' ? 'Reset' : '重置'}
             </button>
             <button

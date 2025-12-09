@@ -20,15 +20,17 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || ''
     const sortBy = searchParams.get('sortBy') || 'sort_order'
     const sortOrder = (searchParams.get('sortOrder') || 'asc') as 'asc' | 'desc'
+    const scene = searchParams.get('scene') || undefined
 
-    console.log('📷 管理员获取轮播图列表:', { page, pageSize, search, sortBy, sortOrder })
+    console.log('📷 管理员获取轮播图列表:', { page, pageSize, search, sortBy, sortOrder, scene })
 
     const result = await getCarouselImagesPaginated({
       page,
       pageSize,
       search,
       sortBy,
-      sortOrder
+      sortOrder,
+      scene
     })
 
     console.log('📷 轮播图列表获取成功:', result.data.length)
@@ -68,7 +70,8 @@ export async function POST(request: NextRequest) {
       image_url: body.image_url,
       link_url: body.link_url || undefined,
       sort_order: body.sort_order || 0,
-      is_active: body.is_active !== undefined ? body.is_active : true
+      is_active: body.is_active !== undefined ? body.is_active : true,
+      scene: body.scene || undefined
     }
 
     console.log('📷 准备创建轮播图:', carouselData)

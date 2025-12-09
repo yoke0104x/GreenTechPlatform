@@ -112,6 +112,7 @@ export interface AdminCarouselImage extends BaseEntity {
   image_url: string
   link_url?: string
   sort_order: number
+  scene?: string | null
 }
 
 /**
@@ -281,6 +282,7 @@ export interface PaginationParams {
   search?: string
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
+  scene?: string
 }
 
 /**

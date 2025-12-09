@@ -11,13 +11,19 @@ import {
 
 /**
  * 获取所有轮播图
+ * @param scene 可选场景标识，例如 'home' | 'parks'
  */
-export async function getCarouselImages(): Promise<AdminCarouselImage[]> {
-  const { data, error } = await supabase
+export async function getCarouselImages(scene?: string): Promise<AdminCarouselImage[]> {
+  let query = supabase
     .from('admin_carousel_images')
     .select('*')
     .eq('is_active', true)
-    .order('sort_order', { ascending: true })
+
+  if (scene) {
+    query = query.eq('scene', scene)
+  }
+
+  const { data, error } = await query.order('sort_order', { ascending: true })
 
   if (error) {
     console.error('获取轮播图失败:', error)
@@ -40,12 +46,17 @@ export async function getCarouselImagesPaginated(params: PaginationParams = {}):
     pageSize = 10, 
     search = '', 
     sortBy = 'sort_order', 
-    sortOrder = 'asc' 
+    sortOrder = 'asc',
+    scene
   } = params
 
   let query = supabaseAdmin
     .from('admin_carousel_images')
     .select('*', { count: 'exact' })
+
+  if (scene) {
+    query = query.eq('scene', scene)
+  }
 
   // 搜索功能
   if (search) {

@@ -30,16 +30,21 @@
 │   │   ├── [locale]/m/         # 移动端(H5)路由（与Web并存）
 │   │   │   ├── (auth)/login/page.tsx   # 移动端登录
 │   │   │   ├── (auth)/wechat/callback/page.tsx # 移动端微信登录回调页
-│   │   │   ├── layout.tsx              # 移动端共享布局（底部Tab）
+│   │   │   ├── layout.tsx              # 移动端共享布局（底部Tab：技术/政策/园区共用）
 │   │   │   ├── page.tsx                # 重定向到 /home
 │   │   │   ├── home/page.tsx           # 移动端首页（绿色技术平台）
 │   │   │   ├── chat/page.tsx           # 移动端消息中心（复用Web端接口与逻辑，H5样式重构）
 │   │   │   ├── company-profile/page.tsx # 移动端企业信息完善（与Web逻辑一致，含Logo上传）
-│   │   │   ├── policy/                 # 政策与园区查询H5入口
+│   │   │   ├── policy/                 # 政策H5入口
 │   │   │   │   ├── page.tsx            # 政策列表与筛选首页
-│   │   │   │   ├── [id]/page.tsx       # 政策详情页（含收藏与原文链接）
+│   │   │   │   ├── [id]/page.tsx       # 政策详情页（含收藏与原文链接+底部功能栏）
 │   │   │   │   └── favorites/page.tsx  # 我的政策收藏列表
-│   │   │   ├── me/                     # 移动端我的相关页面
+│   │   │   ├── parks/                  # 绿色园区H5入口（独立于政策）
+│   │   │   │   ├── page.tsx            # 园区列表与筛选首页（轮播+搜索+筛选+卡片）
+│   │   │   │   ├── [id]/page.tsx       # 园区详情页（基本信息/统计数据/园区政策等）
+│   │   │   │   ├── me/page.tsx         # 园区平台“我的”页面（入口指向园区收藏）
+│   │   │   │   └── favorites/page.tsx  # 我的园区收藏列表
+│   │   │   ├── me/                     # 移动端我的相关页面（技术&政策平台）
 │   │   │   │   ├── page.tsx            # 移动端我的
 │   │   │   │   ├── company/page.tsx    # 移动端我的-企业信息（Logo可上传与展示）
 │   │   │   │   ├── feedback/page.tsx   # 移动端我的-问题反馈
@@ -67,6 +72,11 @@
 │   │       │   ├── filter-options/route.ts  # 技术筛选选项
 │   │       │   ├── search/route.ts          # 技术搜索
 │   │       │   └── search-stats/route.ts    # 搜索统计数据
+│   │       ├── parks/        # 园区H5相关API
+│   │       │   ├── list/route.ts       # 园区列表与筛选
+│   │       │   ├── [id]/route.ts       # 园区详情（基础信息+统计数据）
+│   │       │   ├── [id]/policies/route.ts # 园区下园区政策列表
+│   │       │   └── tags/route.ts       # 园区标签列表
 │   │       ├── _utils/auth.ts # API路由共享认证工具
 │   │       ├── wechat/
 │   │       │   ├── oauth-url/route.ts      # 生成微信网页授权URL（设置state）
@@ -132,7 +142,8 @@
 │       ├── auth.ts           # 用户认证API（包含验证码登录）
 │       ├── wechat.ts         # 微信登录API（获取授权URL/换取code登录）
 │       ├── tech.ts           # 技术产品API
-│       ├── policy.ts         # 政策与园区H5相关API
+│       ├── policy.ts         # 政策H5相关API
+│       ├── parks.ts          # 园区H5相关API（列表/详情/政策/收藏）
 │       ├── favorites.ts      # 用户收藏API封装
 │       └── company.ts        # 企业信息API
 ├── package.json              # 项目依赖配置
@@ -175,9 +186,18 @@
 ```
 
 ### 新增/更新
+- 政策H5底部导航移除“技术发布”入口，避免在 /m/policy 内展示绿色技术平台功能。
+- 政策H5部委筛选默认仅展示主要部委（发改委、生态环境部、商务部、工信部、自然资源部、财政部、交通运输部、科技部），其余通过“更多”展开。
+- 新增绿色园区H5独立入口 `/[locale]/m/parks` 及子页面（`/[locale]/m/parks/[id]`、`/[locale]/m/parks/me`、`/[locale]/m/parks/favorites`），共用账号体系与消息中心，但拥有独立“我的园区收藏”。
+- 新增园区相关 Supabase 表 `parks`、`park_economic_stats`、`park_green_stats`、`park_tags`、`park_tag_relations`、`park_favorites`（由 Supabase SQL Editor 执行建表脚本）。
+- 新增园区 API：`/api/parks/list`（列表与筛选）、`/api/parks/[id]`（园区详情）、`/api/parks/[id]/policies`（园区政策）、`/api/parks/tags`（标签）、`/api/user/park-favorites`（园区收藏）。
+- 扩展轮播图支持 `scene` 字段，并通过 `/api/public/carousel?scene=home|parks` 区分技术首页与园区首页 H5 轮播；管理端轮播图页面支持按场景管理。
+- 园区数据导入：已将 `/data/park_info.sql` + `/data/dict.sql` 导入并同步到 `public.parks`，但下列国家级经开区尚未匹配到 `admin_development_zones`（省份/经开区外键为空，待手动清洗匹配）：北海经济技术开发区、成都国际铁路港经济技术开发区、长春汽车经济技术开发区、广州南沙经济技术开发区、杭州湾上虞经济技术开发区、杭州余杭经济技术开发区、襄阳经济技术开发区、西青经济技术开发区、武汉临空港经济技术开发区、南昌小蓝经济技术开发区、宁波大榭开发区、宁波杭州湾经济技术开发区、宁波石化经济技术开发区、天津子牙经济技术开发区、绥化经济技术开发区、嵩明杨林经济技术开发区、上海金桥出口加工区、沈阳辉山经济技术开发区。
 - 管理端新增 三级/四级 分类管理 API 与前端表单组件：支持在“产业分类管理”中对每个子分类继续维护两级子类目（无需图片）。
 - 管理端技术管理表单支持选择三级/四级分类；用户端上传不涉及此两项，无需改动。
 - 新增 SQL 脚本 `add-tertiary-quaternary-categories.sql`：创建 `admin_tertiary_categories`、`admin_quaternary_categories` 表，并为 `admin_technologies` 增加对应外键列。
+- 新增数据清洗脚本 `data/agency_policy_clean.sql`：在原始 `data/agency_policy.sql` 的基础上去除 `content` 字段中的 HTML 标签，仅保留正文文本。
+- 为适配 Supabase SQL Editor 单次脚本大小限制，将园区政策清洗结果拆分为多份脚本：`data/agency_policy_clean_part1.sql` ~ `data/agency_policy_clean_part9.sql`，其中第 4 份进一步拆分为 `data/agency_policy_clean_part4_1.sql`、`data/agency_policy_clean_part4_2.sql`、`data/agency_policy_clean_part4_3.sql`，可分批导入 `data.agency_policy`。
 middle_process_scripts/      # 中间处理脚本暂存目录（可按需迁移脚本）
 ```
 ```

@@ -10,9 +10,10 @@ interface CarouselFormProps {
   image?: AdminCarouselImage | null
   onSuccess: () => void
   onCancel: () => void
+  sceneDefault?: 'home' | 'parks'
 }
 
-export function CarouselForm({ image, onSuccess, onCancel }: CarouselFormProps) {
+export function CarouselForm({ image, onSuccess, onCancel, sceneDefault = 'home' }: CarouselFormProps) {
   const [formData, setFormData] = useState({
     title_zh: '',
     title_en: '',
@@ -21,7 +22,8 @@ export function CarouselForm({ image, onSuccess, onCancel }: CarouselFormProps) 
     image_url: '',
     link_url: '',
     sort_order: 0,
-    is_active: true
+    is_active: true,
+    scene: 'home' as 'home' | 'parks' | ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -36,13 +38,15 @@ export function CarouselForm({ image, onSuccess, onCancel }: CarouselFormProps) 
         image_url: image.image_url,
         link_url: image.link_url || '',
         sort_order: image.sort_order,
-        is_active: image.is_active
+        is_active: image.is_active,
+        scene: (image.scene as 'home' | 'parks') || 'home'
       })
     } else {
       // 新建时获取下一个排序值
       fetchNextSortOrder()
+      setFormData((prev) => ({ ...prev, scene: sceneDefault }))
     }
-  }, [image])
+  }, [image, sceneDefault])
 
   const fetchNextSortOrder = async () => {
     try {
@@ -108,7 +112,8 @@ export function CarouselForm({ image, onSuccess, onCancel }: CarouselFormProps) 
         image_url: formData.image_url.trim(),
         link_url: formData.link_url.trim() || undefined,
         sort_order: formData.sort_order,
-        is_active: formData.is_active
+        is_active: formData.is_active,
+        scene: formData.scene || undefined
       }
 
       if (image) {
@@ -246,7 +251,7 @@ export function CarouselForm({ image, onSuccess, onCancel }: CarouselFormProps) 
           </div>
 
           {/* 排序和状态 */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 排序值
@@ -284,6 +289,28 @@ export function CarouselForm({ image, onSuccess, onCancel }: CarouselFormProps) 
                   启用状态
                 </label>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                场景
+              </label>
+              <select
+                value={formData.scene}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    scene: e.target.value as 'home' | 'parks' | '',
+                  }))
+                }
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent border-gray-300 text-sm"
+              >
+                <option value="home">绿色技术首页</option>
+                <option value="parks">绿色园区首页</option>
+              </select>
+              <p className="text-gray-500 text-xs mt-1">
+                用于区分不同入口的轮播图。
+              </p>
             </div>
           </div>
 

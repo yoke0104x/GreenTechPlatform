@@ -124,7 +124,7 @@ export default function AdminDashboard() {
             <Calendar className="w-8 h-8 text-green-600 mr-3" />
             <div>
               <h3 className="font-medium text-gray-900">轮播图管理</h3>
-              <p className="text-sm text-gray-500">首页轮播图设置</p>
+              <p className="text-sm text-gray-500">首页与园区轮播图设置</p>
             </div>
           </a>
           

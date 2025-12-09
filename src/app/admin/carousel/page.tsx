@@ -14,6 +14,7 @@ export default function CarouselPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingImage, setEditingImage] = useState<AdminCarouselImage | null>(null)
   const [viewMode, setViewMode] = useState<'table' | 'drag'>('table')
+  const [scene, setScene] = useState<'home' | 'parks'>('home')
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -29,7 +30,8 @@ export default function CarouselPage() {
         pageSize: String(params?.pageSize ?? pagination.pageSize),
         ...(params?.search && { search: params.search }),
         ...(params?.sortBy && { sortBy: params.sortBy }),
-        ...(params?.sortOrder && { sortOrder: params.sortOrder })
+        ...(params?.sortOrder && { sortOrder: params.sortOrder }),
+        scene
       })
 
       const response = await fetch(`/api/admin/carousel?${searchParams}`)
@@ -51,7 +53,7 @@ export default function CarouselPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [pagination.current, pagination.pageSize])
+  }, [pagination.current, pagination.pageSize, scene])
 
   useEffect(() => {
     loadImages()
@@ -302,6 +304,29 @@ export default function CarouselPage() {
               排序模式
             </button>
           </div>
+
+          <div className="flex items-center bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setScene('home')}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                scene === 'home'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              技术首页
+            </button>
+            <button
+              onClick={() => setScene('parks')}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                scene === 'parks'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              园区首页
+            </button>
+          </div>
           
           <button
             onClick={handleAdd}
@@ -346,6 +371,7 @@ export default function CarouselPage() {
       {showForm && (
         <CarouselForm
           image={editingImage}
+          sceneDefault={scene}
           onSuccess={handleFormSuccess}
           onCancel={() => setShowForm(false)}
         />

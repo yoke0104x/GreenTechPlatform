@@ -1,9 +1,13 @@
 import type { AdminCarouselImage } from '@/lib/types/admin'
 
-// Minimal client wrapper to fetch public carousel items for the homepage
+// Minimal client wrapper to fetch public carousel items for the homepage or specific scenes
 // Reuses the server route at /api/public/carousel
-export async function getPublicCarouselApi(): Promise<AdminCarouselImage[]> {
-  const res = await fetch('/api/public/carousel', {
+export async function getPublicCarouselApi(scene?: string): Promise<AdminCarouselImage[]> {
+  const url = scene
+    ? `/api/public/carousel?scene=${encodeURIComponent(scene)}`
+    : '/api/public/carousel'
+
+  const res = await fetch(url, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   })
@@ -23,4 +27,3 @@ export async function getPublicCarouselApi(): Promise<AdminCarouselImage[]> {
   }
   return []
 }
-
