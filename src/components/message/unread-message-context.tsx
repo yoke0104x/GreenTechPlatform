@@ -1,8 +1,9 @@
 'use client'
 
-import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useCallback, useEffect, useState, ReactNode, useMemo } from 'react'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useAuthContext } from '@/components/auth/auth-provider'
-import { getUnreadInternalMessageCount } from '@/lib/supabase/contact-messages'
+import { getUnreadInternalMessageCount, DEFAULT_MESSAGE_CATEGORIES, PARK_MESSAGE_CATEGORIES, SHARED_MESSAGE_CATEGORIES } from '@/lib/supabase/contact-messages'
 
 interface UnreadMessageContextType {
   unreadCount: number
@@ -15,7 +16,24 @@ const UnreadMessageContext = createContext<UnreadMessageContextType | undefined>
 
 export function UnreadMessageProvider({ children }: { children: ReactNode }) {
   const { user } = useAuthContext()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [unreadCount, setUnreadCount] = useState(0)
+
+  const isParkContext = useMemo(() => {
+    if (!pathname) return false
+    if (pathname.includes('/m/parks')) return true
+    if (pathname.includes('/parks/')) return true
+    return searchParams?.get('from') === 'parks'
+  }, [pathname, searchParams])
+
+  const categoryOptions = useMemo(
+    () =>
+      isParkContext
+        ? { categories: [...PARK_MESSAGE_CATEGORIES, ...SHARED_MESSAGE_CATEGORIES], includeNull: false }
+        : { excludeCategories: PARK_MESSAGE_CATEGORIES, includeNull: true },
+    [isParkContext],
+  )
 
   const refreshUnreadCount = useCallback(async () => {
     if (!user) {
@@ -23,13 +41,13 @@ export function UnreadMessageProvider({ children }: { children: ReactNode }) {
       return
     }
     try {
-      const count = await getUnreadInternalMessageCount()
+      const count = await getUnreadInternalMessageCount(categoryOptions)
       setUnreadCount(count)
     } catch (error) {
       console.error('Failed to load unread count:', error)
       setUnreadCount(0)
     }
-  }, [user])
+  }, [user, categoryOptions])
 
   const decrementUnreadCount = useCallback((amount: number = 1) => {
     setUnreadCount(prev => Math.max(0, prev - amount))

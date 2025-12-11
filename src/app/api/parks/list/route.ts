@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const provinceParam = searchParams.get('province')?.trim() || ''
     const developmentZoneParam = searchParams.get('developmentZone')?.trim() || ''
     const tagIdsParam = searchParams.get('tags') || ''
-    const sortBy = searchParams.get('sortBy') || 'updatedAtDesc'
+    const sortBy = searchParams.get('sortBy') || 'default'
 
     let page = parseInt(searchParams.get('page') || '1', 10)
     let pageSize = parseInt(searchParams.get('pageSize') || '10', 10)
@@ -143,7 +143,11 @@ export async function GET(request: NextRequest) {
 
     let orderField = 'updated_at'
     let orderAscending = false
+    let useDefaultSort = false
     switch (sortBy) {
+      case 'default':
+        useDefaultSort = true
+        break
       case 'nameAsc':
         orderField = 'name_zh'
         orderAscending = true
@@ -152,20 +156,25 @@ export async function GET(request: NextRequest) {
         orderField = 'name_zh'
         orderAscending = false
         break
-      case 'updatedAtAsc':
-        orderField = 'updated_at'
-        orderAscending = true
-        break
       case 'updatedAtDesc':
       default:
         orderField = 'updated_at'
         orderAscending = false
     }
 
-    const { data: parks, error, count } = await query
-      .order(orderField, { ascending: orderAscending })
-      .order('id', { ascending: true })
-      .range(from, to)
+    let orderedQuery = query
+    if (useDefaultSort) {
+      orderedQuery = orderedQuery
+        .order('sort_rank', { ascending: true })
+        .order('updated_at', { ascending: false })
+        .order('id', { ascending: true })
+    } else {
+      orderedQuery = orderedQuery
+        .order(orderField, { ascending: orderAscending })
+        .order('id', { ascending: true })
+    }
+
+    const { data: parks, error, count } = await orderedQuery.range(from, to)
 
     if (error) {
       console.error('查询园区列表失败:', error)
@@ -346,4 +355,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-

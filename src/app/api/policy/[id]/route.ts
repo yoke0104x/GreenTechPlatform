@@ -49,12 +49,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const policyId = policy.id as string
     const provinceId = policy.region_id as string | null
-    const zoneId = policy.park_id as string | null
+    const parkId = policy.park_id as string | null
 
     const [
       policyTagRows,
       provincesData,
-      zonesData,
+      parkData,
     ] = await Promise.all([
       supabaseAdmin
         .from('policy_policy_tag')
@@ -67,14 +67,41 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             .eq('id', provinceId)
             .single()
         : Promise.resolve({ data: null } as any),
-      zoneId
+      parkId
         ? supabaseAdmin
-            .from('admin_development_zones')
-            .select('id, name_zh, name_en, code')
-            .eq('id', zoneId)
-            .single()
+            .from('parks')
+            .select('id, name_zh, name_en, province_id, development_zone_id')
+            .eq('id', parkId)
+            .maybeSingle()
         : Promise.resolve({ data: null } as any),
     ])
+
+    // 计算园区对应的经开区（国家级经开区园区），兼容旧数据：policy.park_id 直接为经开区ID
+    let zonesData: { data: any | null } = { data: null } as any
+    try {
+      const zoneIdFromPark =
+        parkData.data && parkData.data.development_zone_id
+          ? (parkData.data.development_zone_id as string)
+          : null
+
+      if (zoneIdFromPark) {
+        zonesData = await supabaseAdmin
+          .from('admin_development_zones')
+          .select('id, name_zh, name_en, code')
+          .eq('id', zoneIdFromPark)
+          .maybeSingle()
+      } else if (parkId) {
+        // 兼容旧语义：park_id 直接存储经开区 ID
+        zonesData = await supabaseAdmin
+          .from('admin_development_zones')
+          .select('id, name_zh, name_en, code')
+          .eq('id', parkId)
+          .maybeSingle()
+      }
+    } catch (e) {
+      console.warn('查询园区经开区信息失败（忽略，不阻断政策详情）:', e)
+      zonesData = { data: null } as any
+    }
 
     const tagIds = Array.from(
       new Set((policyTagRows.data || []).map((r: any) => r.tag_id).filter(Boolean)),

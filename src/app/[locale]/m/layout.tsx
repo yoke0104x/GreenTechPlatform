@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { ReactNode, useMemo } from 'react'
 import { Home, Upload, MessageSquare, User } from 'lucide-react'
 import { UnreadMessageProvider, useUnreadMessage } from '@/components/message/unread-message-context'
@@ -15,6 +15,7 @@ function MobileLayoutInner({
   locale: string
 }) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { unreadCount } = useUnreadMessage()
   const isPolicySection = useMemo(
     () => !!pathname && pathname.startsWith(`/${locale}/m/policy`),
@@ -24,13 +25,19 @@ function MobileLayoutInner({
     () => !!pathname && pathname.startsWith(`/${locale}/m/parks`),
     [pathname, locale],
   )
+  const isParksMessages = useMemo(
+    () => !!pathname && pathname.startsWith(`/${locale}/m/chat`) && searchParams?.get('from') === 'parks',
+    [pathname, locale, searchParams],
+  )
+
+  const isParksContext = isParksSection || isParksMessages
 
   const tabs = useMemo(() => {
     // 绿色园区 H5：独立入口和“我的园区”
-    if (isParksSection) {
+    if (isParksContext) {
       return [
         { key: 'home', labelZh: '首页', labelEn: 'Home', href: `/${locale}/m/parks`, Icon: Home },
-        { key: 'messages', labelZh: '消息', labelEn: 'Messages', href: `/${locale}/m/chat`, Icon: MessageSquare },
+        { key: 'messages', labelZh: '消息', labelEn: 'Messages', href: `/${locale}/m/chat?from=parks`, Icon: MessageSquare },
         { key: 'me', labelZh: '我的', labelEn: 'Me', href: `/${locale}/m/parks/me`, Icon: User },
       ]
     }
@@ -51,7 +58,7 @@ function MobileLayoutInner({
       { key: 'messages', labelZh: '消息', labelEn: 'Messages', href: `/${locale}/m/chat`, Icon: MessageSquare },
       { key: 'me', labelZh: '我的', labelEn: 'Me', href: `/${locale}/m/me`, Icon: User },
     ]
-  }, [locale, isPolicySection, isParksSection])
+  }, [locale, isPolicySection, isParksContext])
   // Derive active tab with precedence to longer, more specific paths
   const activeKey = useMemo(() => {
     if (!pathname) return ''

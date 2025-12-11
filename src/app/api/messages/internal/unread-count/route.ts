@@ -12,12 +12,33 @@ export async function GET(request: NextRequest) {
   }
 
   const toColumn = user.authType === 'custom' ? 'custom_to_user_id' : 'to_user_id'
+  const categoriesParam = request.nextUrl.searchParams.get('categories')
+  const excludeParam = request.nextUrl.searchParams.get('exclude')
+  const includeNull = request.nextUrl.searchParams.get('includeNull') === 'true'
+  const allowedCategories = categoriesParam
+    ? categoriesParam.split(',').map((c) => decodeURIComponent(c)).filter(Boolean)
+    : null
+  const excludeCategories = excludeParam
+    ? excludeParam.split(',').map((c) => decodeURIComponent(c)).filter(Boolean)
+    : null
 
-  const { count, error } = await serviceSupabase
+  let query = serviceSupabase
     .from('internal_messages')
     .select('id', { count: 'exact', head: true })
     .eq(toColumn, user.id)
     .eq('is_read', false)
+
+  if (allowedCategories && allowedCategories.length > 0) {
+    query = query.in('category', allowedCategories)
+    if (includeNull) {
+      query = query.or('category.is.null,category.eq.,category.eq.undefined')
+    }
+  }
+  if (excludeCategories && excludeCategories.length > 0) {
+    query = query.not('category', 'in', `(${excludeCategories.map((c) => `"${c}"`).join(',')})`)
+  }
+
+  const { count, error } = await query
 
   if (error) {
     console.error('Fetch unread count failed:', error)

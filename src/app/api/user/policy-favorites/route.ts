@@ -155,10 +155,19 @@ export async function GET(request: NextRequest) {
       }
 
       const provinceIds = Array.from(
-        new Set((rows.map((r) => (r.policy as any)?.region_id).filter(Boolean))),
+        new Set(
+          rows
+            .map((r) => (r.policy as any)?.region_id)
+            .filter(Boolean),
+        ),
       ) as string[]
-      const zoneIds = Array.from(
-        new Set((rows.map((r) => (r.policy as any)?.park_id).filter(Boolean))),
+
+      const parkIds = Array.from(
+        new Set(
+          rows
+            .map((r) => (r.policy as any)?.park_id)
+            .filter(Boolean),
+        ),
       ) as string[]
 
       if (provinceIds.length) {
@@ -168,15 +177,46 @@ export async function GET(request: NextRequest) {
           .in('id', provinceIds)
         provinceMap = new Map((provinces || []).map((p: any) => [p.id, p]))
       }
-      if (zoneIds.length) {
+
+      // 加载园区及其关联的经开区，兼容旧数据
+      let parkMap = new Map<string, any>()
+      if (parkIds.length) {
+        const { data: parks } = await adminClient
+          .from('parks')
+          .select('id, name_zh, name_en, development_zone_id')
+          .in('id', parkIds)
+        parkMap = new Map((parks || []).map((p: any) => [p.id, p]))
+      }
+
+      const zoneIdsFromParks = Array.from(
+        new Set(
+          Array.from(parkMap.values())
+            .map((p: any) => p.development_zone_id)
+            .filter(Boolean),
+        ),
+      ) as string[]
+
+      const legacyZoneIds = Array.from(
+        new Set(
+          rows
+            .map((r) => (r.policy as any)?.park_id as string | null)
+            .filter((id) => id && !parkMap.has(id)),
+        ),
+      ) as string[]
+
+      const allZoneIds = Array.from(
+        new Set([...zoneIdsFromParks, ...legacyZoneIds]),
+      ) as string[]
+
+      if (allZoneIds.length) {
         const { data: zones } = await adminClient
           .from('admin_development_zones')
           .select('id, name_zh, name_en')
-          .in('id', zoneIds)
+          .in('id', allZoneIds)
         zoneMap = new Map((zones || []).map((z: any) => [z.id, z]))
       }
 
-      // 将 tags、region、park 挂回 policy
+      // 将 tags、region、park 挂回 policy（园区经开区信息通过上面的映射还原）
       rows.forEach((row) => {
         const pol: any = row.policy || {}
         const related = (policyTagRows || []).filter((r: any) => r.policy_id === row.policy_id)
@@ -187,9 +227,27 @@ export async function GET(request: NextRequest) {
           const prov = provinceMap.get(pol.region_id)
           pol.province = { id: prov.id, name: prov.name_zh, nameEn: prov.name_en }
         }
-        if (pol.park_id && zoneMap.get(pol.park_id)) {
-          const z = zoneMap.get(pol.park_id)
-          pol.developmentZone = { id: z.id, name: z.name_zh, nameEn: z.name_en }
+        const parkId = pol.park_id as string | undefined
+        const parkRow = parkId ? parkMap.get(parkId) : null
+        const zoneIdFromPark =
+          parkRow && parkRow.development_zone_id
+            ? (parkRow.development_zone_id as string)
+            : null
+        if (zoneIdFromPark && zoneMap.get(zoneIdFromPark)) {
+          const z = zoneMap.get(zoneIdFromPark)
+          pol.developmentZone = {
+            id: z.id,
+            name: z.name_zh,
+            nameEn: z.name_en,
+          }
+        } else if (parkId && zoneMap.get(parkId)) {
+          // 兼容旧数据：park_id 直接为经开区 ID
+          const z = zoneMap.get(parkId)
+          pol.developmentZone = {
+            id: z.id,
+            name: z.name_zh,
+            nameEn: z.name_en,
+          }
         }
         row.policy = pol
       })

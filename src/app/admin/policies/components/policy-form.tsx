@@ -9,11 +9,11 @@ import {
   POLICY_LEVEL_OPTIONS,
   POLICY_MINISTRY_UNIT_OPTIONS,
   AdminProvince,
-  AdminDevelopmentZone,
+  AdminPark,
 } from '@/lib/types/admin'
 import { getPolicyTagsAdminApi } from '@/lib/api/admin-policies'
 import { getProvincesApi } from '@/lib/api/admin-provinces'
-import { getDevelopmentZonesApi } from '@/lib/api/admin-development-zones'
+import { getParksAdminApi } from '@/lib/api/admin-parks'
 
 export interface PolicyFormValues {
   id?: string
@@ -60,7 +60,7 @@ export function PolicyForm({ open, onClose, onSubmit, initial }: PolicyFormProps
   const [submitting, setSubmitting] = useState(false)
   const [tags, setTags] = useState<AdminPolicyTag[]>([])
   const [provinces, setProvinces] = useState<AdminProvince[]>([])
-  const [zones, setZones] = useState<AdminDevelopmentZone[]>([])
+  const [parks, setParks] = useState<AdminPark[]>([])
 
   useEffect(() => {
     if (!open) return
@@ -75,10 +75,9 @@ export function PolicyForm({ open, onClose, onSubmit, initial }: PolicyFormProps
 
         const regionId = initial?.region_id || values.regionId
         if (regionId) {
-          const z = await getDevelopmentZonesApi(regionId)
-          setZones(z)
+          await loadParks(regionId)
         } else {
-          setZones([])
+          setParks([])
         }
       } catch (error) {
         console.warn('加载政策表单依赖数据失败:', error)
@@ -115,19 +114,36 @@ export function PolicyForm({ open, onClose, onSubmit, initial }: PolicyFormProps
     })
   }
 
+  const loadParks = async (provinceId: string) => {
+    if (!provinceId) {
+      setParks([])
+      return
+    }
+    try {
+      const res = await getParksAdminApi({
+        provinceId,
+        page: 1,
+        pageSize: 200,
+      })
+      setParks(res.data)
+    } catch (e) {
+      console.warn('加载园区列表失败:', e)
+      setParks([])
+    }
+  }
+
   const handleRegionChange = async (regionId: string) => {
     handleChange('regionId', regionId)
     handleChange('parkId', '')
     if (regionId) {
       try {
-        const z = await getDevelopmentZonesApi(regionId)
-        setZones(z)
+        await loadParks(regionId)
       } catch (e) {
-        console.warn('加载经开区失败:', e)
-        setZones([])
+        console.warn('加载园区列表失败:', e)
+        setParks([])
       }
     } else {
-      setZones([])
+      setParks([])
     }
   }
 
@@ -310,17 +326,22 @@ export function PolicyForm({ open, onClose, onSubmit, initial }: PolicyFormProps
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                经开区 / 园区
+                园区（仅园区政策）
               </label>
               <select
                 value={values.parkId || ''}
                 onChange={(e) => handleChange('parkId', e.target.value)}
+                disabled={values.level !== 'park'}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="">未设置</option>
-                {zones.map((z) => (
-                  <option key={z.id} value={z.id}>
-                    {z.name_zh}
+                <option value="">
+                  {values.level === 'park'
+                    ? '请选择园区'
+                    : '仅当政策级别为园区政策时可选'}
+                </option>
+                {parks.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name_zh}
                   </option>
                 ))}
               </select>

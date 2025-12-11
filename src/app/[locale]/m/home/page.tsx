@@ -85,7 +85,7 @@ export default function MobileHomePage() {
     showLoading()
     ;(async () => {
       try {
-        const list = await getPublicCarouselApi()
+        const list = await getPublicCarouselApi('home')
         if (!mounted) return
         if (list && list.length) setCarousel(list as AdminCarouselImage[])
         else setCarousel([])

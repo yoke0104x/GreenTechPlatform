@@ -52,7 +52,7 @@ export default function MobileParksHomePage() {
 
   const [filterOpen, setFilterOpen] = useState(false)
   const [sortOpen, setSortOpen] = useState(false)
-  const [currentSort, setCurrentSort] = useState<'updatedAtDesc' | 'updatedAtAsc' | 'nameAsc' | 'nameDesc'>('updatedAtDesc')
+  const [currentSort, setCurrentSort] = useState<'default' | 'updatedAtDesc' | 'nameAsc' | 'nameDesc'>('default')
 
   // 列表数据
   const [parks, setParks] = useState<ParkListItem[]>([])
@@ -131,19 +131,34 @@ export default function MobileParksHomePage() {
     return () => clearInterval(timer)
   }, [carousel.length])
 
-  const loadParks = async (resetPage = true) => {
+  const loadParks = async (
+    resetPage = true,
+    overrides?: {
+      keyword?: string
+      level?: string
+      province?: string
+      tags?: string[]
+      sortBy?: 'default' | 'updatedAtDesc' | 'nameAsc' | 'nameDesc'
+    },
+  ) => {
     if (loadingList) return
     const nextPage = resetPage ? 1 : page + 1
+
+    const keywordValue = overrides?.keyword ?? keyword
+    const levelValue = overrides?.level ?? level
+    const provinceValue = overrides?.province ?? selectedProvince
+    const tagsValue = overrides?.tags ?? selectedTags
+    const sortValue = overrides?.sortBy ?? currentSort
 
     setLoadingList(true)
     showLoading()
     try {
       const res = await getParks({
-        keyword: keyword.trim() || undefined,
-        level: level || undefined,
-        province: selectedProvince || undefined,
-        tags: selectedTags.length ? selectedTags : undefined,
-        sortBy: currentSort,
+        keyword: keywordValue.trim() || undefined,
+        level: levelValue || undefined,
+        province: provinceValue || undefined,
+        tags: tagsValue.length ? tagsValue : undefined,
+        sortBy: sortValue,
         page: nextPage,
         pageSize: PAGE_SIZE,
       })
@@ -408,13 +423,14 @@ export default function MobileParksHomePage() {
                   setLevel('')
                   setSelectedTags([])
                   setSelectedProvince('')
-                  setParks([])
-                  setTotal(0)
                   setPage(1)
                   setFilterOpen(false)
-                  setTimeout(() => {
-                    loadParks(true)
-                  }, 0)
+                  loadParks(true, {
+                    keyword: '',
+                    level: '',
+                    province: '',
+                    tags: [],
+                  })
                 }}
                 className="h-8 px-3 rounded-full text-[12px] border border-gray-200 text-gray-600 bg-white inline-flex items-center gap-1"
               >
@@ -460,7 +476,20 @@ export default function MobileParksHomePage() {
           </button>
           {sortOpen && (
             <>
-              <div className="absolute right-0 mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+              <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                <button
+                  onClick={() => {
+                    setCurrentSort('default')
+                    setSortOpen(false)
+                    loadParks(true)
+                  }}
+                  className={`w-full px-3 h-9 text-left text-[12px] hover:bg-gray-50 inline-flex items-center gap-2 ${
+                    currentSort === 'default' ? 'text-[#00b899] font-semibold' : ''
+                  }`}
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  {isEn ? 'Default order' : '默认排序'}
+                </button>
                 <button
                   onClick={() => {
                     setCurrentSort('updatedAtDesc')
@@ -473,19 +502,6 @@ export default function MobileParksHomePage() {
                 >
                   <Clock className="w-4 h-4" />
                   {isEn ? 'Latest updated' : '最近更新'}
-                </button>
-                <button
-                  onClick={() => {
-                    setCurrentSort('updatedAtAsc')
-                    setSortOpen(false)
-                    loadParks(true)
-                  }}
-                  className={`w-full px-3 h-9 text-left text-[12px] hover:bg-gray-50 inline-flex items-center gap-2 ${
-                    currentSort === 'updatedAtAsc' ? 'text-[#00b899] font-semibold' : ''
-                  }`}
-                >
-                  <Clock className="w-4 h-4" />
-                  {isEn ? 'Oldest updated' : '最早更新'}
                 </button>
                 <button
                   onClick={() => {

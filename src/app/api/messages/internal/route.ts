@@ -42,14 +42,34 @@ export async function GET(request: NextRequest) {
   }
 
   const messageId = request.nextUrl.searchParams.get('id')
+  const categoriesParam = request.nextUrl.searchParams.get('categories')
+  const excludeParam = request.nextUrl.searchParams.get('exclude')
+  const includeNull = request.nextUrl.searchParams.get('includeNull') === 'true'
+  const allowedCategories = categoriesParam
+    ? categoriesParam.split(',').map((c) => decodeURIComponent(c)).filter(Boolean)
+    : null
+  const excludeCategories = excludeParam
+    ? excludeParam.split(',').map((c) => decodeURIComponent(c)).filter(Boolean)
+    : null
 
   if (messageId) {
-    const { data, error } = await serviceSupabase
+    let detailQuery = serviceSupabase
       .from('internal_messages')
       .select('*')
       .eq('id', messageId)
       .eq(toColumn, targetId)
-      .maybeSingle()
+
+    if (allowedCategories && allowedCategories.length > 0) {
+      detailQuery = detailQuery.in('category', allowedCategories)
+      if (includeNull) {
+        detailQuery = detailQuery.or('category.is.null,category.eq.,category.eq.undefined')
+      }
+    }
+    if (excludeCategories && excludeCategories.length > 0) {
+      detailQuery = detailQuery.not('category', 'in', `(${excludeCategories.map((c) => `"${c}"`).join(',')})`)
+    }
+
+    const { data, error } = await detailQuery.maybeSingle()
 
     if (error) {
       console.error('获取站内信详情失败:', error)
@@ -63,11 +83,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, data })
   }
 
-  const { data, error } = await serviceSupabase
+  let query = serviceSupabase
     .from('internal_messages')
     .select('*')
     .eq(toColumn, targetId)
-    .order('created_at', { ascending: false })
+
+  if (allowedCategories && allowedCategories.length > 0) {
+    query = query.in('category', allowedCategories)
+    if (includeNull) {
+      query = query.or('category.is.null,category.eq.,category.eq.undefined')
+    }
+  }
+  if (excludeCategories && excludeCategories.length > 0) {
+    query = query.not('category', 'in', `(${excludeCategories.map((c) => `"${c}"`).join(',')})`)
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false })
 
   if (error) {
     console.error('Internal messages fetch failed:', error)

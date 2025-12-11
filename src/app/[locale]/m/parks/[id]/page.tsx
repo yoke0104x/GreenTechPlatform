@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { ArrowLeft, Heart, Loader2, Share2, Bell, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, Heart, Loader2, Share2, Phone, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { useLoadingOverlay } from '@/components/common/loading-overlay'
+import { ContactUsModal } from '@/components/contact/contact-us-modal'
+import { useAuthContext } from '@/components/auth/auth-provider'
 import {
   getParkDetail,
   getParkPolicies,
@@ -27,6 +29,7 @@ export default function MobileParkDetailPage({
   const locale = pathname.startsWith('/en') ? 'en' : 'zh'
   const isEn = locale === 'en'
   const { showLoading, hideLoading } = useLoadingOverlay()
+  const { user } = useAuthContext()
 
   const [park, setPark] = useState<ParkDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -41,6 +44,23 @@ export default function MobileParkDetailPage({
   const [favoriteLoading, setFavoriteLoading] = useState(false)
   const [isFavorited, setIsFavorited] = useState(false)
   const [showMoreInfo, setShowMoreInfo] = useState(false)
+  const [selectedYear, setSelectedYear] = useState<number | null>(null)
+  const [contactOpen, setContactOpen] = useState(false)
+
+  // 检查登录状态并提示（复用技术详情页逻辑）
+  const checkAuthAndPrompt = () => {
+    if (!user) {
+      const message =
+        locale === 'en'
+          ? 'Please register or login to continue'
+          : '请注册登录后继续操作'
+      if (confirm(message)) {
+        router.push(`/${locale}/m/login`)
+      }
+      return false
+    }
+    return true
+  }
 
   useEffect(() => {
     let alive = true
@@ -66,6 +86,13 @@ export default function MobileParkDetailPage({
       hideLoading()
     }
   }, [id, hideLoading, showLoading])
+
+  useEffect(() => {
+    if (!park?.economicStats?.length) return
+    const years = [...new Set(park.economicStats.map((s) => s.year))].sort((a, b) => a - b)
+    // 默认选最新年份
+    setSelectedYear(years[years.length - 1] ?? null)
+  }, [park?.economicStats])
 
   const handleBackNavigation = () => {
     if (typeof window !== 'undefined' && window.history.length > 1) {
@@ -107,10 +134,6 @@ export default function MobileParkDetailPage({
     } else {
       alert(isEn ? 'Sharing is not supported on this device.' : '当前设备不支持分享')
     }
-  }
-
-  const handleSubscribe = () => {
-    alert(isEn ? 'Subscribed successfully' : '已订阅该园区最新动态')
   }
 
   const loadPolicies = async (reset = true) => {
@@ -160,6 +183,52 @@ export default function MobileParkDetailPage({
     ]
     return extras.filter((e) => e.value)
   }, [park, isEn])
+
+  const honorsTimeline = useMemo(() => {
+    const result: {
+      years: string[]
+      itemsByYear: Map<string, { id: string; title: string; type?: string | null }>
+    } = {
+      years: [],
+      itemsByYear: new Map(),
+    }
+
+    if (!park?.brandHonors || park.brandHonors.length === 0) {
+      return result
+    }
+
+    const otherLabel = isEn ? 'Other' : '其他'
+
+    for (const honor of park.brandHonors) {
+      if (!honor || !honor.title) continue
+      const yearKey =
+        typeof honor.year === 'number' && !Number.isNaN(honor.year)
+          ? String(honor.year)
+          : otherLabel
+
+      const existing = result.itemsByYear.get(yearKey) ?? []
+      existing.push({
+        id: honor.id,
+        title: honor.title,
+        type: honor.type ?? null,
+      })
+      result.itemsByYear.set(yearKey, existing)
+    }
+
+    const years = Array.from(result.itemsByYear.keys()).sort((a, b) => {
+      if (a === otherLabel) return 1
+      if (b === otherLabel) return -1
+      const na = Number(a)
+      const nb = Number(b)
+      if (Number.isNaN(na) && Number.isNaN(nb)) return 0
+      if (Number.isNaN(na)) return 1
+      if (Number.isNaN(nb)) return -1
+      return nb - na
+    })
+
+    result.years = years
+    return result
+  }, [park?.brandHonors, isEn])
 
   if (loading) {
     return (
@@ -225,11 +294,18 @@ export default function MobileParkDetailPage({
             <h2 className="text-[16px] font-semibold text-gray-900 leading-snug line-clamp-2">
               {park.name}
             </h2>
-            {park.level && (
-              <div className="mt-1 inline-flex items-center px-2 h-6 rounded-full bg-emerald-50 text-emerald-700 text-[11px] border border-emerald-100">
-                {park.level}
-              </div>
-            )}
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {park.level && (
+                <span className="px-2 h-6 inline-flex items-center rounded-lg bg-emerald-50 text-emerald-700 text-[11px]">
+                  {park.level}
+                </span>
+              )}
+              {park.province && (
+                <span className="px-2 h-6 inline-flex items-center rounded-lg bg-[#eef2ff] text-[#4b50d4] text-[11px]">
+                  {park.province.name}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -273,27 +349,27 @@ export default function MobileParkDetailPage({
                     {isEn ? 'Basic Information' : '基本信息'}
                   </h3>
                 </div>
-                <div className="space-y-2 text-[12px] text-gray-700">
+                <div className="space-y-2 text-[12px] text-gray-700 ml-[14px]">
                   <div className="flex">
-                    <span className="w-20 text-gray-500 shrink-0">
+                    <span className="w-20 text-gray-400 shrink-0">
                       {isEn ? 'Chinese name' : '中文名称'}：
                     </span>
-                    <span className="flex-1 text-gray-900">{park.name}</span>
+                    <span className="flex-1 text-gray-950">{park.name}</span>
                   </div>
                   {park.nameEn && (
                     <div className="flex">
-                      <span className="w-20 text-gray-500 shrink-0">
+                      <span className="w-20 text-gray-400 shrink-0">
                         {isEn ? 'English name' : '英文名称'}：
                       </span>
-                      <span className="flex-1 text-gray-900">{park.nameEn}</span>
+                      <span className="flex-1 text-gray-950">{park.nameEn}</span>
                     </div>
                   )}
                   {park.province && (
                     <div className="flex">
-                      <span className="w-20 text-gray-500 shrink-0">
+                      <span className="w-20 text-gray-400 shrink-0">
                         {isEn ? 'Province / City' : '所在省市'}：
                       </span>
-                      <span className="flex-1 text-gray-900">
+                      <span className="flex-1 text-gray-950">
                         {park.province.name}
                         {park.city ? ` · ${park.city}` : ''}
                       </span>
@@ -301,59 +377,59 @@ export default function MobileParkDetailPage({
                   )}
                   {park.address && (
                     <div className="flex">
-                      <span className="w-20 text-gray-500 shrink-0">
+                      <span className="w-20 text-gray-400 shrink-0">
                         {isEn ? 'Address' : '地址'}：
                       </span>
-                      <span className="flex-1 text-gray-900">{park.address}</span>
+                      <span className="flex-1 text-gray-950">{park.address}</span>
                     </div>
                   )}
                   {park.areaKm2 != null && (
                     <div className="flex">
-                      <span className="w-20 text-gray-500 shrink-0">
+                      <span className="w-20 text-gray-400 shrink-0">
                         {isEn ? 'Area' : '面积'}：
                       </span>
-                      <span className="flex-1 text-gray-900">
+                      <span className="flex-1 text-gray-950">
                         {park.areaKm2} {isEn ? 'km²' : '平方公里'}
                       </span>
                     </div>
                   )}
                   {park.population != null && (
                     <div className="flex">
-                      <span className="w-20 text-gray-500 shrink-0">
+                      <span className="w-20 text-gray-400 shrink-0">
                         {isEn ? 'Population' : '人口'}：
                       </span>
-                      <span className="flex-1 text-gray-900">
+                      <span className="flex-1 text-gray-950">
                         {(park.population / 10000).toFixed(2)} {isEn ? 'million people' : '万人'}
                       </span>
                     </div>
                   )}
                   {park.establishedDate && (
                     <div className="flex">
-                      <span className="w-20 text-gray-500 shrink-0">
+                      <span className="w-20 text-gray-400 shrink-0">
                         {isEn ? 'Established' : '成立时间'}：
                       </span>
-                      <span className="flex-1 text-gray-900">{park.establishedDate}</span>
+                      <span className="flex-1 text-gray-950">{park.establishedDate}</span>
                     </div>
                   )}
                   {park.leadingIndustries && (
                     <div className="flex">
-                      <span className="w-20 text-gray-500 shrink-0">
+                      <span className="w-20 text-gray-400 shrink-0">
                         {isEn ? 'Leading industries' : '主导产业'}：
                       </span>
-                      <span className="flex-1 text-gray-900">{park.leadingIndustries}</span>
+                      <span className="flex-1 text-gray-950">{park.leadingIndustries}</span>
                     </div>
                   )}
                   {park.leadingCompanies && (
                     <div className="flex">
-                      <span className="w-20 text-gray-500 shrink-0">
+                      <span className="w-20 text-gray-400 shrink-0">
                         {isEn ? 'Leading companies' : '龙头企业'}：
                       </span>
-                      <span className="flex-1 text-gray-900">{park.leadingCompanies}</span>
+                      <span className="flex-1 text-gray-950">{park.leadingCompanies}</span>
                     </div>
                   )}
                   {park.websiteUrl && (
                     <div className="flex">
-                      <span className="w-20 text-gray-500 shrink-0">
+                      <span className="w-20 text-gray-400 shrink-0">
                         {isEn ? 'Website' : '官网地址'}：
                       </span>
                       <a
@@ -372,10 +448,10 @@ export default function MobileParkDetailPage({
                   )}
                   {park.wechatOfficialAccount && (
                     <div className="flex">
-                      <span className="w-20 text-gray-500 shrink-0">
+                      <span className="w-20 text-gray-400 shrink-0">
                         {isEn ? 'WeChat OA' : '微信公众号'}：
                       </span>
-                      <span className="flex-1 text-gray-900">{park.wechatOfficialAccount}</span>
+                      <span className="flex-1 text-gray-950">{park.wechatOfficialAccount}</span>
                     </div>
                   )}
                   {basicInfoExtra.length > 0 && (
@@ -407,10 +483,10 @@ export default function MobileParkDetailPage({
                           </div>
                           {basicInfoExtra.map((item) => (
                             <div key={item.label} className="flex">
-                              <span className="w-20 text-gray-500 shrink-0">
+                              <span className="w-20 text-gray-400 shrink-0">
                                 {item.label}：
                               </span>
-                              <span className="flex-1 text-gray-900">{item.value}</span>
+                              <span className="flex-1 text-gray-950">{item.value}</span>
                             </div>
                           ))}
                         </div>
@@ -429,14 +505,16 @@ export default function MobileParkDetailPage({
                       {isEn ? 'Introduction' : '园区简介'}
                     </h3>
                   </div>
-                  <p className="text-[12px] text-gray-700 leading-relaxed whitespace-pre-line">
-                    {park.briefZh || park.briefEn}
-                  </p>
+                  <div className="ml-[14px]">
+                    <p className="text-[12px] text-gray-700 leading-relaxed whitespace-pre-line">
+                      {park.briefZh || park.briefEn}
+                    </p>
+                  </div>
                 </div>
               )}
 
-              {/* 品牌与荣誉 */}
-              {park.brandHonors && park.brandHonors.length > 0 && (
+              {/* 品牌与荣誉：时间轴 */}
+              {honorsTimeline.years.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-1.5 h-4 bg-[#00b899]" />
@@ -444,15 +522,57 @@ export default function MobileParkDetailPage({
                       {isEn ? 'Brand & Honors' : '品牌与荣誉'}
                     </h3>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {park.brandHonors.map((h, idx) => (
-                      <span
-                        key={`${h}-${idx}`}
-                        className="px-2 h-6 inline-flex items-center rounded-full bg-amber-50 text-amber-700 text-[11px] border border-amber-100"
-                      >
-                        {h}
-                      </span>
-                    ))}
+                  <div className="mt-1 ml-[14px]">
+                    <div className="space-y-8">
+                      {honorsTimeline.years.map((year, index) => {
+                        const items = honorsTimeline.itemsByYear.get(year) ?? []
+                        const isFirst = index === 0
+                        const isLast = index === honorsTimeline.years.length - 1
+                        return (
+                          <div
+                            key={year}
+                            className="grid grid-cols-[52px,16px,1fr] gap-x-2"
+                          >
+                            <div className="flex items-center justify-start">
+                              <span className="text-[12px] text-gray-600 font-medium">
+                                {year}
+                                {!isEn ? '年' : ''}
+                              </span>
+                            </div>
+                            <div className="relative flex items-center justify-center">
+                              <span
+                                className={`w-2 h-2 rounded-full z-[1] bg-white ${
+                                  isFirst ? 'bg-[#2f76ff]' : 'bg-[#8fa3d8]'
+                                }`}
+                              />
+                              {!isLast && (
+                                <div className="absolute left-1/2 top-full -translate-x-1/2 w-px h-10 bg-gray-200 mt-1" />
+                              )}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {items.map((item) => (
+                                <div
+                                  key={item.id}
+                                  className="flex items-center gap-2 rounded-md border border-[#b9cdfb] bg-[#f5f8ff] px-3 py-1.5"
+                                >
+                                  <div className="relative w-4 h-4 flex-shrink-0">
+                                    <Image
+                                      src="/images/icons/trophy.png"
+                                      alt={isEn ? 'Honor' : '荣誉'}
+                                      fill
+                                      className="object-contain"
+                                    />
+                                  </div>
+                                  <span className="text-[12px] text-[#2f5fe9] font-medium whitespace-nowrap">
+                                    {item.title}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
@@ -462,76 +582,111 @@ export default function MobileParkDetailPage({
           {/* 统计数据 */}
           {activeTab === 'stats' && (
             <section className="rounded-2xl bg-white border border-gray-100 p-3 shadow-sm space-y-3">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-1.5 h-4 bg-[#00b899]" />
-                <h3 className="text-[13px] font-semibold text-gray-900">
-                  {isEn ? 'Economic Indicators' : '经济数据'}
-                </h3>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-4 bg-[#00b899]" />
+                  <h3 className="text-[13px] font-semibold text-gray-900">
+                    {isEn ? 'Economic Indicators' : '经济数据'}
+                  </h3>
+                </div>
+                {park.economicStats.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {[...new Set(park.economicStats.map((s) => s.year))]
+                      .sort((a, b) => a - b)
+                      .map((year) => {
+                        const active = selectedYear === year
+                        return (
+                          <button
+                            key={year}
+                            type="button"
+                            onClick={() => setSelectedYear(year)}
+                            className={`px-2 h-7 rounded-full text-[11px] border ${
+                              active
+                                ? 'bg-[#e6fffa] border-[#00b899] text-[#007f66]'
+                                : 'bg-white border-gray-200 text-gray-700'
+                            }`}
+                          >
+                            {year}
+                          </button>
+                        )
+                      })}
+                  </div>
+                )}
               </div>
               {park.economicStats.length === 0 ? (
                 <p className="text-[12px] text-gray-500">
                   {isEn ? 'No economic data yet.' : '暂未维护经济数据。'}
                 </p>
               ) : (
-                <div className="space-y-3">
-                  {park.economicStats.map((row) => (
-                    <div
-                      key={row.year}
-                      className="p-2.5 rounded-xl bg-slate-50 border border-slate-100"
-                    >
-                      <div className="text-[12px] font-semibold text-gray-900 mb-1">
-                        {row.year}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[12px] text-gray-700">
+                  {(() => {
+                    const stat = park.economicStats.find((s) => s.year === selectedYear) || park.economicStats[0]
+                    const rows = [
+                      {
+                        label: isEn ? 'GDP' : 'GDP',
+                        value: stat?.gdpBillion != null ? `${stat.gdpBillion}${isEn ? ' bn RMB' : ' 亿元'}` : '--',
+                      },
+                      {
+                        label: isEn ? 'Tax revenue' : '税收收入',
+                        value:
+                          stat?.taxRevenueBillion != null
+                            ? `${stat.taxRevenueBillion}${isEn ? ' bn RMB' : ' 亿元'}`
+                            : '--',
+                      },
+                      {
+                        label: isEn ? 'Industrial output' : '工业总产值',
+                        value:
+                          stat?.industrialOutputBillion != null
+                            ? `${stat.industrialOutputBillion}${isEn ? ' bn RMB' : ' 亿元'}`
+                            : '--',
+                      },
+                      {
+                        label: isEn ? 'Fixed asset investment' : '固定资产投资',
+                        value:
+                          stat?.fixedAssetInvestmentBillion != null
+                            ? `${stat.fixedAssetInvestmentBillion}${isEn ? ' bn RMB' : ' 亿元'}`
+                            : '--',
+                      },
+                      {
+                        label: isEn ? 'Utilized FDI' : '实际利用外资',
+                        value:
+                          stat?.utilizedForeignCapitalBillionUsd != null
+                            ? `${stat.utilizedForeignCapitalBillionUsd}${isEn ? ' bn USD' : ' 亿美元'}`
+                            : '--',
+                      },
+                      {
+                        label: isEn ? 'Total import & export' : '进出口总额',
+                        value:
+                          stat?.totalImportExportBillionUsd != null
+                            ? `${stat.totalImportExportBillionUsd}${isEn ? ' bn USD' : ' 亿美元'}`
+                            : '--',
+                      },
+                      {
+                        label: isEn ? 'Total import' : '进口总额',
+                        value:
+                          stat?.totalImportBillionUsd != null
+                            ? `${stat.totalImportBillionUsd}${isEn ? ' bn USD' : ' 亿美元'}`
+                            : '--',
+                      },
+                      {
+                        label: isEn ? 'Total export' : '出口总额',
+                        value:
+                          stat?.totalExportBillionUsd != null
+                            ? `${stat.totalExportBillionUsd}${isEn ? ' bn USD' : ' 亿美元'}`
+                            : '--',
+                      },
+                      {
+                        label: isEn ? 'Fortune 500 companies' : '世界500强企业数',
+                        value: stat?.worldTop500Count != null ? `${stat.worldTop500Count}` : '--',
+                      },
+                    ]
+                    return rows.map((row) => (
+                      <div key={row.label} className="flex">
+                        <span className="w-28 text-gray-500 shrink-0">{row.label}：</span>
+                        <span className="flex-1 text-gray-950 font-semibold">{row.value}</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px] text-gray-700">
-                        {row.gdpBillion != null && (
-                          <div>
-                            {isEn ? 'GDP' : 'GDP'}：{row.gdpBillion}
-                            {isEn ? ' bn RMB' : ' 亿元'}
-                          </div>
-                        )}
-                        {row.taxRevenueBillion != null && (
-                          <div>
-                            {isEn ? 'Tax revenue' : '税收收入'}：{row.taxRevenueBillion}
-                            {isEn ? ' bn RMB' : ' 亿元'}
-                          </div>
-                        )}
-                        {row.industrialOutputBillion != null && (
-                          <div>
-                            {isEn ? 'Industrial output' : '工业总产值'}：
-                            {row.industrialOutputBillion}
-                            {isEn ? ' bn RMB' : ' 亿元'}
-                          </div>
-                        )}
-                        {row.fixedAssetInvestmentBillion != null && (
-                          <div>
-                            {isEn ? 'Fixed asset investment' : '固定资产投资'}：
-                            {row.fixedAssetInvestmentBillion}
-                            {isEn ? ' bn RMB' : ' 亿元'}
-                          </div>
-                        )}
-                        {row.utilizedForeignCapitalBillionUsd != null && (
-                          <div>
-                            {isEn ? 'Utilized FDI' : '实际利用外资'}：
-                            {row.utilizedForeignCapitalBillionUsd}
-                            {isEn ? ' bn USD' : ' 亿美元'}
-                          </div>
-                        )}
-                        {row.totalImportExportBillionUsd != null && (
-                          <div>
-                            {isEn ? 'Total import & export' : '进出口总额'}：
-                            {row.totalImportExportBillionUsd}
-                            {isEn ? ' bn USD' : ' 亿美元'}
-                          </div>
-                        )}
-                        {row.worldTop500Count != null && (
-                          <div>
-                            {isEn ? 'Fortune 500 companies' : '世界500强企业数'}：
-                            {row.worldTop500Count}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  })()}
                 </div>
               )}
 
@@ -590,8 +745,12 @@ export default function MobileParkDetailPage({
                         </div>
                       </div>
                       <div className="mt-1 flex items-center justify-between text-[11px] text-gray-500">
+                        {p.docNumber ? (
+                          <span>{p.docNumber}</span>
+                        ) : (
+                          <span className="text-transparent">-</span>
+                        )}
                         <span>{p.publishDate}</span>
-                        {p.docNumber && <span>{p.docNumber}</span>}
                       </div>
                       <button
                         type="button"
@@ -663,7 +822,7 @@ export default function MobileParkDetailPage({
         </div>
       </div>
 
-      {/* 底部功能栏：返回 / 收藏 / 分享 / 订阅 */}
+      {/* 底部功能栏：返回 / 收藏 / 分享 / 园区对接 */}
       <div className="fixed left-0 right-0 bottom-0 z-50 bg-white border-t">
         <div
           className="mx-auto max-w-md px-3"
@@ -713,16 +872,31 @@ export default function MobileParkDetailPage({
                 <span>{isEn ? 'Share' : '分享'}</span>
               </button>
               <button
-                onClick={handleSubscribe}
+                onClick={() => {
+                  if (checkAuthAndPrompt()) {
+                    setContactOpen(true)
+                  }
+                }}
                 className="h-10 rounded-xl bg-[#00b899] hover:bg-[#009a7a] text-white text-[13px] inline-flex items-center justify-center gap-1.5 transition-colors"
               >
-                <Bell className="w-4 h-4" />
-                <span>{isEn ? 'Subscribe' : '订阅'}</span>
+                <Phone className="w-4 h-4" />
+                <span>{isEn ? 'Contact' : '联系咨询'}</span>
               </button>
             </div>
           </div>
         </div>
       </div>
+      {/* 联系我们弹窗：园区对接 */}
+      <ContactUsModal
+        isOpen={contactOpen}
+        onClose={() => setContactOpen(false)}
+        technologyId={park.id}
+        technologyName={park.name}
+        companyName={park.province?.name}
+        locale={locale}
+        category="园区对接"
+        source="park"
+      />
     </div>
   )
 }

@@ -399,7 +399,7 @@ export default function MessageCenterPage() {
               }`}
             >
               <span>{locale === 'en' ? 'All Categories' : '全部类别'}</span>
-              <span className="text-gray-600">({messages.length})</span>
+              <span className="text-blue-600 font-semibold">({messages.length})</span>
             </button>
             <button
               onClick={() => setFilters(prev => ({ ...prev, category: 'technical' }))}
@@ -410,7 +410,7 @@ export default function MessageCenterPage() {
               }`}
             >
               <span>{locale === 'en' ? 'Technical' : '技术对接'}</span>
-              <span className="text-blue-600">({messages.filter(msg => 
+              <span className="text-blue-600 font-semibold">({messages.filter(msg => 
                 msg.category === '技术对接' || 
                 msg.category === 'Technical Connection' ||
                 !msg.category || 
@@ -428,7 +428,7 @@ export default function MessageCenterPage() {
               }`}
             >
               <span>{locale === 'en' ? 'Review' : '发布审核'}</span>
-              <span className="text-blue-600">({messages.filter(msg => 
+              <span className="text-blue-600 font-semibold">({messages.filter(msg => 
                 msg.category === '发布审核' || msg.category === 'Publication Review'
               ).length})</span>
             </button>
@@ -439,9 +439,9 @@ export default function MessageCenterPage() {
                   ? 'text-green-600 border-green-600' 
                   : 'text-gray-500 border-transparent hover:text-gray-700'
               }`}
-            >
+              >
               <span>{locale === 'en' ? 'Following' : '我的关注'}</span>
-              <span className="text-blue-600">({messages.filter(msg => 
+              <span className="text-blue-600 font-semibold">({messages.filter(msg => 
                 msg.category === '我的关注' || msg.category === 'My Following'
               ).length})</span>
             </button>
@@ -452,9 +452,9 @@ export default function MessageCenterPage() {
                   ? 'text-red-600 border-red-600' 
                   : 'text-gray-500 border-transparent hover:text-gray-700'
               }`}
-            >
+              >
               <span>{locale === 'en' ? 'Security' : '安全消息'}</span>
-              <span className="text-blue-600">({messages.filter(msg => 
+              <span className="text-blue-600 font-semibold">({messages.filter(msg => 
                 msg.category === '安全消息' || msg.category === 'Security Messages'
               ).length})</span>
             </button>
@@ -465,9 +465,9 @@ export default function MessageCenterPage() {
                   ? 'text-gray-600 border-gray-600' 
                   : 'text-gray-500 border-transparent hover:text-gray-700'
               }`}
-            >
+              >
               <span>{locale === 'en' ? 'Other' : '其他'}</span>
-              <span className="text-blue-600">({messages.filter(msg => 
+              <span className="text-blue-600 font-semibold">({messages.filter(msg => 
                 msg.category === '其他' || msg.category === 'Other'
               ).length})</span>
             </button>
@@ -593,7 +593,7 @@ export default function MessageCenterPage() {
                           <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 animate-pulse"></div>
                         )}
                         <h3 className={`text-sm font-medium truncate ${
-                          !message.is_read ? 'text-gray-900' : 'text-gray-700'
+                          !message.is_read ? 'text-gray-900' : 'text-gray-400'
                         }`}>
                           {message.title}
                         </h3>

@@ -53,6 +53,21 @@ export interface ParkGreenStat {
   metrics: Record<string, number | string | null>
 }
 
+export type ParkBrandHonorType =
+  | '综合类'
+  | '生态文明类'
+  | '经济发展类'
+  | '外资外贸类'
+  | '科技创新类'
+  | '社会治理类'
+
+export interface ParkBrandHonor {
+  id: string
+  year?: number | null
+  title: string
+  type?: ParkBrandHonorType | null
+}
+
 export interface ParkDetail {
   id: string
   name: string
@@ -83,7 +98,7 @@ export interface ParkDetail {
   postalCode?: string | null
   briefZh?: string | null
   briefEn?: string | null
-  brandHonors: string[]
+  brandHonors: ParkBrandHonor[]
   tags: ParkTag[]
   economicStats: ParkEconomicStat[]
   greenStats: ParkGreenStat[]
@@ -132,7 +147,7 @@ export async function getParks(params: {
   province?: string
   developmentZone?: string
   tags?: string[]
-  sortBy?: 'updatedAtDesc' | 'updatedAtAsc' | 'nameAsc' | 'nameDesc'
+  sortBy?: 'default' | 'updatedAtDesc' | 'nameAsc' | 'nameDesc'
   page?: number
   pageSize?: number
 }): Promise<ParkListResponse> {

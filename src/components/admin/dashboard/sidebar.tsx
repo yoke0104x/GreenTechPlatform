@@ -74,6 +74,12 @@ const menuItems: MenuItem[] = [
     href: '/admin/companies'
   },
   {
+    id: 'parks',
+    label: '园区管理',
+    icon: Building2,
+    href: '/admin/parks'
+  },
+  {
     id: 'users',
     label: '用户管理',
     icon: Users,

@@ -93,6 +93,18 @@ export async function GET(
       .eq('park_id', park.id)
       .order('year', { ascending: false })
 
+    const { data: honorRows, error: honorError } = await supabaseAdmin
+      .from('park_brand_honors')
+      .select('id, park_id, year, title, type')
+      .eq('park_id', park.id)
+      .eq('is_active', true)
+      .order('year', { ascending: false })
+      .order('created_at', { ascending: false })
+
+    if (honorError) {
+      console.error('查询园区品牌荣誉失败:', honorError)
+    }
+
     const province = provinceRow.data
       ? {
           id: provinceRow.data.id,
@@ -135,6 +147,43 @@ export async function GET(
       metrics: row.metrics || {},
     }))
 
+    let brandHonors =
+      (honorRows || []).map((row: any) => ({
+        id: row.id,
+        year: row.year,
+        title: row.title,
+        type: row.type,
+      })) || []
+
+    // 兼容早期直接存储在 parks.brand_honors 数组中的数据
+    if (
+      (!brandHonors || brandHonors.length === 0) &&
+      Array.isArray(park.brand_honors) &&
+      park.brand_honors.length > 0
+    ) {
+      brandHonors = park.brand_honors.map((raw: string, index: number) => {
+        if (!raw) {
+          return {
+            id: `${park.id}-${index}`,
+            year: null,
+            title: '',
+            type: null,
+          }
+        }
+        const match = raw.match(/\b(19|20)\d{2}\b/)
+        const year = match ? Number(match[0]) : null
+        const title = match
+          ? raw.replace(match[0], '').trim().replace(/^[\s\-–—]+/, '')
+          : raw.trim()
+        return {
+          id: `${park.id}-${index}`,
+          year: Number.isNaN(year) ? null : year,
+          title,
+          type: null,
+        }
+      }).filter((h: any) => h.title)
+    }
+
     const detail = {
       id: park.id,
       name: park.name_zh,
@@ -165,7 +214,7 @@ export async function GET(
       postalCode: park.postal_code,
       briefZh: park.brief_zh,
       briefEn: park.brief_en,
-      brandHonors: park.brand_honors || [],
+      brandHonors,
       tags,
       economicStats,
       greenStats,

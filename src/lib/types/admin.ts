@@ -102,6 +102,64 @@ export interface AdminDevelopmentZone extends BaseEntity, MultiLanguageField {
 }
 
 /**
+ * 园区（含国家级经开区及其他类型园区）
+ * 对应 public.parks 表
+ */
+export interface AdminPark extends BaseEntity {
+  name_zh: string
+  name_en?: string | null
+  level?: string | null
+  level_code?: string | null
+  logo_url?: string | null
+  sort_rank?: number | null
+
+  province_id?: string | null
+  development_zone_id?: string | null
+
+  city?: string | null
+  address?: string | null
+  area_km2?: number | null
+  population?: number | null
+  established_date?: string | null
+  website_url?: string | null
+  wechat_official_account?: string | null
+  leading_industries?: string | null
+  leading_companies?: string | null
+  alias?: string | null
+  dialect?: string | null
+  climate?: string | null
+  region_desc?: string | null
+  nearby_airports?: string | null
+  nearby_railway_stations?: string | null
+  famous_scenic_spots?: string | null
+  license_plate_code?: string | null
+  phone_area_code?: string | null
+  postal_code?: string | null
+  brief_zh?: string | null
+  brief_en?: string | null
+  brand_honors?: string[] | null
+
+  // 关联数据
+  province?: AdminProvince
+  development_zone?: AdminDevelopmentZone
+}
+
+export type ParkBrandHonorType =
+  | '综合类'
+  | '生态文明类'
+  | '经济发展类'
+  | '外资外贸类'
+  | '科技创新类'
+  | '社会治理类'
+
+export interface AdminParkBrandHonor extends BaseEntity {
+  park_id: string
+  year?: number | null
+  title: string
+  type?: ParkBrandHonorType | null
+}
+
+/**
  * 轮播图
  */
 export interface AdminCarouselImage extends BaseEntity {
@@ -242,6 +300,9 @@ export type UpdateProvinceData = Partial<CreateProvinceData>
 
 export type CreateDevelopmentZoneData = Omit<AdminDevelopmentZone, 'id' | 'created_at' | 'updated_at' | 'province'>
 export type UpdateDevelopmentZoneData = Partial<CreateDevelopmentZoneData>
+
+export type CreateParkData = Omit<AdminPark, 'id' | 'created_at' | 'updated_at' | 'province' | 'development_zone'>
+export type UpdateParkData = Partial<CreateParkData>
 
 export type CreateCarouselImageData = Omit<AdminCarouselImage, 'id' | 'created_at' | 'updated_at'>
 export type UpdateCarouselImageData = Partial<CreateCarouselImageData>

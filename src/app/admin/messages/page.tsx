@@ -328,6 +328,13 @@ export default function AdminMessagesPage() {
           用户反馈
         </Badge>
       );
+    } else if (category === '园区对接') {
+      return (
+        <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50">
+          <Building2 className="w-3 h-3 mr-1" />
+          园区对接
+        </Badge>
+      );
     } else {
       return (
         <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">

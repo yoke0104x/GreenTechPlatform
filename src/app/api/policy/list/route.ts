@@ -103,7 +103,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 解析经开区 -> admin_development_zones.id -> policy.park_id
+    // 解析经开区 -> admin_development_zones.id
+    // 新语义：policy.park_id 优先指向 parks.id（园区），其中国家级经开区园区通过 parks.development_zone_id 关联 admin_development_zones
+    // 兼容旧数据：若未找到任何关联园区，则仍使用 zoneId 直接与 policy.park_id 比较
     if (developmentZoneParam) {
       console.log('🔍 开始解析经开区参数:', developmentZoneParam)
       let zoneId: string | null = null
@@ -127,7 +129,31 @@ export async function GET(request: NextRequest) {
       }
 
       if (zoneId) {
-        query = query.eq('park_id', zoneId)
+        // 先查出该经开区下的园区（parks），按新语义通过园区ID过滤政策
+        const { data: parkRows, error: parkError } = await supabaseAdmin
+          .from('parks')
+          .select('id')
+          .eq('development_zone_id', zoneId)
+          .eq('is_active', true)
+
+        if (parkError) {
+          console.error('按照经开区查询园区失败:', parkError)
+          return NextResponse.json(
+            { error: '经开区筛选失败: ' + parkError.message },
+            { status: 500 },
+          )
+        }
+
+        const parkIds = (parkRows || [])
+          .map((p: any) => p.id as string)
+          .filter(Boolean)
+
+        if (parkIds.length > 0) {
+          query = query.in('park_id', parkIds)
+        } else {
+          // 兼容旧数据：policy.park_id 仍然直接存储经开区ID
+          query = query.eq('park_id', zoneId)
+        }
       }
     }
 
@@ -229,7 +255,7 @@ export async function GET(request: NextRequest) {
     const provinceIds = Array.from(
       new Set(policyList.map((p: any) => p.region_id).filter(Boolean)),
     ) as string[]
-    const zoneIds = Array.from(
+    const parkIds = Array.from(
       new Set(policyList.map((p: any) => p.park_id).filter(Boolean)),
     ) as string[]
 
@@ -250,7 +276,7 @@ export async function GET(request: NextRequest) {
       new Set((policyTagRowsData || []).map((r: any) => r.tag_id).filter(Boolean)),
     ) as string[]
 
-    const [tagRows, provincesData, zonesData] = await Promise.all([
+    const [tagRows, provincesData, parksData] = await Promise.all([
       allTagIds.length > 0
         ? supabaseAdmin
             .from('policy_tag')
@@ -263,13 +289,46 @@ export async function GET(request: NextRequest) {
             .select('id, name_zh, name_en, code')
             .in('id', provinceIds)
         : Promise.resolve({ data: [] } as any),
-      zoneIds.length > 0
+      parkIds.length > 0
         ? supabaseAdmin
-            .from('admin_development_zones')
-            .select('id, name_zh, name_en, code')
-            .in('id', zoneIds)
+            .from('parks')
+            .select('id, name_zh, name_en, development_zone_id')
+            .in('id', parkIds)
         : Promise.resolve({ data: [] } as any),
     ])
+
+    const parksMap = new Map(
+      (parksData.data || []).map((p: any) => [p.id, p]),
+    )
+
+    const zoneIdsFromParks = Array.from(
+      new Set(
+        (parksData.data || [])
+          .map((p: any) => p.development_zone_id)
+          .filter(Boolean),
+      ),
+    ) as string[]
+
+    // 兼容旧数据：policy.park_id 直接为经开区ID 的情况
+    const legacyZoneIds = Array.from(
+      new Set(
+        policyList
+          .map((p: any) => p.park_id as string | null)
+          .filter((id) => id && !parksMap.has(id)),
+      ),
+    ) as string[]
+
+    const allZoneIds = Array.from(
+      new Set([...zoneIdsFromParks, ...legacyZoneIds]),
+    ) as string[]
+
+    const zonesData =
+      allZoneIds.length > 0
+        ? await supabaseAdmin
+            .from('admin_development_zones')
+            .select('id, name_zh, name_en, code')
+            .in('id', allZoneIds)
+        : ({ data: [] } as any)
 
     const tagsByPolicyId = new Map<string, string[]>()
     ;(policyTagRowsData || []).forEach((row: any) => {
@@ -295,8 +354,26 @@ export async function GET(request: NextRequest) {
         .filter(Boolean)
         .map((t: any) => ({ id: t.id, name: t.name }))
 
-      const province = p.region_id ? (provincesMap.get(p.region_id) as any) : null
-      const zone = p.park_id ? (zonesMap.get(p.park_id) as any) : null
+      const province = p.region_id
+        ? (provincesMap.get(p.region_id) as any)
+        : null
+
+      const parkRow = p.park_id
+        ? (parksMap.get(p.park_id) as any)
+        : null
+
+      const zoneIdFromPark =
+        parkRow && parkRow.development_zone_id
+          ? (parkRow.development_zone_id as string)
+          : null
+
+      const zone =
+        zoneIdFromPark && zonesMap.get(zoneIdFromPark)
+          ? (zonesMap.get(zoneIdFromPark) as any)
+          : // 兼容旧数据：park_id 直接为经开区 ID
+            p.park_id && zonesMap.get(p.park_id)
+            ? (zonesMap.get(p.park_id) as any)
+            : null
 
       return {
         id: p.id,

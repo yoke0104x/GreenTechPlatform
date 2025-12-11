@@ -2,41 +2,65 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuthContext } from '@/components/auth/auth-provider'
-import { ChevronRight, User, Shield, Building, Heart, MessageSquare, LogOut } from 'lucide-react'
-import { logout } from '@/api/auth'
+import { ChevronRight, User, Shield, Building, Heart, MessageSquare, LogOut, Crown } from 'lucide-react'
 
 export default function MobileParksMePage() {
   const pathname = usePathname()
   const router = useRouter()
   const locale = pathname.startsWith('/en') ? 'en' : 'zh'
   const basePath = locale === 'en' ? '/en' : '/zh'
-  const { user } = useAuthContext()
+  const { user, logout } = useAuthContext()
 
+  const displayName = user
+    ? user.name || user.email || user.phone || (locale === 'en' ? 'Guest' : '访客')
+    : locale === 'en'
+      ? 'Not logged in'
+      : '未登录'
+  const initial = user ? (displayName?.charAt(0)?.toUpperCase() || 'U') : null
   const needsBinding = !!user && !user.phone && !user.email
 
   return (
     <div className="min-h-dvh" style={{ backgroundColor: '#edeef7' }}>
       <div className="px-3 pt-4 pb-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-[18px] font-semibold text-gray-900">
-            {locale === 'en' ? 'My Parks' : '我的园区'}
-          </h1>
-        </div>
-
-        {/* User Card */}
-        <div className="rounded-2xl bg-gradient-to-r from-[#00b899] to-[#009a7a] p-4 text-white shadow-sm">
+        {/* User Card (same as 技术平台“我的”) */}
+        <div className="rounded-3xl bg-gradient-to-br from-[#10b981] to-[#059669] px-4 py-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-[18px] font-semibold">
-              {user?.phone?.slice(-4) || user?.email?.[0]?.toUpperCase() || 'U'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[15px] font-semibold truncate">
-                {user
-                  ? user.phone || user.email || (locale === 'en' ? 'Verified User' : '已登录用户')
-                  : locale === 'en'
-                    ? 'Guest'
-                    : '游客'}
+            {user?.avatar_url ? (
+              <div className="relative w-14 h-14 rounded-full bg-white/95 overflow-hidden shadow">
+                <div className="absolute inset-0 flex items-center justify-center text-[18px] font-semibold text-[#007f66]">
+                  {initial}
+                </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={user.avatar_url}
+                  alt={displayName}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  onError={(e) => { (e.currentTarget.style.display = 'none') }}
+                />
+              </div>
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-white/95 flex items-center justify-center text-[18px] font-semibold text-[#007f66] shadow">
+                {user ? initial : <User className="w-7 h-7" />}
+              </div>
+            )}
+            <div className="min-w-0 text-white flex-1">
+              <div className="flex items-center justify-between min-w-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="text-[18px] font-semibold truncate">{displayName}</div>
+                  {user && (
+                    <span className="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-white/20 text-[12px]">
+                      {locale==='en'?'Regular User':'普通用户'} <Crown className="w-3.5 h-3.5" />
+                    </span>
+                  )}
+                </div>
+                {!user && (
+                  <button
+                    onClick={()=>router.push(`${basePath}/m/login`)}
+                    className="h-8 px-3 rounded-lg bg-white/20 text-white text-[12px] font-medium border border-white/30 hover:bg-white/30 transition-colors"
+                  >
+                    {locale==='en'?'Go to Login':'去登录'}
+                  </button>
+                )}
               </div>
               <div className="text-[12px] opacity-90 truncate">
                 {user
@@ -47,11 +71,11 @@ export default function MobileParksMePage() {
                         onClick={() => router.push(`${basePath}/m/me/basic`)}
                         className="underline text-white/90 hover:text-white"
                       >
-                        {locale === 'en' ? 'Bind phone or email' : '去绑定手机或邮箱'}
+                        {locale==='en' ? 'Bind phone or email' : '去绑定手机或邮箱'}
                       </button>
                     )
                     : (user.phone || user.email)
-                  : (locale === 'en' ? 'Please log in to access features' : '请登录以使用功能')
+                  : (locale==='en'?'Please log in to access features':'请登录以使用功能')
                 }
               </div>
             </div>
@@ -137,4 +161,3 @@ function OptionTile({
     </button>
   )
 }
-

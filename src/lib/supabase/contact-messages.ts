@@ -14,7 +14,7 @@ export interface ContactMessage {
   contact_email: string | null;
   message: string;
   status: 'pending' | 'processed';
-  category?: '技术对接' | '用户反馈'; // 新增分类字段
+  category?: '技术对接' | '用户反馈' | '园区对接'; // 新增分类字段，包含园区对接
   admin_reply?: string;
   admin_id?: string;
   replied_at?: string;
@@ -31,7 +31,8 @@ export interface CreateContactMessageData {
   contact_phone?: string | null;
   contact_email?: string | null;
   message: string;
-  category?: '技术对接' | '用户反馈'; // 新增分类字段
+  category?: '技术对接' | '用户反馈' | '园区对接'; // 新增分类字段，包含园区对接
+  source?: string; // 可选来源标记（如 park/tech/policy），便于后端兜底分类
 }
 
 // 站内信数据类型定义
@@ -58,6 +59,35 @@ export interface SendInternalMessageData {
   content: string;
   category?: string; // 消息分类
 }
+
+// 消息分类白名单（平台隔离）
+export const TECH_MESSAGE_CATEGORIES = [
+  '技术对接',
+  'Technical Connection',
+  '发布审核',
+  'Publication Review',
+  '我的关注',
+  'My Following',
+]
+export const PARK_MESSAGE_CATEGORIES = [
+  '园区对接',
+  'Park Connection',
+  '我的关注',
+  'My Following',
+]
+export const SHARED_MESSAGE_CATEGORIES = [
+  '安全消息',
+  'Security Messages',
+  '其他',
+  'Other',
+]
+// 默认：技术平台（含历史为空/undefined 分类）
+export const DEFAULT_MESSAGE_CATEGORIES = [
+  ...TECH_MESSAGE_CATEGORIES,
+  ...SHARED_MESSAGE_CATEGORIES,
+  '',
+  'undefined',
+]
 
 /**
  * 创建联系消息
@@ -231,12 +261,37 @@ export async function sendInternalMessage(data: SendInternalMessageData): Promis
   return payload as InternalMessage;
 }
 
+type MessageFilterOptions = {
+  categories?: string[];
+  includeNull?: boolean;
+  excludeCategories?: string[];
+};
+
+const buildCategoryQuery = (options?: MessageFilterOptions) => {
+  const params = new URLSearchParams();
+  if (options?.categories && options.categories.length > 0) {
+    const encoded = options.categories.map((c) => encodeURIComponent(c)).join(',');
+    params.set('categories', encoded);
+  }
+  if (options?.excludeCategories && options.excludeCategories.length > 0) {
+    const encodedEx = options.excludeCategories.map((c) => encodeURIComponent(c)).join(',');
+    params.set('exclude', encodedEx);
+  }
+  if (options?.includeNull) {
+    params.set('includeNull', 'true');
+  }
+  const query = params.toString();
+  return query ? `?${query}` : '';
+};
+
 /**
- * 获取用户收到的站内信
+ * 获取用户收到的站内信（支持按分类过滤）
  */
-export async function getReceivedInternalMessages(): Promise<InternalMessage[]> {
+export async function getReceivedInternalMessages(options?: MessageFilterOptions): Promise<InternalMessage[]> {
   try {
-    const response = await safeFetch('/api/messages/internal', {
+    const merged = options ?? { excludeCategories: PARK_MESSAGE_CATEGORIES, includeNull: true };
+    const query = buildCategoryQuery(merged);
+    const response = await safeFetch(`/api/messages/internal${query}`, {
       method: 'GET',
       useAuth: true,
     });
@@ -250,11 +305,13 @@ export async function getReceivedInternalMessages(): Promise<InternalMessage[]> 
 }
 
 /**
- * 根据ID获取单条站内信
+ * 根据ID获取单条站内信（支持按分类过滤）
  */
-export async function getInternalMessageById(messageId: string): Promise<InternalMessage> {
+export async function getInternalMessageById(messageId: string, options?: MessageFilterOptions): Promise<InternalMessage> {
   try {
-    const response = await safeFetch(`/api/messages/internal?id=${encodeURIComponent(messageId)}`, {
+    const merged = options ?? { excludeCategories: PARK_MESSAGE_CATEGORIES, includeNull: true };
+    const query = buildCategoryQuery(merged);
+    const response = await safeFetch(`/api/messages/internal?id=${encodeURIComponent(messageId)}${query}`, {
       method: 'GET',
       useAuth: true,
     });
@@ -303,11 +360,13 @@ export async function markInternalMessageAsRead(messageId: string): Promise<Inte
 }
 
 /**
- * 获取未读站内信数量
+ * 获取未读站内信数量（支持按分类过滤）
  */
-export async function getUnreadInternalMessageCount(): Promise<number> {
+export async function getUnreadInternalMessageCount(options?: MessageFilterOptions): Promise<number> {
   try {
-    const response = await safeFetch('/api/messages/internal/unread-count', {
+    const merged = options ?? { excludeCategories: PARK_MESSAGE_CATEGORIES, includeNull: true };
+    const query = buildCategoryQuery(merged);
+    const response = await safeFetch(`/api/messages/internal/unread-count${query}`, {
       method: 'GET',
       useAuth: true,
     });

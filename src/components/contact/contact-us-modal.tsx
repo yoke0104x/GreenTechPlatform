@@ -26,6 +26,17 @@ interface ContactUsModalProps {
   technologyName?: string;
   companyName?: string;
   locale?: string;
+  /**
+   * 消息分类：
+   * - 技术对接（默认）
+   * - 用户反馈
+   * - 园区对接（园区详情页使用）
+   */
+  category?: '技术对接' | '用户反馈' | '园区对接';
+  /**
+   * 来源标记，便于后端兜底分类，例如 'park' | 'tech' | 'policy'
+   */
+  source?: string;
 }
 
 interface ContactFormData {
@@ -41,7 +52,9 @@ export function ContactUsModal({
   technologyId, 
   technologyName, 
   companyName,
-  locale = 'zh'
+  locale = 'zh',
+  category,
+  source,
 }: ContactUsModalProps) {
   const { user } = useAuthContext();
   const { toast } = useToast();
@@ -230,7 +243,10 @@ export function ContactUsModal({
         contact_name: formData.contactName,
         contact_phone: formData.contactPhone,
         contact_email: formData.contactEmail,
-        message: formData.message
+        message: formData.message,
+        // 默认仍归为“技术对接”，园区详情页等可通过 props 显式传入“园区对接”等分类
+        category: category ?? '技术对接',
+        source,
       });
 
       toast({

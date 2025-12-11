@@ -53,7 +53,14 @@ export async function POST(request: NextRequest) {
   const contactPhone = (body.contact_phone ?? body.contactPhone ?? '').trim()
   const contactEmail = (body.contact_email ?? body.contactEmail ?? '').trim()
   const message = (body.message || '').trim()
-  const category = (body.category || body.type || '').trim() || '技术对接'
+  const source = (body.source || body.context || '').trim()
+  const categoryInput = (body.category || body.type || '').trim()
+  const resolvedCategory =
+    categoryInput && ['技术对接', '用户反馈', '园区对接'].includes(categoryInput)
+      ? categoryInput
+      : source === 'park'
+        ? '园区对接'
+        : '技术对接'
   const technologyId = body.technology_id || body.technologyId || null
   const technologyName = body.technology_name || body.technologyName || ''
   const companyName = body.company_name || body.companyName || ''
@@ -75,7 +82,7 @@ export async function POST(request: NextRequest) {
     contact_phone: resolvedContactPhone,
     contact_email: resolvedContactEmail,
     message,
-    category,
+    category: resolvedCategory,
     status: 'pending' as const,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -120,10 +127,18 @@ async function notifyAdmins(client: any, contactMessage: any) {
 
   if (!admins || admins.length === 0) return
 
-  const isFeedback = contactMessage.category === '用户反馈'
-  const titlePrefix = isFeedback ? '新的用户反馈' : '新的联系咨询'
-  const titleSuffix = isFeedback ? '问题反馈' : (contactMessage.technology_name || '技术咨询')
-  const category = isFeedback ? '用户反馈' : '技术对接'
+  const category: string = contactMessage.category || '技术对接'
+  const isFeedback = category === '用户反馈'
+  const isPark = category === '园区对接'
+
+  const titlePrefix = isFeedback
+    ? '新的用户反馈'
+    : isPark
+    ? '新的园区对接需求'
+    : '新的联系咨询'
+  const titleSuffix = isFeedback
+    ? '问题反馈'
+    : contactMessage.technology_name || (isPark ? '园区对接' : '技术咨询')
   const now = new Date().toISOString()
 
   const fromUserId = contactMessage.user_id || null
@@ -135,7 +150,11 @@ async function notifyAdmins(client: any, contactMessage: any) {
     to_user_id: admin.id,
     contact_message_id: contactMessage.id,
     title: `${titlePrefix}：${titleSuffix}`,
-    content: `您收到了一条新的${isFeedback ? '用户反馈' : '联系消息'}：\n\n联系人：${contactMessage.contact_name}\n联系电话：${contactMessage.contact_phone}\n联系邮箱：${contactMessage.contact_email}\n${isFeedback ? '' : `咨询技术：${contactMessage.technology_name || '无'}\n所属公司：${contactMessage.company_name || '无'}`}\n\n${isFeedback ? '反馈' : '留言'}内容：\n${contactMessage.message}\n\n请前往管理后台查看并处理此消息。`,
+    content: `您收到了一条新的${isFeedback ? '用户反馈' : isPark ? '园区对接消息' : '联系消息'}：\n\n联系人：${contactMessage.contact_name}\n联系电话：${contactMessage.contact_phone}\n联系邮箱：${contactMessage.contact_email}\n${
+      isFeedback
+        ? ''
+        : `咨询对象：${contactMessage.technology_name || (isPark ? '园区' : '技术')}\n所属公司：${contactMessage.company_name || '无'}`
+    }\n\n${isFeedback ? '反馈' : '留言'}内容：\n${contactMessage.message}\n\n请前往管理后台查看并处理此消息。`,
     category,
     is_read: false,
     created_at: now,

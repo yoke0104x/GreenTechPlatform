@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Trash2, CheckCircle, Mail } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/use-toast'
@@ -12,12 +12,26 @@ import {
   getInternalMessageById,
   markInternalMessageAsRead,
   deleteInternalMessages,
+  PARK_MESSAGE_CATEGORIES,
+  SHARED_MESSAGE_CATEGORIES,
+  DEFAULT_MESSAGE_CATEGORIES,
 } from '@/lib/supabase/contact-messages'
 
 export default function MobileMessageDetailPage({ params: { id } }: { params: { id: string } }) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const router = useRouter()
   const locale: 'en' | 'zh' = pathname.startsWith('/en') ? 'en' : 'zh'
+  const from = searchParams?.get('from') || ''
+  const isParkContext = from === 'parks'
+  const allowedCategories = useMemo(
+    () =>
+      isParkContext
+        ? [...PARK_MESSAGE_CATEGORIES, ...SHARED_MESSAGE_CATEGORIES]
+        : [...DEFAULT_MESSAGE_CATEGORIES],
+    [isParkContext],
+  )
+  const includeNullCategories = useMemo(() => !isParkContext, [isParkContext])
   const { user } = useAuthContext()
   const { toast } = useToast()
   const { decrementUnreadCount } = useUnreadMessage()
@@ -36,7 +50,12 @@ export default function MobileMessageDetailPage({ params: { id } }: { params: { 
 
       try {
         setLoading(true)
-        const messageData = await getInternalMessageById(id)
+        const messageData = await getInternalMessageById(
+          id,
+          allowedCategories
+            ? { categories: allowedCategories, includeNull: includeNullCategories }
+            : { excludeCategories: PARK_MESSAGE_CATEGORIES, includeNull: includeNullCategories },
+        )
         setMessage(messageData)
 
         // 自动标记为已读（如果未读）
@@ -164,6 +183,57 @@ export default function MobileMessageDetailPage({ params: { id } }: { params: { 
 
   const displayCategory = message.category || (locale === 'en' ? 'Technical Connection' : '技术对接')
 
+  const categoryBadge = (() => {
+    const normalize = (val: string) => {
+      if (['发布审核', 'Publication Review', '用户反馈', 'User Feedback'].includes(val)) return 'audit'
+      if (['我的关注', 'My Following'].includes(val)) return 'following'
+      if (['安全消息', 'Security Messages'].includes(val)) return 'security'
+      if (['其他', 'Other'].includes(val)) return 'other'
+      if (['园区对接', 'Park Connection'].includes(val)) return 'park'
+      return 'technical'
+    }
+    const kind = normalize(displayCategory)
+    const classNameMap: Record<string, string> = {
+      technical: 'bg-blue-50 text-blue-700 border-blue-100',
+      park: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+      audit: 'bg-orange-50 text-orange-700 border-orange-100',
+      following: 'bg-green-50 text-green-700 border-green-100',
+      security: 'bg-red-50 text-red-700 border-red-100',
+      other: 'bg-gray-100 text-gray-700 border-gray-200',
+    }
+    const label =
+      kind === 'park'
+        ? locale === 'en'
+          ? 'Park Connection'
+          : '园区对接'
+        : kind === 'technical'
+          ? locale === 'en'
+            ? 'Technical Connection'
+            : '技术对接'
+          : kind === 'audit'
+            ? locale === 'en'
+              ? 'Review / Feedback'
+              : message.category === '用户反馈'
+                ? '用户反馈'
+                : '发布审核'
+            : kind === 'following'
+              ? locale === 'en'
+                ? 'My Following'
+                : '我的关注'
+              : kind === 'security'
+                ? locale === 'en'
+                  ? 'Security'
+                  : '安全消息'
+                : locale === 'en'
+                  ? 'Other'
+                  : '其他'
+    return (
+      <Badge className={`shrink-0 ${classNameMap[kind]} border text-[11px] font-medium rounded-lg px-2 py-1`}>
+        {label}
+      </Badge>
+    )
+  })()
+
   return (
     <div className="pb-20" style={{ backgroundColor: '#edeef7' }}>
       <div className="px-3 pt-4">
@@ -174,9 +244,7 @@ export default function MobileMessageDetailPage({ params: { id } }: { params: { 
             <h1 className="flex-1 text-[18px] font-semibold text-gray-900 leading-tight">
               {message.title}
             </h1>
-            <Badge className="shrink-0 bg-gray-100 text-gray-700 hover:bg-gray-100 border border-gray-200 text-[11px] font-medium rounded-full px-2 py-1">
-              {displayCategory}
-            </Badge>
+            {categoryBadge}
           </div>
 
           {/* Date */}

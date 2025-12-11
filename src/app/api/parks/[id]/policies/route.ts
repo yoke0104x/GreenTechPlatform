@@ -20,6 +20,23 @@ export async function GET(
       return NextResponse.json({ error: '缺少园区ID' }, { status: 400 })
     }
 
+    // 查询园区所关联的国家级经开区，用于兼容旧数据中 policy.park_id 直接存储经开区ID 的情况
+    let relatedZoneId: string | null = null
+    try {
+      const { data: parkRow } = await supabaseAdmin
+        .from('parks')
+        .select('id, development_zone_id')
+        .eq('id', parkId)
+        .maybeSingle()
+
+      if (parkRow && parkRow.development_zone_id) {
+        relatedZoneId = parkRow.development_zone_id as string
+      }
+    } catch (e) {
+      console.warn('查询园区经开区信息失败（忽略，不阻断园区政策列表）:', e)
+      relatedZoneId = null
+    }
+
     const { searchParams } = new URL(request.url)
 
     const keyword = searchParams.get('keyword')?.trim() || ''
@@ -48,7 +65,13 @@ export async function GET(
       .select('*', { count: 'exact' })
       .eq('status', 'active')
       .eq('level', 'park')
-      .eq('park_id', parkId)
+
+    if (relatedZoneId) {
+      // 兼容新旧语义：新数据使用 park_id = parks.id，旧数据可能仍为 park_id = 经开区ID
+      query = query.in('park_id', [parkId, relatedZoneId])
+    } else {
+      query = query.eq('park_id', parkId)
+    }
 
     if (keyword) {
       query = query.or(
@@ -132,4 +155,3 @@ export async function GET(
     )
   }
 }
-

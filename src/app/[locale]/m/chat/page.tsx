@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useMemo, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Bell, Mail } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/use-toast'
@@ -18,6 +18,9 @@ import {
   markInternalMessagesAsRead,
   markAllInternalMessagesAsRead,
   deleteInternalMessages,
+  PARK_MESSAGE_CATEGORIES,
+  SHARED_MESSAGE_CATEGORIES,
+  DEFAULT_MESSAGE_CATEGORIES,
 } from '@/lib/supabase/contact-messages'
 
 type CategoryKey = 'all' | 'technical' | 'audit' | 'following' | 'security' | 'other'
@@ -31,11 +34,23 @@ interface MessageFilters {
 export default function MobileChatPage() {
   const pathname = usePathname()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const locale: 'en' | 'zh' = pathname.startsWith('/en') ? 'en' : 'zh'
+  const from = searchParams?.get('from') || ''
+  const isParkContext = from === 'parks'
   const { user } = useAuthContext()
   const { toast } = useToast()
   const { refreshUnreadCount, decrementUnreadCount, setUnreadCount: setGlobalUnreadCount } = useUnreadMessage()
   const { showLoading, hideLoading } = useLoadingOverlay()
+
+  const allowedCategories = useMemo(
+    () =>
+      isParkContext
+        ? [...PARK_MESSAGE_CATEGORIES, ...SHARED_MESSAGE_CATEGORIES]
+        : undefined,
+    [isParkContext],
+  )
+  const includeNullCategories = useMemo(() => !isParkContext, [isParkContext])
 
   const [messages, setMessages] = useState<InternalMessage[]>([])
   const [filtered, setFiltered] = useState<InternalMessage[]>([])
@@ -46,17 +61,64 @@ export default function MobileChatPage() {
   const [batchLoading, setBatchLoading] = useState(false)
   const [filters, setFilters] = useState<MessageFilters>({ category: 'all', status: 'all', searchKeyword: '' })
 
-  // Category display mapping
+  // Category display mapping（园区入口下将“技术对接/发布审核”文案替换为“园区对接/用户反馈”）
   const categoryMap = useMemo(
     () => ({
-      technical: locale === 'en' ? 'Technical Connection' : '技术对接',
-      audit: locale === 'en' ? 'Publication Review' : '发布审核',
+      technical:
+        locale === 'en'
+          ? isParkContext
+            ? 'Park Connection'
+            : 'Technical Connection'
+          : isParkContext
+          ? '园区对接'
+          : '技术对接',
+      audit:
+        locale === 'en'
+          ? isParkContext
+            ? 'User Feedback'
+            : 'Publication Review'
+          : isParkContext
+          ? '用户反馈'
+          : '发布审核',
       following: locale === 'en' ? 'My Following' : '我的关注',
       security: locale === 'en' ? 'Security Messages' : '安全消息',
       other: locale === 'en' ? 'Other' : '其他',
     }),
-    [locale],
+    [locale, isParkContext],
   )
+
+  const matchCategory = (m: InternalMessage, key: CategoryKey) => {
+    const cat = (m.category ?? '').trim()
+    switch (key) {
+      case 'technical':
+        // 技术对接 & 园区对接类消息（兼容历史数据）
+        return (
+          cat === '技术对接' ||
+          cat === 'Technical Connection' ||
+          cat === '园区对接' ||
+          cat === 'Park Connection' ||
+          cat === '' ||
+          cat === 'undefined'
+        )
+      case 'audit':
+        // 发布审核 & 用户反馈
+        return (
+          cat === '发布审核' ||
+          cat === 'Publication Review' ||
+          cat === '用户反馈' ||
+          cat === 'User Feedback'
+        )
+      case 'following':
+        return cat === '我的关注' || cat === 'My Following'
+      case 'security':
+        return cat === '安全消息' || cat === 'Security Messages'
+      case 'other':
+        return cat === '其他' || cat === 'Other'
+      case 'all':
+      default:
+        return true
+    }
+  }
 
   const loadMessages = async () => {
     if (!user) return
@@ -64,8 +126,16 @@ export default function MobileChatPage() {
     showLoading()
     try {
       const [list, unread] = await Promise.all([
-        getReceivedInternalMessages(),
-        getUnreadInternalMessageCount(),
+        getReceivedInternalMessages(
+          allowedCategories
+            ? { categories: allowedCategories, includeNull: includeNullCategories }
+            : { excludeCategories: PARK_MESSAGE_CATEGORIES, includeNull: includeNullCategories },
+        ),
+        getUnreadInternalMessageCount(
+          allowedCategories
+            ? { categories: allowedCategories, includeNull: includeNullCategories }
+            : { excludeCategories: PARK_MESSAGE_CATEGORIES, includeNull: includeNullCategories },
+        ),
       ])
       setMessages(list)
       setUnreadCount(unread)
@@ -85,29 +155,13 @@ export default function MobileChatPage() {
   useEffect(() => {
     loadMessages()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user])
+  }, [user, allowedCategories, includeNullCategories])
 
   // Apply filters
   useEffect(() => {
     let list = [...messages]
     if (filters.category !== 'all') {
-      const target = (categoryMap as any)[filters.category]
-      if (target) {
-        list = list.filter((m) => {
-          if (target === '技术对接' || target === 'Technical Connection') {
-            return (
-              m.category === target ||
-              m.category === '技术对接' ||
-              m.category === 'Technical Connection' ||
-              !m.category ||
-              m.category === (null as any) ||
-              m.category === '' ||
-              m.category === 'undefined'
-            )
-          }
-          return m.category === target
-        })
-      }
+      list = list.filter((m) => matchCategory(m, filters.category))
     }
     if (filters.status === 'read') list = list.filter((m) => m.is_read)
     else if (filters.status === 'unread') list = list.filter((m) => !m.is_read)
@@ -228,28 +282,105 @@ export default function MobileChatPage() {
   }
 
   const chips: { key: CategoryKey; label: string; count?: number; color?: string }[] = useMemo(() => {
-    const countBy = (test: (m: InternalMessage) => boolean) => messages.filter(test).length
-    return [
+    const countByCategory = (key: CategoryKey) => messages.filter((m) => matchCategory(m, key)).length
+    const list: { key: CategoryKey; label: string; count?: number; color?: string }[] = [
       { key: 'all', label: locale === 'en' ? 'All' : '全部', count: messages.length },
       {
         key: 'technical',
-        label: locale === 'en' ? 'Technical' : '技术对接',
-        count: countBy((m) =>
-          m.category === '技术对接' ||
-          m.category === 'Technical Connection' ||
-          !m.category ||
-          (m.category as any) === null ||
-          m.category === '' ||
-          m.category === 'undefined',
-        ),
+        label: locale === 'en' ? (isParkContext ? 'Park Connection' : 'Technical') : categoryMap.technical,
+        count: countByCategory('technical'),
         color: '#2563eb',
       },
-      { key: 'audit', label: locale === 'en' ? 'Review' : '发布审核', count: countBy((m) => m.category === '发布审核' || m.category === 'Publication Review'), color: '#ea580c' },
-      { key: 'following', label: locale === 'en' ? 'Following' : '我的关注', count: countBy((m) => m.category === '我的关注' || m.category === 'My Following'), color: '#16a34a' },
-      { key: 'security', label: locale === 'en' ? 'Security' : '安全消息', count: countBy((m) => m.category === '安全消息' || m.category === 'Security Messages'), color: '#dc2626' },
-      { key: 'other', label: locale === 'en' ? 'Other' : '其他', count: countBy((m) => m.category === '其他' || m.category === 'Other'), color: '#6b7280' },
     ]
-  }, [messages, locale])
+
+    if (!isParkContext) {
+      list.push({
+        key: 'audit',
+        label: locale === 'en' ? 'Review' : categoryMap.audit,
+        count: countByCategory('audit'),
+        color: '#ea580c',
+      })
+    }
+
+    list.push(
+      {
+        key: 'following',
+        label: locale === 'en' ? 'Following' : categoryMap.following,
+        count: countByCategory('following'),
+        color: '#16a34a',
+      },
+      {
+        key: 'security',
+        label: locale === 'en' ? 'Security' : categoryMap.security,
+        count: countByCategory('security'),
+        color: '#dc2626',
+      },
+      {
+        key: 'other',
+        label: locale === 'en' ? 'Other' : categoryMap.other,
+        count: countByCategory('other'),
+        color: '#6b7280',
+      },
+    )
+
+    return list
+  }, [messages, locale, isParkContext, categoryMap])
+
+  const renderCategoryBadge = (category?: string) => {
+    const cat = (category ?? '').trim()
+    const normalize = (val: string) => {
+      if (['发布审核', 'Publication Review', '用户反馈', 'User Feedback'].includes(val)) return 'audit'
+      if (['我的关注', 'My Following'].includes(val)) return 'following'
+      if (['安全消息', 'Security Messages'].includes(val)) return 'security'
+      if (['其他', 'Other'].includes(val)) return 'other'
+      if (['园区对接', 'Park Connection'].includes(val)) return 'park'
+      // default to technical
+      return 'technical'
+    }
+    const kind = normalize(cat || (isParkContext ? '园区对接' : '技术对接'))
+    const classNameMap: Record<string, string> = {
+      technical: 'bg-blue-50 text-blue-700 border-blue-100',
+      park: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+      audit: 'bg-orange-50 text-orange-700 border-orange-100',
+      following: 'bg-green-50 text-green-700 border-green-100',
+      security: 'bg-red-50 text-red-700 border-red-100',
+      other: 'bg-gray-100 text-gray-700 border-gray-200',
+    }
+    const label =
+      kind === 'park'
+        ? locale === 'en'
+          ? 'Park Connection'
+          : '园区对接'
+        : kind === 'technical'
+          ? locale === 'en'
+            ? 'Technical Connection'
+            : '技术对接'
+          : kind === 'audit'
+            ? locale === 'en'
+              ? isParkContext
+                ? 'User Feedback'
+                : 'Publication Review'
+              : isParkContext
+                ? '用户反馈'
+                : '发布审核'
+            : kind === 'following'
+              ? locale === 'en'
+                ? 'My Following'
+                : '我的关注'
+              : kind === 'security'
+                ? locale === 'en'
+                  ? 'Security'
+                  : '安全消息'
+                : locale === 'en'
+                  ? 'Other'
+                  : '其他'
+
+    return (
+      <Badge className={`shrink-0 whitespace-nowrap border text-[11px] font-medium rounded-lg px-2 py-1 ${classNameMap[kind]}`}>
+        {label}
+      </Badge>
+    )
+  }
 
   if (!user) {
     return (
@@ -288,9 +419,17 @@ export default function MobileChatPage() {
                 }`}
                 aria-pressed={active}
               >
-                <span>
-                  {c.label}
-                  {typeof c.count === 'number' ? ` (${c.count})` : ''}
+                <span className="inline-flex items-center gap-1">
+                  <span>{c.label}</span>
+                  {typeof c.count === 'number' && (
+                    <span
+                      className={`font-semibold ${
+                        active ? 'text-white' : 'text-blue-600'
+                      }`}
+                    >
+                      ({c.count})
+                    </span>
+                  )}
                 </span>
               </button>
             )
@@ -333,7 +472,11 @@ export default function MobileChatPage() {
                 <li key={m.id}>
                   <div
                     className="relative bg-white rounded-2xl shadow-sm border border-gray-100 p-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                    onClick={() => router.push(`${pathname}/${m.id}`)}
+                    onClick={() => {
+                      const base = `${pathname}/${m.id}`
+                      const suffix = from ? `?from=${encodeURIComponent(from)}` : ''
+                      router.push(`${base}${suffix}`)
+                    }}
                   >
                     <div className="w-full text-left">
                       {/* Single-row aligned: checkbox, dot, icon, title, status */}
@@ -351,12 +494,10 @@ export default function MobileChatPage() {
                             <Mail className="w-4 h-4 text-white" strokeWidth={2.2} />
                           </div>
                         </div>
-                        <div className={`text-left text-[14px] font-semibold leading-tight truncate ${unread ? 'text-gray-900' : 'text-gray-700'}`}>
+                        <div className={`text-left text-[14px] font-semibold leading-tight truncate ${unread ? 'text-gray-900' : 'text-gray-400'}`}>
                           {m.title}
                         </div>
-                        <Badge className="shrink-0 whitespace-nowrap bg-gray-100 text-gray-700 hover:bg-gray-100 border border-gray-200 text-[10px] font-medium rounded-full px-2 py-0.5">
-                          {displayCategory}
-                        </Badge>
+                        {renderCategoryBadge(displayCategory)}
                       </div>
                       {/* content and date aligned with title (second column start) */}
                       <div className="mt-1.5 pl-[62px] text-[12px] text-gray-500 truncate">{m.content}</div>
