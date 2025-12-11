@@ -12,11 +12,11 @@ export default function MobileLayout({
 }) {
   return (
     <LoadingOverlayProvider>
-      <UnreadMessageProvider>
-        <Suspense fallback={null}>
+      <Suspense fallback={null}>
+        <UnreadMessageProvider>
           <MobileLayoutShell locale={locale}>{children}</MobileLayoutShell>
-        </Suspense>
-      </UnreadMessageProvider>
+        </UnreadMessageProvider>
+      </Suspense>
     </LoadingOverlayProvider>
   )
 }
