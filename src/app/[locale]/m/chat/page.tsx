@@ -494,8 +494,7 @@ function MobileChatPage() {
                     className="relative bg-white rounded-2xl shadow-sm border border-gray-100 p-3 cursor-pointer hover:bg-gray-50 transition-colors"
                     onClick={() => {
                       const base = `${pathname}/${m.id}`
-                      const suffix = from ? `?from=${encodeURIComponent(from)}` : ''
-                      router.push(`${base}${suffix}`)
+                      router.push(base)
                     }}
                   >
                     <div className="w-full text-left">
