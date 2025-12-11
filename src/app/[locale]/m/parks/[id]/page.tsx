@@ -187,7 +187,7 @@ export default function MobileParkDetailPage({
   const honorsTimeline = useMemo(() => {
     const result: {
       years: string[]
-      itemsByYear: Map<string, { id: string; title: string; type?: string | null }>
+      itemsByYear: Map<string, { id: string; title: string; type?: string | null }[]>
     } = {
       years: [],
       itemsByYear: new Map(),
@@ -207,12 +207,15 @@ export default function MobileParkDetailPage({
           : otherLabel
 
       const existing = result.itemsByYear.get(yearKey) ?? []
-      existing.push({
-        id: honor.id,
-        title: honor.title,
-        type: honor.type ?? null,
-      })
-      result.itemsByYear.set(yearKey, existing)
+      const nextItems = [
+        ...existing,
+        {
+          id: honor.id,
+          title: honor.title,
+          type: honor.type ?? null,
+        },
+      ]
+      result.itemsByYear.set(yearKey, nextItems)
     }
 
     const years = Array.from(result.itemsByYear.keys()).sort((a, b) => {
