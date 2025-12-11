@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { Suspense, useEffect, useMemo, useState } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Bell, Mail } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/use-toast'
@@ -42,10 +42,8 @@ export default function MobileChatPageWrapper() {
 function MobileChatPage() {
   const pathname = usePathname()
   const router = useRouter()
-  const searchParams = useSearchParams()
   const locale: 'en' | 'zh' = pathname.startsWith('/en') ? 'en' : 'zh'
-  const from = searchParams?.get('from') || ''
-  const isParkContext = from === 'parks'
+  const [isParkContext, setIsParkContext] = useState(false)
   const { user } = useAuthContext()
   const { toast } = useToast()
   const { refreshUnreadCount, decrementUnreadCount, setUnreadCount: setGlobalUnreadCount } = useUnreadMessage()
@@ -68,6 +66,20 @@ function MobileChatPage() {
   const [isAllSelected, setIsAllSelected] = useState(false)
   const [batchLoading, setBatchLoading] = useState(false)
   const [filters, setFilters] = useState<MessageFilters>({ category: 'all', status: 'all', searchKeyword: '' })
+
+  // 在客户端解析 ?from=parks，避免使用 useSearchParams
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      setIsParkContext(false)
+      return
+    }
+    try {
+      const sp = new URLSearchParams(window.location.search)
+      setIsParkContext(sp.get('from') === 'parks')
+    } catch {
+      setIsParkContext(false)
+    }
+  }, [pathname])
 
   // Category display mapping（园区入口下将“技术对接/发布审核”文案替换为“园区对接/用户反馈”）
   const categoryMap = useMemo(

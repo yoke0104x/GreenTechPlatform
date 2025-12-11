@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useEffect, useState } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { getTechnologyById } from '@/api/tech'
 import { addFavorite, getFavoriteStatus, removeFavorite } from '@/api/favorites'
@@ -24,11 +24,24 @@ export default function MobileTechDetailPageWrapper({
 function MobileTechDetailPage({ id }: { id: string }) {
   const pathname = usePathname()
   const router = useRouter()
-  const searchParams = useSearchParams()
   const locale = pathname.startsWith('/en') ? 'en' : 'zh'
   const { user } = useAuthContext()
   const basePath = locale === 'en' ? '/en' : '/zh'
-  const from = searchParams.get('from')
+  const [from, setFrom] = useState<string | null>(null)
+
+  // 在客户端解析 ?from=xxx，避免使用 useSearchParams
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      setFrom(null)
+      return
+    }
+    try {
+      const sp = new URLSearchParams(window.location.search)
+      setFrom(sp.get('from'))
+    } catch {
+      setFrom(null)
+    }
+  }, [pathname])
 
   // 检查登录状态并提示
   const checkAuthAndPrompt = () => {

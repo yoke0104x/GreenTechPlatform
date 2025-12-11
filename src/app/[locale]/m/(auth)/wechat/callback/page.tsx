@@ -1,7 +1,7 @@
 "use client"
 
 import { Suspense, useEffect, useState } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { wechatAuthApi } from '@/api/wechat'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { useLoadingOverlay } from '@/components/common/loading-overlay'
@@ -19,7 +19,6 @@ export default function WechatCallbackPage() {
 function WechatCallbackContent() {
   const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const { checkUser } = useAuthContext()
   const locale = pathname.startsWith('/en') ? 'en' : 'zh'
   const { showLoading, hideLoading } = useLoadingOverlay()
@@ -27,8 +26,20 @@ function WechatCallbackContent() {
   const [message, setMessage] = useState(locale === 'en' ? 'Signing in with WeChat...' : '正在通过微信登录...')
 
   useEffect(() => {
-    const code = searchParams?.get('code') || ''
-    const state = searchParams?.get('state') || ''
+    if (typeof window === 'undefined') {
+      setMessage(locale === 'en' ? 'Missing code parameter' : '缺少code参数')
+      return
+    }
+    let code = ''
+    let state = ''
+    try {
+      const sp = new URLSearchParams(window.location.search)
+      code = sp.get('code') || ''
+      state = sp.get('state') || ''
+    } catch {
+      code = ''
+      state = ''
+    }
     if (!code) {
       setMessage(locale === 'en' ? 'Missing code parameter' : '缺少code参数')
       return

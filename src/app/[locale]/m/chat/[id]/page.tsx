@@ -1,7 +1,7 @@
 "use client"
 
 import { Suspense, useEffect, useMemo, useState } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { ArrowLeft, Trash2, CheckCircle, Mail } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/use-toast'
@@ -31,11 +31,9 @@ export default function MobileMessageDetailPageWrapper({
 
 function MobileMessageDetailPage({ id }: { id: string }) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const router = useRouter()
   const locale: 'en' | 'zh' = pathname.startsWith('/en') ? 'en' : 'zh'
-  const from = searchParams?.get('from') || ''
-  const isParkContext = from === 'parks'
+  const [isParkContext, setIsParkContext] = useState(false)
   const allowedCategories = useMemo(
     () =>
       isParkContext
@@ -52,6 +50,20 @@ function MobileMessageDetailPage({ id }: { id: string }) {
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
   const [markingRead, setMarkingRead] = useState(false)
+
+  // 在客户端解析 ?from=parks，避免使用 useSearchParams
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      setIsParkContext(false)
+      return
+    }
+    try {
+      const sp = new URLSearchParams(window.location.search)
+      setIsParkContext(sp.get('from') === 'parks')
+    } catch {
+      setIsParkContext(false)
+    }
+  }, [pathname])
 
   useEffect(() => {
     const loadMessage = async () => {
