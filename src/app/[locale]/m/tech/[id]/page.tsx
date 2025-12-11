@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { getTechnologyById } from '@/api/tech'
@@ -8,8 +8,20 @@ import { addFavorite, getFavoriteStatus, removeFavorite } from '@/api/favorites'
 import { Share2, Heart, Phone, ArrowLeft } from 'lucide-react'
 import { ContactUsModal } from '@/components/contact/contact-us-modal'
 import { useAuthContext } from '@/components/auth/auth-provider'
+// Wrap useSearchParams usage in Suspense at page level
+export default function MobileTechDetailPageWrapper({
+  params: { id },
+}: {
+  params: { id: string }
+}) {
+  return (
+    <Suspense fallback={<section className="min-h-dvh" />}>
+      <MobileTechDetailPage id={id} />
+    </Suspense>
+  )
+}
 
-export default function MobileTechDetailPage({ params: { id } }: { params: { id: string } }) {
+function MobileTechDetailPage({ id }: { id: string }) {
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()

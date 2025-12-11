@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Trash2, CheckCircle, Mail } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -16,8 +16,20 @@ import {
   SHARED_MESSAGE_CATEGORIES,
   DEFAULT_MESSAGE_CATEGORIES,
 } from '@/lib/supabase/contact-messages'
+// Wrap useSearchParams usage in Suspense at page level
+export default function MobileMessageDetailPageWrapper({
+  params: { id },
+}: {
+  params: { id: string }
+}) {
+  return (
+    <Suspense fallback={<section className="min-h-dvh" />}>
+      <MobileMessageDetailPage id={id} />
+    </Suspense>
+  )
+}
 
-export default function MobileMessageDetailPage({ params: { id } }: { params: { id: string } }) {
+function MobileMessageDetailPage({ id }: { id: string }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()

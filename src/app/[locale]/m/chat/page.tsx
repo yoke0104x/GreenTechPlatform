@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Bell, Mail } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -30,8 +30,16 @@ interface MessageFilters {
   status: 'all' | 'read' | 'unread'
   searchKeyword: string
 }
+// Page-level wrapper to ensure useSearchParams is inside Suspense
+export default function MobileChatPageWrapper() {
+  return (
+    <Suspense fallback={<section className="min-h-dvh" />}>
+      <MobileChatPage />
+    </Suspense>
+  )
+}
 
-export default function MobileChatPage() {
+function MobileChatPage() {
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()

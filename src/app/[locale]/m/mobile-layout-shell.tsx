@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
-import { ReactNode, useMemo } from 'react'
+import { usePathname } from 'next/navigation'
+import { ReactNode, useEffect, useMemo, useState } from 'react'
 import { Home, Upload, MessageSquare, User } from 'lucide-react'
 import { useUnreadMessage } from '@/components/message/unread-message-context'
 
@@ -14,8 +14,8 @@ export function MobileLayoutShell({
   locale: string
 }) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const { unreadCount } = useUnreadMessage()
+  const [isParksMessages, setIsParksMessages] = useState(false)
 
   const isPolicySection = useMemo(
     () => !!pathname && pathname.startsWith(`/${locale}/m/policy`),
@@ -25,13 +25,19 @@ export function MobileLayoutShell({
     () => !!pathname && pathname.startsWith(`/${locale}/m/parks`),
     [pathname, locale],
   )
-  const isParksMessages = useMemo(
-    () =>
-      !!pathname &&
-      pathname.startsWith(`/${locale}/m/chat`) &&
-      searchParams?.get('from') === 'parks',
-    [pathname, locale, searchParams],
-  )
+
+  // 仅在客户端通过 window.location.search 判断是否来自园区入口
+  useEffect(() => {
+    if (!pathname || typeof window === 'undefined') return
+    try {
+      const sp = new URLSearchParams(window.location.search)
+      const fromParks =
+        pathname.startsWith(`/${locale}/m/chat`) && sp.get('from') === 'parks'
+      setIsParksMessages(fromParks)
+    } catch {
+      setIsParksMessages(false)
+    }
+  }, [pathname, locale])
 
   const isParksContext = isParksSection || isParksMessages
 
@@ -183,4 +189,3 @@ export function MobileLayoutShell({
     </div>
   )
 }
-
