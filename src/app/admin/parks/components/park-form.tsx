@@ -133,6 +133,7 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
       leading_industries: park?.leading_industries || '',
       leading_companies: park?.leading_companies || '',
       alias: park?.alias || '',
+      dialect: park?.dialect || '',
       climate: park?.climate || '',
       region_desc: park?.region_desc || '',
       license_plate_code: park?.license_plate_code || '',
