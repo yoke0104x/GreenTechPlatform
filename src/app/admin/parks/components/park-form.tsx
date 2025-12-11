@@ -188,6 +188,15 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
     }
   }
 
+  const handleProvinceChange = (provinceId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      province_id: provinceId,
+      development_zone_id: '',
+    }))
+    loadDevelopmentZones(provinceId)
+  }
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
     if (!formData.name_zh.trim()) {
