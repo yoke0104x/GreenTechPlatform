@@ -65,6 +65,7 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
     leading_industries: '',
     leading_companies: '',
     alias: '',
+    dialect: '',
     climate: '',
     region_desc: '',
     license_plate_code: '',
