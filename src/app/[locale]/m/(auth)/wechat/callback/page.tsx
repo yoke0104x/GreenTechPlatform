@@ -66,7 +66,7 @@ function WechatCallbackContent() {
       }
     })()
     return () => hideLoading()
-  }, [searchParams, router, checkUser, locale, showLoading, hideLoading])
+  }, [router, checkUser, locale, showLoading, hideLoading])
 
   return (
     <section className="min-h-dvh flex items-center justify-center">
