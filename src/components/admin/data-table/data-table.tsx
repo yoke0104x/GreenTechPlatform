@@ -10,6 +10,7 @@ export interface Column<T> {
   sortable?: boolean
   width?: string
   render?: (value: T[keyof T], record: T, index: number) => React.ReactNode
+  sticky?: 'left' | 'right'
 }
 
 interface DataTableProps<T> {
@@ -180,38 +181,46 @@ export function DataTable<T extends Record<string, any>>({
           {/* 表头 */}
           <thead className="bg-gray-50">
             <tr>
-              {columns.map((column, index) => (
-                <th
-                  key={index}
-                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
-                    column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
-                  }`}
-                  style={{ width: column.width }}
-                  onClick={() => column.sortable && column.key && handleSort(column.key as string)}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>{column.title}</span>
-                    {column.sortable && column.key && (
-                      <div className="flex flex-col">
-                        <ChevronUp 
-                          className={`w-3 h-3 -mb-1 ${
-                            sortField === column.key && sortOrder === 'asc' 
-                              ? 'text-green-600' 
-                              : 'text-gray-400'
-                          }`} 
-                        />
-                        <ChevronDown 
-                          className={`w-3 h-3 ${
-                            sortField === column.key && sortOrder === 'desc' 
-                              ? 'text-green-600' 
-                              : 'text-gray-400'
-                          }`} 
-                        />
-                      </div>
-                    )}
-                  </div>
-                </th>
-              ))}
+              {columns.map((column, index) => {
+                const stickyClass =
+                  column.sticky === 'left'
+                    ? 'sticky left-0 z-20 bg-gray-50'
+                    : column.sticky === 'right'
+                      ? 'sticky right-0 z-20 bg-gray-50'
+                      : ''
+                return (
+                  <th
+                    key={index}
+                    className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
+                      column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
+                    } ${stickyClass}`}
+                    style={{ width: column.width, minWidth: column.width }}
+                    onClick={() => column.sortable && column.key && handleSort(column.key as string)}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>{column.title}</span>
+                      {column.sortable && column.key && (
+                        <div className="flex flex-col">
+                          <ChevronUp 
+                            className={`w-3 h-3 -mb-1 ${
+                              sortField === column.key && sortOrder === 'asc' 
+                                ? 'text-green-600' 
+                                : 'text-gray-400'
+                            }`} 
+                          />
+                          <ChevronDown 
+                            className={`w-3 h-3 ${
+                              sortField === column.key && sortOrder === 'desc' 
+                                ? 'text-green-600' 
+                                : 'text-gray-400'
+                            }`} 
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </th>
+                )
+              })}
             </tr>
           </thead>
 
@@ -229,11 +238,23 @@ export function DataTable<T extends Record<string, any>>({
             ) : (
               data.map((record, index) => (
                 <tr key={getRowKey(record, index)} className="hover:bg-gray-50 transition-colors">
-                  {columns.map((column, colIndex) => (
-                    <td key={colIndex} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {renderCell(column, record, index)}
-                    </td>
-                  ))}
+                  {columns.map((column, colIndex) => {
+                    const stickyClass =
+                      column.sticky === 'left'
+                        ? 'sticky left-0 z-10 bg-white'
+                        : column.sticky === 'right'
+                          ? 'sticky right-0 z-10 bg-white'
+                          : ''
+                    return (
+                      <td
+                        key={colIndex}
+                        className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${stickyClass}`}
+                        style={{ width: column.width, minWidth: column.width }}
+                      >
+                        {renderCell(column, record, index)}
+                      </td>
+                    )
+                  })}
                 </tr>
               ))
             )}

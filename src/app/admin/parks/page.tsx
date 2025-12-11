@@ -259,6 +259,7 @@ export default function AdminParksPage() {
       key: 'actions',
       title: '操作',
       width: '120px',
+      sticky: 'right',
       render: (_: unknown, record: AdminPark) => (
         <div className="flex items-center space-x-2">
           <button
