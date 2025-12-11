@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { ReactNode, useMemo } from 'react'
+import { ReactNode, useMemo, Suspense } from 'react'
 import { Home, Upload, MessageSquare, User } from 'lucide-react'
 import { UnreadMessageProvider, useUnreadMessage } from '@/components/message/unread-message-context'
 import { LoadingOverlayProvider } from '@/components/common/loading-overlay'
@@ -144,9 +144,11 @@ export default function MobileLayout({
   return (
     <LoadingOverlayProvider>
       <UnreadMessageProvider>
-        <MobileLayoutInner locale={locale}>
-          {children}
-        </MobileLayoutInner>
+        <Suspense fallback={null}>
+          <MobileLayoutInner locale={locale}>
+            {children}
+          </MobileLayoutInner>
+        </Suspense>
       </UnreadMessageProvider>
     </LoadingOverlayProvider>
   )

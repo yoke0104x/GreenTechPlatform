@@ -116,9 +116,8 @@ export default function MobileParksMePage() {
             onClick={async () => {
               try {
                 await logout()
-                router.push(`${basePath}/m/login`)
-              } catch {
-                router.push(`${basePath}/m/login`)
+              } finally {
+                router.replace(`${basePath}/m/login`)
               }
             }}
           />
