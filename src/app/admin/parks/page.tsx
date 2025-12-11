@@ -38,18 +38,20 @@ export default function AdminParksPage() {
   })
   const [levelFilter, setLevelFilter] = useState('')
   const [provinceFilter, setProvinceFilter] = useState('')
+  const [sortField, setSortField] = useState<string>('')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [provinces, setProvinces] = useState<AdminProvince[]>([])
 
   const loadParks = useCallback(
-    async (params?: Partial<PaginationParams>) => {
+    async (params?: Partial<PaginationParams> & { level?: string; provinceId?: string }) => {
       try {
         setLoading(true)
         const res = await getParksAdminApi({
           page: params?.page ?? pagination.current,
           pageSize: params?.pageSize ?? pagination.pageSize,
           search: params?.search,
-          sortBy: params?.sortBy,
-          sortOrder: params?.sortOrder,
+          sortBy: params?.sortBy ?? (sortField || undefined),
+          sortOrder: params?.sortOrder ?? (sortField ? sortOrder : undefined),
           level: params?.level ?? levelFilter,
           provinceId: params?.provinceId ?? provinceFilter,
         })
@@ -67,7 +69,7 @@ export default function AdminParksPage() {
         setLoading(false)
       }
     },
-    [pagination.current, pagination.pageSize, levelFilter, provinceFilter],
+    [pagination.current, pagination.pageSize, levelFilter, provinceFilter, sortField, sortOrder],
   )
 
   useEffect(() => {
@@ -92,6 +94,8 @@ export default function AdminParksPage() {
   }
 
   const handleSort = (field: string, order: 'asc' | 'desc') => {
+    setSortField(field)
+    setSortOrder(order)
     loadParks({ sortBy: field, sortOrder: order })
   }
 
