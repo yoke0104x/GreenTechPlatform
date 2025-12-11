@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { isValidEmail, isValidPhone, emailError, phoneError } from '@/lib/validators'
@@ -8,22 +8,27 @@ import { authApi } from '@/api/auth'
 import { LanguageSwitcher } from '@/components/common/language-switcher'
 import { ArrowLeft } from 'lucide-react'
 
+// 强制动态渲染，避免预渲染时的 searchParams/Suspense 报错
+export const dynamic = 'force-dynamic'
+
 export default function MobileForgotPasswordPage() {
   return (
-    <section className="min-h-dvh relative flex flex-col bg-[radial-gradient(120%_60%_at_50%_-10%,#e9e7ff_0%,#ffffff_60%)]">
-      {/* 顶部右侧语言切换（iPhone 安全区适配） */}
-      <div
-        className="fixed z-50"
-        style={{
-          top: 'calc(env(safe-area-inset-top, 0px) + 8px)',
-          right: 'calc(env(safe-area-inset-right, 0px) + 8px)'
-        }}
-      >
-        <LanguageSwitcher className="text-[12px]" hideIcon />
-      </div>
+    <Suspense fallback={<section className="min-h-dvh" />}>
+      <section className="min-h-dvh relative flex flex-col bg-[radial-gradient(120%_60%_at_50%_-10%,#e9e7ff_0%,#ffffff_60%)]">
+        {/* 顶部右侧语言切换（iPhone 安全区适配） */}
+        <div
+          className="fixed z-50"
+          style={{
+            top: 'calc(env(safe-area-inset-top, 0px) + 8px)',
+            right: 'calc(env(safe-area-inset-right, 0px) + 8px)'
+          }}
+        >
+          <LanguageSwitcher className="text-[12px]" hideIcon />
+        </div>
 
-      <ForgotContent />
-    </section>
+        <ForgotContent />
+      </section>
+    </Suspense>
   )
 }
 
