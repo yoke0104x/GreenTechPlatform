@@ -145,8 +145,14 @@ export function MobileLayoutShell({
     !pathname.startsWith(`/${locale}/m/parks/favorites`)
   )
 
+  const isPortalPage = pathname === `/${locale}/m`
   const showNav =
-    !isAuthPage && !isTechDetail && !isMessageDetail && !isPolicyDetail && !isParkDetail
+    !isAuthPage &&
+    !isTechDetail &&
+    !isMessageDetail &&
+    !isPolicyDetail &&
+    !isParkDetail &&
+    !isPortalPage
 
   return (
     <div className="min-h-dvh bg-[#edeef7] flex flex-col">

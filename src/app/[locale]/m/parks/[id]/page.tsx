@@ -44,6 +44,7 @@ export default function MobileParkDetailPage({
   const [favoriteLoading, setFavoriteLoading] = useState(false)
   const [isFavorited, setIsFavorited] = useState(false)
   const [showMoreInfo, setShowMoreInfo] = useState(false)
+  const [showFullBrief, setShowFullBrief] = useState(false)
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
   const [contactOpen, setContactOpen] = useState(false)
 
@@ -257,6 +258,20 @@ export default function MobileParkDetailPage({
       </div>
     )
   }
+
+  const introText = isEn
+    ? park.briefEn || park.briefZh || ''
+    : park.briefZh || park.briefEn || ''
+  const introTooLong = introText.length > 220
+  const introClampStyle =
+    !showFullBrief && introTooLong
+      ? ({
+          display: '-webkit-box',
+          WebkitLineClamp: 10,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        } as React.CSSProperties)
+      : undefined
 
   return (
     <div className="min-h-dvh pb-[120px]" style={{ backgroundColor: '#edeef7' }}>
@@ -500,7 +515,7 @@ export default function MobileParkDetailPage({
               </div>
 
               {/* 园区简介 */}
-              {(park.briefZh || park.briefEn) && (
+              {introText && (
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-1.5 h-4 bg-[#00b899]" />
@@ -509,9 +524,31 @@ export default function MobileParkDetailPage({
                     </h3>
                   </div>
                   <div className="ml-[14px]">
-                    <p className="text-[12px] text-gray-700 leading-relaxed whitespace-pre-line">
-                      {park.briefZh || park.briefEn}
+                    <p
+                      className="text-[12px] text-gray-700 leading-relaxed whitespace-pre-line"
+                      style={introClampStyle}
+                    >
+                      {introText}
                     </p>
+                    {introTooLong && (
+                      <button
+                        type="button"
+                        onClick={() => setShowFullBrief((v) => !v)}
+                        className="mt-1.5 flex items-center gap-1 text-[12px] text-[#00b899]"
+                      >
+                        {showFullBrief ? (
+                          <>
+                            {isEn ? 'Hide details' : '收起更多'}
+                            <ChevronUp className="w-3.5 h-3.5" />
+                          </>
+                        ) : (
+                          <>
+                            {isEn ? 'View more' : '查看更多'}
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
