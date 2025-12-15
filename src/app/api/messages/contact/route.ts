@@ -56,10 +56,12 @@ export async function POST(request: NextRequest) {
   const source = (body.source || body.context || '').trim()
   const categoryInput = (body.category || body.type || '').trim()
   const resolvedCategory =
-    categoryInput && ['技术对接', '用户反馈', '园区对接'].includes(categoryInput)
+    categoryInput && ['技术对接', '用户反馈', '园区对接', '政策咨询'].includes(categoryInput)
       ? categoryInput
       : source === 'park'
         ? '园区对接'
+        : source === 'policy'
+          ? '政策咨询'
         : '技术对接'
   const technologyId = body.technology_id || body.technologyId || null
   const technologyName = body.technology_name || body.technologyName || ''
@@ -130,6 +132,7 @@ async function notifyAdmins(client: any, contactMessage: any) {
   const category: string = contactMessage.category || '技术对接'
   const isFeedback = category === '用户反馈'
   const isPark = category === '园区对接'
+  const isPolicy = category === '政策咨询'
 
   const titlePrefix = isFeedback
     ? '新的用户反馈'
@@ -150,10 +153,15 @@ async function notifyAdmins(client: any, contactMessage: any) {
     to_user_id: admin.id,
     contact_message_id: contactMessage.id,
     title: `${titlePrefix}：${titleSuffix}`,
-    content: `您收到了一条新的${isFeedback ? '用户反馈' : isPark ? '园区对接消息' : '联系消息'}：\n\n联系人：${contactMessage.contact_name}\n联系电话：${contactMessage.contact_phone}\n联系邮箱：${contactMessage.contact_email}\n${
+    content: `您收到了一条新的${
+      isFeedback ? '用户反馈' : isPark ? '园区对接消息' : isPolicy ? '政策咨询消息' : '联系消息'
+    }：\n\n联系人：${contactMessage.contact_name}\n联系电话：${contactMessage.contact_phone}\n联系邮箱：${contactMessage.contact_email}\n${
       isFeedback
         ? ''
-        : `咨询对象：${contactMessage.technology_name || (isPark ? '园区' : '技术')}\n所属公司：${contactMessage.company_name || '无'}`
+        : `咨询对象：${
+            contactMessage.technology_name ||
+            (isPark ? '园区' : isPolicy ? '政策' : '技术')
+          }\n所属公司：${contactMessage.company_name || '无'}`
     }\n\n${isFeedback ? '反馈' : '留言'}内容：\n${contactMessage.message}\n\n请前往管理后台查看并处理此消息。`,
     category,
     is_read: false,

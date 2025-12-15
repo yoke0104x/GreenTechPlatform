@@ -16,6 +16,7 @@ export function MobileLayoutShell({
   const pathname = usePathname()
   const { unreadCount } = useUnreadMessage()
   const [isParksMessages, setIsParksMessages] = useState(false)
+   const [isPolicyMessages, setIsPolicyMessages] = useState(false)
 
   const isPolicySection = useMemo(
     () => !!pathname && pathname.startsWith(`/${locale}/m/policy`),
@@ -26,20 +27,37 @@ export function MobileLayoutShell({
     [pathname, locale],
   )
 
-  // 仅在客户端通过 window.location.search 判断是否来自园区入口
+  // 仅在客户端通过 window.location.search 判断是否来自园区/政策入口
   useEffect(() => {
     if (!pathname || typeof window === 'undefined') return
     try {
       const sp = new URLSearchParams(window.location.search)
+      const from = sp.get('from')
       const fromParks =
-        pathname.startsWith(`/${locale}/m/chat`) && sp.get('from') === 'parks'
+        pathname.startsWith(`/${locale}/m/chat`) && from === 'parks'
+      const fromPolicy =
+        pathname.startsWith(`/${locale}/m/chat`) && from === 'policy'
       setIsParksMessages(fromParks)
+      setIsPolicyMessages(fromPolicy)
     } catch {
       setIsParksMessages(false)
+      setIsPolicyMessages(false)
     }
   }, [pathname, locale])
 
   const isParksContext = isParksSection || isParksMessages
+  const isPolicyContext = isPolicySection || isPolicyMessages
+
+  // 将当前上下文写入 sessionStorage，供消息页兜底识别
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const ctx = isPolicyContext ? 'policy' : isParksContext ? 'parks' : 'default'
+      window.sessionStorage.setItem('m_chat_context', ctx)
+    } catch {
+      // ignore
+    }
+  }, [isPolicyContext, isParksContext])
 
   const tabs = useMemo(() => {
     // 绿色园区 H5：独立入口和“我的园区”
@@ -57,15 +75,15 @@ export function MobileLayoutShell({
       ]
     }
 
-    // 政策 H5：仅显示 首页/消息/我的
-    if (isPolicySection) {
+    // 政策 H5：仅显示 首页/消息/我的（包括从政策入口进入的消息页）
+    if (isPolicyContext) {
       return [
         { key: 'home', labelZh: '首页', labelEn: 'Home', href: `/${locale}/m/policy`, Icon: Home },
         {
           key: 'messages',
           labelZh: '消息',
           labelEn: 'Messages',
-          href: `/${locale}/m/chat`,
+          href: `/${locale}/m/chat?from=policy`,
           Icon: MessageSquare,
         },
         { key: 'me', labelZh: '我的', labelEn: 'Me', href: `/${locale}/m/me`, Icon: User },
@@ -91,7 +109,7 @@ export function MobileLayoutShell({
       },
       { key: 'me', labelZh: '我的', labelEn: 'Me', href: `/${locale}/m/me`, Icon: User },
     ]
-  }, [locale, isPolicySection, isParksContext])
+  }, [locale, isPolicyContext, isParksContext])
 
   // 根据路径推导当前激活的 tab
   const activeKey = useMemo(() => {

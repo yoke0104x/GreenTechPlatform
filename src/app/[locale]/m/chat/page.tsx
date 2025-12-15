@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Bell, Mail } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -21,6 +21,7 @@ import {
   PARK_MESSAGE_CATEGORIES,
   SHARED_MESSAGE_CATEGORIES,
   DEFAULT_MESSAGE_CATEGORIES,
+  POLICY_MESSAGE_CATEGORIES,
 } from '@/lib/supabase/contact-messages'
 
 type CategoryKey = 'all' | 'technical' | 'audit' | 'following' | 'security' | 'other'
@@ -43,43 +44,103 @@ function MobileChatPage() {
   const pathname = usePathname()
   const router = useRouter()
   const locale: 'en' | 'zh' = pathname.startsWith('/en') ? 'en' : 'zh'
-  const [isParkContext, setIsParkContext] = useState(false)
-  const { user } = useAuthContext()
+  const [context, setContext] = useState<'default' | 'parks' | 'policy'>('default')
+  const { user, loading: authLoading, checkUser } = useAuthContext()
   const { toast } = useToast()
   const { refreshUnreadCount, decrementUnreadCount, setUnreadCount: setGlobalUnreadCount } = useUnreadMessage()
-  const { showLoading, hideLoading } = useLoadingOverlay()
+  const { showLoading, hideLoading, resetLoading } = useLoadingOverlay()
+  const isParkContext = context === 'parks'
+  const isPolicyContext = context === 'policy'
 
-  const allowedCategories = useMemo(
-    () =>
-      isParkContext
-        ? [...PARK_MESSAGE_CATEGORIES, ...SHARED_MESSAGE_CATEGORIES]
-        : undefined,
-    [isParkContext],
-  )
-  const includeNullCategories = useMemo(() => !isParkContext, [isParkContext])
+  const allowedCategories = useMemo(() => {
+    if (isParkContext) {
+      return [...PARK_MESSAGE_CATEGORIES, ...SHARED_MESSAGE_CATEGORIES]
+    }
+    if (isPolicyContext) {
+      return [...POLICY_MESSAGE_CATEGORIES, ...SHARED_MESSAGE_CATEGORIES]
+    }
+    return undefined
+  }, [isParkContext, isPolicyContext])
+
+  const includeNullCategories = useMemo(() => !isParkContext && !isPolicyContext, [isParkContext, isPolicyContext])
 
   const [messages, setMessages] = useState<InternalMessage[]>([])
   const [filtered, setFiltered] = useState<InternalMessage[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isAllSelected, setIsAllSelected] = useState(false)
   const [batchLoading, setBatchLoading] = useState(false)
   const [filters, setFilters] = useState<MessageFilters>({ category: 'all', status: 'all', searchKeyword: '' })
+  const requestIdRef = useRef(0)
+  const authRetryRef = useRef(false)
 
-  // 在客户端解析 ?from=parks，避免使用 useSearchParams
+  useEffect(() => {
+    resetLoading()
+  }, [resetLoading])
+
+  // 在客户端解析 ?from=parks / ?from=policy，避免使用 useSearchParams
   useEffect(() => {
     if (typeof window === 'undefined') {
-      setIsParkContext(false)
+      setContext('default')
       return
     }
     try {
       const sp = new URLSearchParams(window.location.search)
-      setIsParkContext(sp.get('from') === 'parks')
+      const from = sp.get('from')
+      if (from === 'parks') setContext('parks')
+      else if (from === 'policy') setContext('policy')
+      else {
+        // 兜底：读取 sessionStorage 中最近的上下文
+        const stored = window.sessionStorage.getItem('m_chat_context')
+        if (stored === 'parks') setContext('parks')
+        else if (stored === 'policy') setContext('policy')
+        else setContext('default')
+      }
     } catch {
-      setIsParkContext(false)
+      setContext('default')
     }
   }, [pathname])
+
+  const maybeRecoverAuthOnce = async (error: unknown) => {
+    if (authRetryRef.current) return false
+    const message = error instanceof Error ? error.message : String(error)
+    if (!message.includes('未登录') && !message.includes('Invalid token')) return false
+
+    authRetryRef.current = true
+
+    if (typeof window !== 'undefined') {
+      const customToken = window.localStorage.getItem('custom_auth_token')
+      if (customToken) {
+        const refreshToken = window.localStorage.getItem('custom_refresh_token')
+        if (refreshToken) {
+          try {
+            const { customAuthApi } = await import('@/api/customAuth')
+            await customAuthApi.refreshToken()
+          } catch {
+            // ignore
+          }
+        }
+
+        try {
+          const { supabase } = await import('@/lib/supabase')
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session?.access_token) {
+            window.localStorage.removeItem('custom_auth_token')
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    try {
+      await checkUser()
+    } catch {
+      // ignore
+    }
+    return true
+  }
 
   // Category display mapping（园区入口下将“技术对接/发布审核”文案替换为“园区对接/用户反馈”）
   const categoryMap = useMemo(
@@ -88,9 +149,13 @@ function MobileChatPage() {
         locale === 'en'
           ? isParkContext
             ? 'Park Connection'
+            : isPolicyContext
+            ? 'Policy Consultation'
             : 'Technical Connection'
           : isParkContext
           ? '园区对接'
+          : isPolicyContext
+          ? '政策咨询'
           : '技术对接',
       audit:
         locale === 'en'
@@ -104,7 +169,7 @@ function MobileChatPage() {
       security: locale === 'en' ? 'Security Messages' : '安全消息',
       other: locale === 'en' ? 'Other' : '其他',
     }),
-    [locale, isParkContext],
+    [locale, isParkContext, isPolicyContext],
   )
 
   const matchCategory = (m: InternalMessage, key: CategoryKey) => {
@@ -117,6 +182,8 @@ function MobileChatPage() {
           cat === 'Technical Connection' ||
           cat === '园区对接' ||
           cat === 'Park Connection' ||
+          cat === '政策咨询' ||
+          cat === 'Policy Consultation' ||
           cat === '' ||
           cat === 'undefined'
         )
@@ -142,23 +209,54 @@ function MobileChatPage() {
 
   const loadMessages = async () => {
     if (!user) return
+    const requestId = ++requestIdRef.current
     setLoading(true)
     showLoading()
     try {
-      const [list, unread] = await Promise.all([
-        getReceivedInternalMessages(
-          allowedCategories
-            ? { categories: allowedCategories, includeNull: includeNullCategories }
-            : { excludeCategories: PARK_MESSAGE_CATEGORIES, includeNull: includeNullCategories },
-        ),
-        getUnreadInternalMessageCount(
-          allowedCategories
-            ? { categories: allowedCategories, includeNull: includeNullCategories }
-            : { excludeCategories: PARK_MESSAGE_CATEGORIES, includeNull: includeNullCategories },
-        ),
-      ])
-      setMessages(list)
-      setUnreadCount(unread)
+      let rawList: InternalMessage[] = []
+      let unread = 0
+
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const res = await Promise.all([
+            getReceivedInternalMessages(
+              allowedCategories
+                ? { categories: allowedCategories, includeNull: includeNullCategories }
+                : { excludeCategories: [...PARK_MESSAGE_CATEGORIES, ...POLICY_MESSAGE_CATEGORIES], includeNull: includeNullCategories },
+            ),
+            getUnreadInternalMessageCount(
+              allowedCategories
+                ? { categories: allowedCategories, includeNull: includeNullCategories }
+                : { excludeCategories: [...PARK_MESSAGE_CATEGORIES, ...POLICY_MESSAGE_CATEGORIES], includeNull: includeNullCategories },
+            ),
+          ])
+          rawList = res[0]
+          unread = res[1]
+          break
+        } catch (e) {
+          const recovered = attempt === 0 && (await maybeRecoverAuthOnce(e))
+          if (!recovered) throw e
+        }
+      }
+
+      // 保险起见：在策略上下文里再次在前端过滤，只保留“政策咨询 + 通用（安全消息/其他）”
+      let list = rawList
+      if (isPolicyContext && rawList.length) {
+        list = rawList.filter((m) => {
+          const c = (m.category ?? '').trim()
+          return POLICY_MESSAGE_CATEGORIES.includes(c) || SHARED_MESSAGE_CATEGORIES.includes(c)
+        })
+      } else if (isParkContext && rawList.length) {
+        list = rawList.filter((m) => {
+          const c = (m.category ?? '').trim()
+          return PARK_MESSAGE_CATEGORIES.includes(c) || SHARED_MESSAGE_CATEGORIES.includes(c)
+        })
+      }
+
+      if (requestId === requestIdRef.current) {
+        setMessages(list)
+        setUnreadCount(unread)
+      }
     } catch (e) {
       console.error('加载消息失败:', e)
       toast({
@@ -167,19 +265,42 @@ function MobileChatPage() {
         variant: 'destructive',
       })
     } finally {
-      setLoading(false)
       hideLoading()
+      if (requestId === requestIdRef.current) setLoading(false)
     }
   }
 
   useEffect(() => {
+    if (authLoading) return
+    if (!user) {
+      setMessages([])
+      setUnreadCount(0)
+      setSelectedIds(new Set())
+      setIsAllSelected(false)
+      setLoading(false)
+      return
+    }
     loadMessages()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, allowedCategories, includeNullCategories])
+  }, [authLoading, user, allowedCategories, includeNullCategories])
 
   // Apply filters
   useEffect(() => {
     let list = [...messages]
+
+    // 强制按上下文过滤，避免意外混入技术平台消息
+    if (isPolicyContext) {
+      list = list.filter((m) => {
+        const c = (m.category ?? '').trim()
+        return POLICY_MESSAGE_CATEGORIES.includes(c) || SHARED_MESSAGE_CATEGORIES.includes(c)
+      })
+    } else if (isParkContext) {
+      list = list.filter((m) => {
+        const c = (m.category ?? '').trim()
+        return PARK_MESSAGE_CATEGORIES.includes(c) || SHARED_MESSAGE_CATEGORIES.includes(c)
+      })
+    }
+
     if (filters.category !== 'all') {
       list = list.filter((m) => matchCategory(m, filters.category))
     }
@@ -307,13 +428,20 @@ function MobileChatPage() {
       { key: 'all', label: locale === 'en' ? 'All' : '全部', count: messages.length },
       {
         key: 'technical',
-        label: locale === 'en' ? (isParkContext ? 'Park Connection' : 'Technical') : categoryMap.technical,
+        label:
+          locale === 'en'
+            ? isParkContext
+              ? 'Park Connection'
+              : isPolicyContext
+              ? 'Policy'
+              : 'Technical'
+            : categoryMap.technical,
         count: countByCategory('technical'),
         color: '#2563eb',
       },
     ]
 
-    if (!isParkContext) {
+    if (!isParkContext && !isPolicyContext) {
       list.push({
         key: 'audit',
         label: locale === 'en' ? 'Review' : categoryMap.audit,
@@ -344,7 +472,7 @@ function MobileChatPage() {
     )
 
     return list
-  }, [messages, locale, isParkContext, categoryMap])
+  }, [messages, locale, isParkContext, isPolicyContext, categoryMap])
 
   const renderCategoryBadge = (category?: string) => {
     const cat = (category ?? '').trim()
@@ -354,10 +482,11 @@ function MobileChatPage() {
       if (['安全消息', 'Security Messages'].includes(val)) return 'security'
       if (['其他', 'Other'].includes(val)) return 'other'
       if (['园区对接', 'Park Connection'].includes(val)) return 'park'
+      if (['政策咨询', 'Policy Consultation'].includes(val)) return 'policy'
       // default to technical
       return 'technical'
     }
-    const kind = normalize(cat || (isParkContext ? '园区对接' : '技术对接'))
+    const kind = normalize(cat || (isParkContext ? '园区对接' : isPolicyContext ? '政策咨询' : '技术对接'))
     const classNameMap: Record<string, string> = {
       technical: 'bg-blue-50 text-blue-700 border-blue-100',
       park: 'bg-emerald-50 text-emerald-700 border-emerald-100',
@@ -365,35 +494,40 @@ function MobileChatPage() {
       following: 'bg-green-50 text-green-700 border-green-100',
       security: 'bg-red-50 text-red-700 border-red-100',
       other: 'bg-gray-100 text-gray-700 border-gray-200',
+      policy: 'bg-indigo-50 text-indigo-700 border-indigo-100',
     }
     const label =
       kind === 'park'
         ? locale === 'en'
           ? 'Park Connection'
           : '园区对接'
-        : kind === 'technical'
+        : kind === 'policy'
           ? locale === 'en'
-            ? 'Technical Connection'
-            : '技术对接'
-          : kind === 'audit'
+            ? 'Policy Consultation'
+            : '政策咨询'
+          : kind === 'technical'
             ? locale === 'en'
-              ? isParkContext
-                ? 'User Feedback'
-                : 'Publication Review'
-              : isParkContext
-                ? '用户反馈'
-                : '发布审核'
-            : kind === 'following'
+              ? 'Technical Connection'
+              : '技术对接'
+            : kind === 'audit'
               ? locale === 'en'
-                ? 'My Following'
-                : '我的关注'
-              : kind === 'security'
+                ? isParkContext
+                  ? 'User Feedback'
+                  : 'Publication Review'
+                : isParkContext
+                  ? '用户反馈'
+                  : '发布审核'
+              : kind === 'following'
                 ? locale === 'en'
-                  ? 'Security'
-                  : '安全消息'
-                : locale === 'en'
-                  ? 'Other'
-                  : '其他'
+                  ? 'My Following'
+                  : '我的关注'
+                : kind === 'security'
+                  ? locale === 'en'
+                    ? 'Security'
+                    : '安全消息'
+                  : locale === 'en'
+                    ? 'Other'
+                    : '其他'
 
     return (
       <Badge className={`shrink-0 whitespace-nowrap border text-[11px] font-medium rounded-lg px-2 py-1 ${classNameMap[kind]}`}>
@@ -476,7 +610,7 @@ function MobileChatPage() {
 
       {/* Message list */}
       <div className="px-3 pb-28 pt-3 max-w-md mx-auto">
-        {loading ? (
+        {authLoading || loading ? (
           <div className="py-16 text-center text-gray-500">{locale === 'en' ? 'Loading...' : '加载中...'}</div>
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center text-gray-500">

@@ -44,7 +44,7 @@
 │   │   │   ├── layout.tsx              # 移动端共享布局（底部Tab：技术/政策/园区共用，园区入口下“消息”指向园区对接消息中心）
 │   │   │   ├── page.tsx                # 重定向到 /home
 │   │   │   ├── home/page.tsx           # 移动端首页（绿色技术平台）
-│   │   │   ├── chat/page.tsx           # 移动端消息中心（复用Web端接口与逻辑，H5样式重构；园区入口下分类文案为“园区对接/用户反馈”）
+│   │   │   ├── chat/page.tsx           # 移动端消息中心（复用Web端接口与逻辑，H5样式重构；园区入口下分类文案为“园区对接/用户反馈”，增加请求ID防重复加载控制与登录态恢复重试）
 │   │   │   ├── company-profile/page.tsx # 移动端企业信息完善（与Web逻辑一致，含Logo上传）
 │   │   │   ├── policy/                 # 政策H5入口
 │   │   │   │   ├── page.tsx            # 政策列表与筛选首页
@@ -131,6 +131,8 @@
 │   ├── components/            # React组件
 │   │   ├── ui/               # shadcn/ui基础组件
 │   │   │   └── button.tsx    # 按钮组件
+│   │   ├── common/           # 通用组件
+│   │   │   └── loading-overlay.tsx # 全局Loading遮罩（计数器+重置）
 │   │   ├── layout/           # 布局组件
 │   │   │   ├── header.tsx    # 头部导航
 │   │   │   └── footer.tsx    # 底部组件
@@ -146,11 +148,13 @@
 │   │       └── floating-actions.tsx  # 浮动操作按钮
 │   ├── lib/                  # 工具库
 │   │   ├── custom-auth.ts    # 自定义认证工具（密码哈希、JWT生成、令牌校验等）
+│   │   ├── safe-fetch.ts     # Fetch封装：安全Header清理 + 自动附带认证Token（优先Supabase session）
 │   │   ├── utils.ts          # 通用工具函数
 │   │   ├── fixed-labels.ts   # 152个固定场景标签配置与匹配工具
 │   │   ├── mock-data.ts      # Mock数据
 │   │   └── validators.ts     # 表单校验工具（邮箱/手机号）
 │   ├── hooks/                # 自定义Hooks
+│   │   ├── useAuth.ts        # 统一认证状态（Supabase / 自定义认证）
 │   │   ├── useFavoritesData.ts # 收藏数据加载与状态同步
 │   │   └── use-fixed-label-suggestions.ts # 自定义/固定标签智能匹配
 │   └── api/                  # API调用封装

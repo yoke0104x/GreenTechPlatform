@@ -59,7 +59,7 @@ function LoginContent() {
 
   // 使用全局 Supabase 客户端，确保会话能被全局 AuthProvider 识别
 
-  const goAfterLogin = () => router.replace(`/${locale}/m/home`)
+  const goAfterLogin = () => router.replace(`/${locale}/m`)
   const goAfterRegister = () => router.push(`/${locale}/company-profile`)
 
   // 从 URL 解析 ?register=1，避免使用 useSearchParams 触发 Suspense 限制

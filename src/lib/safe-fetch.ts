@@ -21,15 +21,7 @@ async function getAuthToken(): Promise<string | null> {
       // 客户端环境
       console.log('🔍 开始获取认证token...')
       
-      // 1. 优先检查自定义认证token
-      const customToken = localStorage.getItem('custom_auth_token');
-      console.log('🔍 自定义token:', customToken ? '存在' : '不存在');
-      if (customToken) {
-        console.log('✅ 使用自定义认证token');
-        return customToken;
-      }
-      
-      // 2. 尝试从Supabase session获取
+      // 1. 优先从 Supabase session 获取（避免历史自定义 token 干扰 Supabase 登录态）
       try {
         console.log('🔍 尝试获取Supabase session...');
         const { supabase } = await import('@/lib/supabase');
@@ -41,6 +33,14 @@ async function getAuthToken(): Promise<string | null> {
         }
       } catch (error) {
         console.warn('获取Supabase session失败:', error);
+      }
+
+      // 2. 回退到自定义认证 token
+      const customToken = localStorage.getItem('custom_auth_token');
+      console.log('🔍 自定义token:', customToken ? '存在' : '不存在');
+      if (customToken) {
+        console.log('✅ 使用自定义认证token');
+        return customToken;
       }
       
       // 3. 回退到传统localStorage token

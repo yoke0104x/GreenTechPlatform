@@ -40,6 +40,7 @@ import { TablePagination } from '@/components/admin/data-table/table-pagination'
 interface MessageFilters {
   status: 'all' | 'pending' | 'processed';
   searchKeyword: string;
+  category: 'all' | 'tech' | 'park' | 'policy';
 }
 
 export default function AdminMessagesPage() {
@@ -49,7 +50,8 @@ export default function AdminMessagesPage() {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<MessageFilters>({
     status: 'all',
-    searchKeyword: ''
+    searchKeyword: '',
+    category: 'all',
   });
   const [pagination, setPagination] = useState({
     page: 1,
@@ -304,6 +306,63 @@ export default function AdminMessagesPage() {
     return new Date(dateString).toLocaleString('zh-CN');
   };
 
+  // 规范化类别：用于筛选和计数
+  const normalizeCategory = (category?: string | null): 'tech' | 'park' | 'policy' | 'other' => {
+    const c = (category ?? '').trim();
+    if (c === '园区对接') return 'park';
+    if (c === '政策咨询') return 'policy';
+    if (c === '用户反馈') return 'other';
+    // 其余视为技术对接（含 null/空/技术对接）
+    return 'tech';
+  };
+
+  // 按类别统计数量（用于顶部 tab 计数）
+  const categoryCounts = (() => {
+    let tech = 0;
+    let park = 0;
+    let policy = 0;
+    for (const m of messages) {
+      const k = normalizeCategory(m.category);
+      if (k === 'tech') tech += 1;
+      else if (k === 'park') park += 1;
+      else if (k === 'policy') policy += 1;
+    }
+    return { tech, park, policy };
+  })();
+
+  // 根据筛选条件得到实际展示的消息列表
+  const filteredMessages = messages.filter((m) => {
+    // 状态筛选
+    if (filters.status === 'pending' && m.status !== 'pending') return false;
+    if (filters.status === 'processed' && m.status !== 'processed') return false;
+
+    // 类别筛选
+    if (filters.category !== 'all') {
+      const k = normalizeCategory(m.category);
+      if (filters.category === 'tech' && k !== 'tech') return false;
+      if (filters.category === 'park' && k !== 'park') return false;
+      if (filters.category === 'policy' && k !== 'policy') return false;
+    }
+
+    // 关键字搜索（联系人/电话/邮箱/公司名）
+    const kw = filters.searchKeyword.trim();
+    if (kw) {
+      const haystack = [
+        m.contact_name,
+        m.contact_phone,
+        m.contact_email,
+        m.company_name,
+        m.technology_name,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      if (!haystack.includes(kw.toLowerCase())) return false;
+    }
+
+    return true;
+  });
+
   // 获取状态徽章
   const getStatusBadge = (status: string) => {
     return status === 'pending' ? (
@@ -333,6 +392,13 @@ export default function AdminMessagesPage() {
         <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50">
           <Building2 className="w-3 h-3 mr-1" />
           园区对接
+        </Badge>
+      );
+    } else if (category === '政策咨询') {
+      return (
+        <Badge variant="outline" className="text-indigo-600 border-indigo-200 bg-indigo-50">
+          <MessageSquare className="w-3 h-3 mr-1" />
+          政策咨询
         </Badge>
       );
     } else {
@@ -508,8 +574,35 @@ export default function AdminMessagesPage() {
 
       {/* 消息列表 */}
       <div className="bg-white rounded-lg border border-gray-200">
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <h2 className="text-lg font-semibold text-gray-900">联系消息列表</h2>
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            {[
+              { key: 'all' as const, label: '全部', count: messages.length },
+              { key: 'tech' as const, label: '技术对接', count: categoryCounts.tech },
+              { key: 'park' as const, label: '园区对接', count: categoryCounts.park },
+              { key: 'policy' as const, label: '政策咨询', count: categoryCounts.policy },
+            ].map((tab) => {
+              const active = filters.category === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setFilters((prev) => ({ ...prev, category: tab.key }))}
+                  className={`px-3 py-1 rounded-full border transition-colors ${
+                    active
+                      ? 'bg-green-50 border-green-500 text-green-700'
+                      : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    <span>{tab.label}</span>
+                    <span className="text-[11px] text-gray-500">({tab.count})</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
         
         {loading ? (
@@ -517,14 +610,14 @@ export default function AdminMessagesPage() {
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
             <p className="mt-2 text-gray-600">加载中...</p>
           </div>
-        ) : messages.length === 0 ? (
+        ) : filteredMessages.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
             <p>暂无消息</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
-            {messages.map((message) => (
+            {filteredMessages.map((message) => (
               <div key={message.id} className="p-6 hover:bg-gray-50">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">

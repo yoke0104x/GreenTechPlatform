@@ -3,7 +3,7 @@
 import { createContext, useContext, useCallback, useEffect, useState, ReactNode, useMemo } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useAuthContext } from '@/components/auth/auth-provider'
-import { getUnreadInternalMessageCount, DEFAULT_MESSAGE_CATEGORIES, PARK_MESSAGE_CATEGORIES, SHARED_MESSAGE_CATEGORIES } from '@/lib/supabase/contact-messages'
+import { getUnreadInternalMessageCount, PARK_MESSAGE_CATEGORIES, SHARED_MESSAGE_CATEGORIES, POLICY_MESSAGE_CATEGORIES } from '@/lib/supabase/contact-messages'
 
 interface UnreadMessageContextType {
   unreadCount: number
@@ -27,13 +27,22 @@ export function UnreadMessageProvider({ children }: { children: ReactNode }) {
     return searchParams?.get('from') === 'parks'
   }, [pathname, searchParams])
 
-  const categoryOptions = useMemo(
-    () =>
-      isParkContext
-        ? { categories: [...PARK_MESSAGE_CATEGORIES, ...SHARED_MESSAGE_CATEGORIES], includeNull: false }
-        : { excludeCategories: PARK_MESSAGE_CATEGORIES, includeNull: true },
-    [isParkContext],
-  )
+  const isPolicyContext = useMemo(() => {
+    if (!pathname) return false
+    if (pathname.includes('/m/policy')) return true
+    return searchParams?.get('from') === 'policy'
+  }, [pathname, searchParams])
+
+  const categoryOptions = useMemo(() => {
+    if (isParkContext) {
+      return { categories: [...PARK_MESSAGE_CATEGORIES, ...SHARED_MESSAGE_CATEGORIES], includeNull: false as const }
+    }
+    if (isPolicyContext) {
+      return { categories: [...POLICY_MESSAGE_CATEGORIES, ...SHARED_MESSAGE_CATEGORIES], includeNull: false as const }
+    }
+    // 默认技术平台：排除园区与政策咨询类消息，仅统计技术平台相关消息
+    return { excludeCategories: [...PARK_MESSAGE_CATEGORIES, ...POLICY_MESSAGE_CATEGORIES], includeNull: true as const }
+  }, [isParkContext, isPolicyContext])
 
   const refreshUnreadCount = useCallback(async () => {
     if (!user) {

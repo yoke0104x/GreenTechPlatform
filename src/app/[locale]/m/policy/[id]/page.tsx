@@ -1,8 +1,8 @@
-"use client"
+'use client'
 
 import { useEffect, useState, useMemo } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { ArrowLeft, ExternalLink, Heart, Loader2, Share2, Bell } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Heart, Loader2, Share2, Phone } from 'lucide-react'
 import { useLoadingOverlay } from '@/components/common/loading-overlay'
 import {
   getPolicyDetail,
@@ -11,6 +11,8 @@ import {
   removePolicyFavorite,
   type PolicyDetail,
 } from '@/api/policy'
+import { ContactUsModal } from '@/components/contact/contact-us-modal'
+import { useAuthContext } from '@/components/auth/auth-provider'
 
 export default function MobilePolicyDetailPage({
   params: { id },
@@ -20,12 +22,15 @@ export default function MobilePolicyDetailPage({
   const pathname = usePathname()
   const router = useRouter()
   const locale = pathname.startsWith('/en') ? 'en' : 'zh'
+  const isEn = locale === 'en'
   const { showLoading, hideLoading } = useLoadingOverlay()
+  const { user } = useAuthContext()
 
   const [policy, setPolicy] = useState<PolicyDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [favoriteLoading, setFavoriteLoading] = useState(false)
   const [isFavorited, setIsFavorited] = useState(false)
+  const [contactOpen, setContactOpen] = useState(false)
   const issuers = useMemo(() => {
     if (!policy?.issuer) return []
     return policy.issuer
@@ -64,6 +69,18 @@ export default function MobilePolicyDetailPage({
       hideLoading()
     }
   }, [id, hideLoading, showLoading])
+
+  // 检查登录状态并提示（复用园区详情页逻辑）
+  const checkAuthAndPrompt = () => {
+    if (!user) {
+      const message = isEn ? 'Please register or login to continue' : '请注册登录后继续操作'
+      if (confirm(message)) {
+        router.push(`/${locale}/m/login`)
+      }
+      return false
+    }
+    return true
+  }
 
   const handleToggleFavorite = async () => {
     if (!policy || favoriteLoading) return
@@ -105,10 +122,6 @@ export default function MobilePolicyDetailPage({
     } else {
       alert(locale === 'en' ? 'Sharing is not supported on this device.' : '当前设备不支持分享')
     }
-  }
-
-  const handleSubscribe = () => {
-    alert(locale === 'en' ? 'Subscribed successfully' : '已订阅最新政策动态')
   }
 
   if (loading) {
@@ -392,16 +405,30 @@ export default function MobilePolicyDetailPage({
                 <span>{locale === 'en' ? 'Share' : '分享'}</span>
               </button>
               <button
-                onClick={handleSubscribe}
+                onClick={() => {
+                  if (checkAuthAndPrompt()) {
+                    setContactOpen(true)
+                  }
+                }}
                 className="h-10 rounded-xl bg-[#00b899] hover:bg-[#009a7a] text-white text-[13px] inline-flex items-center justify-center gap-1.5 transition-colors"
               >
-                <Bell className="w-4 h-4" />
-                <span>{locale === 'en' ? 'Subscribe' : '订阅'}</span>
+                <Phone className="w-4 h-4" />
+                <span>{locale === 'en' ? 'Contact' : '联系咨询'}</span>
               </button>
             </div>
           </div>
         </div>
       </div>
+      {/* 联系我们弹窗：政策咨询 */}
+      <ContactUsModal
+        isOpen={contactOpen}
+        onClose={() => setContactOpen(false)}
+        technologyId={policy.id}
+        technologyName={policy.name}
+        locale={locale}
+        category="政策咨询"
+        source="policy"
+      />
     </div>
   )
 }

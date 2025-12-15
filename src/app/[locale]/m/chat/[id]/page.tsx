@@ -15,6 +15,7 @@ import {
   PARK_MESSAGE_CATEGORIES,
   SHARED_MESSAGE_CATEGORIES,
   DEFAULT_MESSAGE_CATEGORIES,
+  POLICY_MESSAGE_CATEGORIES,
 } from '@/lib/supabase/contact-messages'
 // Wrap useSearchParams usage in Suspense at page level
 export default function MobileMessageDetailPageWrapper({
@@ -33,15 +34,19 @@ function MobileMessageDetailPage({ id }: { id: string }) {
   const pathname = usePathname()
   const router = useRouter()
   const locale: 'en' | 'zh' = pathname.startsWith('/en') ? 'en' : 'zh'
-  const [isParkContext, setIsParkContext] = useState(false)
-  const allowedCategories = useMemo(
-    () =>
-      isParkContext
-        ? [...PARK_MESSAGE_CATEGORIES, ...SHARED_MESSAGE_CATEGORIES]
-        : [...DEFAULT_MESSAGE_CATEGORIES],
-    [isParkContext],
-  )
-  const includeNullCategories = useMemo(() => !isParkContext, [isParkContext])
+  const [context, setContext] = useState<'default' | 'parks' | 'policy'>('default')
+  const isParkContext = context === 'parks'
+  const isPolicyContext = context === 'policy'
+  const allowedCategories = useMemo(() => {
+    if (isParkContext) {
+      return [...PARK_MESSAGE_CATEGORIES, ...SHARED_MESSAGE_CATEGORIES]
+    }
+    if (isPolicyContext) {
+      return [...POLICY_MESSAGE_CATEGORIES, ...SHARED_MESSAGE_CATEGORIES]
+    }
+    return [...DEFAULT_MESSAGE_CATEGORIES]
+  }, [isParkContext, isPolicyContext])
+  const includeNullCategories = useMemo(() => !isParkContext && !isPolicyContext, [isParkContext, isPolicyContext])
   const { user } = useAuthContext()
   const { toast } = useToast()
   const { decrementUnreadCount } = useUnreadMessage()
@@ -51,17 +56,25 @@ function MobileMessageDetailPage({ id }: { id: string }) {
   const [deleting, setDeleting] = useState(false)
   const [markingRead, setMarkingRead] = useState(false)
 
-  // 在客户端解析 ?from=parks，避免使用 useSearchParams
+  // 在客户端解析 ?from=parks / ?from=policy，避免使用 useSearchParams
   useEffect(() => {
     if (typeof window === 'undefined') {
-      setIsParkContext(false)
+      setContext('default')
       return
     }
     try {
       const sp = new URLSearchParams(window.location.search)
-      setIsParkContext(sp.get('from') === 'parks')
+      const from = sp.get('from')
+      if (from === 'parks') setContext('parks')
+      else if (from === 'policy') setContext('policy')
+      else {
+        const stored = window.sessionStorage.getItem('m_chat_context')
+        if (stored === 'parks') setContext('parks')
+        else if (stored === 'policy') setContext('policy')
+        else setContext('default')
+      }
     } catch {
-      setIsParkContext(false)
+      setContext('default')
     }
   }, [pathname])
 
@@ -106,7 +119,7 @@ function MobileMessageDetailPage({ id }: { id: string }) {
     }
 
     loadMessage()
-  }, [id, user, locale, toast])
+  }, [id, user, locale, toast, allowedCategories, includeNullCategories])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -214,6 +227,7 @@ function MobileMessageDetailPage({ id }: { id: string }) {
       if (['安全消息', 'Security Messages'].includes(val)) return 'security'
       if (['其他', 'Other'].includes(val)) return 'other'
       if (['园区对接', 'Park Connection'].includes(val)) return 'park'
+      if (['政策咨询', 'Policy Consultation'].includes(val)) return 'policy'
       return 'technical'
     }
     const kind = normalize(displayCategory)
@@ -224,33 +238,38 @@ function MobileMessageDetailPage({ id }: { id: string }) {
       following: 'bg-green-50 text-green-700 border-green-100',
       security: 'bg-red-50 text-red-700 border-red-100',
       other: 'bg-gray-100 text-gray-700 border-gray-200',
+      policy: 'bg-indigo-50 text-indigo-700 border-indigo-100',
     }
     const label =
       kind === 'park'
         ? locale === 'en'
           ? 'Park Connection'
           : '园区对接'
-        : kind === 'technical'
+        : kind === 'policy'
           ? locale === 'en'
-            ? 'Technical Connection'
-            : '技术对接'
-          : kind === 'audit'
+            ? 'Policy Consultation'
+            : '政策咨询'
+          : kind === 'technical'
             ? locale === 'en'
-              ? 'Review / Feedback'
-              : message.category === '用户反馈'
-                ? '用户反馈'
-                : '发布审核'
-            : kind === 'following'
+              ? 'Technical Connection'
+              : '技术对接'
+            : kind === 'audit'
               ? locale === 'en'
-                ? 'My Following'
-                : '我的关注'
-              : kind === 'security'
+                ? 'Review / Feedback'
+                : message.category === '用户反馈'
+                  ? '用户反馈'
+                  : '发布审核'
+              : kind === 'following'
                 ? locale === 'en'
-                  ? 'Security'
-                  : '安全消息'
-                : locale === 'en'
-                  ? 'Other'
-                  : '其他'
+                  ? 'My Following'
+                  : '我的关注'
+                : kind === 'security'
+                  ? locale === 'en'
+                    ? 'Security'
+                    : '安全消息'
+                  : locale === 'en'
+                    ? 'Other'
+                    : '其他'
     return (
       <Badge className={`shrink-0 ${classNameMap[kind]} border text-[11px] font-medium rounded-lg px-2 py-1`}>
         {label}

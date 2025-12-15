@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { AuthSync } from '@/lib/auth-sync';
 
 interface AdminAuthGuardProps {
   children: React.ReactNode;
@@ -23,28 +25,29 @@ export function AdminAuthGuard({ children }: AdminAuthGuardProps) {
 
   // 检查管理员认证状态
   useEffect(() => {
-    const checkAuth = () => {
+    const checkAuth = async () => {
       try {
-        const adminAuth = localStorage.getItem('admin_authenticated');
-        const authTime = localStorage.getItem('admin_auth_time');
-        
-        if (adminAuth === 'true' && authTime) {
-          const authTimeMs = parseInt(authTime);
-          const now = Date.now();
-          // 管理员会话有效期8小时
-          const sessionDuration = 8 * 60 * 60 * 1000;
-          
-          if (now - authTimeMs < sessionDuration) {
-            setIsAuthenticated(true);
-          } else {
-            // 会话过期，清除认证信息
-            localStorage.removeItem('admin_authenticated');
-            localStorage.removeItem('admin_auth_time');
-            setShowLoginForm(true);
-          }
-        } else {
-          setShowLoginForm(true);
+        const { data } = await supabase.auth.getSession();
+        const user = data.session?.user;
+        const metaRole = user?.user_metadata?.role;
+        if (user && metaRole === 'admin') {
+          // 保持 admin_user/admin_mode，供站内信等功能复用
+          const adminUser = {
+            id: user.id,
+            email: user.email || '',
+            name: user.user_metadata?.name || user.email || 'Admin',
+            role: 'admin',
+          };
+          localStorage.setItem('admin_user', JSON.stringify(adminUser));
+          localStorage.setItem('admin_mode', 'true');
+          setIsAuthenticated(true);
+          setShowLoginForm(false);
+          setIsLoading(false);
+          return;
         }
+
+        // 兜底：如果没有 session，则展示登录表单
+        setShowLoginForm(true);
       } catch (error) {
         console.error('检查管理员认证状态失败:', error);
         setShowLoginForm(true);
@@ -63,25 +66,69 @@ export function AdminAuthGuard({ children }: AdminAuthGuardProps) {
     setIsLoggingIn(true);
 
     try {
-      // 验证管理员账号密码
-      if (loginData.username === 'admin' && loginData.password === 'Ecocenter2025') {
-        const currentTime = Date.now().toString();
-        
-        // 保存认证状态到localStorage
-        localStorage.setItem('admin_authenticated', 'true');
-        localStorage.setItem('admin_auth_time', currentTime);
-        
-        // 设置cookie用于API请求验证
-        const isSecure = window.location.protocol === 'https:';
-        const cookieOptions = `path=/; max-age=${8 * 60 * 60}; SameSite=strict${isSecure ? '; Secure' : ''}`;
-        document.cookie = `admin_authenticated=true; ${cookieOptions}`;
-        document.cookie = `admin_auth_time=${currentTime}; ${cookieOptions}`;
-        
-        setIsAuthenticated(true);
-        setShowLoginForm(false);
-      } else {
-        setLoginError('用户名或密码错误');
+      // 使用 Supabase 账号密码登录
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginData.username.trim(),
+        password: loginData.password,
+      });
+
+      if (error || !data.user) {
+        setLoginError(error?.message || '登录失败');
+        setIsLoggingIn(false);
+        return;
       }
+
+      // 验证角色（public.users 或 user_metadata）
+      let role = data.user.user_metadata?.role as string | undefined;
+      let name = data.user.user_metadata?.name as string | undefined;
+      try {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('role, name')
+          .eq('id', data.user.id)
+          .maybeSingle();
+        role = profile?.role || role;
+        name = profile?.name || name;
+      } catch {
+        // ignore profile fetch error
+      }
+
+      if (role !== 'admin') {
+        await supabase.auth.signOut();
+        setLoginError('权限不足：该账号不是管理员');
+        setIsLoggingIn(false);
+        return;
+      }
+
+      // 写入 admin_user / admin_mode，兼容站内信和管理员模式
+      const adminUser = {
+        id: data.user.id,
+        email: data.user.email || '',
+        name: name || data.user.email || 'Admin',
+        role: 'admin',
+      };
+      localStorage.setItem('admin_user', JSON.stringify(adminUser));
+      localStorage.setItem('admin_mode', 'true');
+
+      // 也写一份兼容旧逻辑的标记（若某些 API 仍检查）
+      const currentTime = Date.now().toString();
+      localStorage.setItem('admin_authenticated', 'true');
+      localStorage.setItem('admin_auth_time', currentTime);
+      const isSecure = window.location.protocol === 'https:';
+      const cookieOptions = `path=/; max-age=${8 * 60 * 60}; SameSite=strict${isSecure ? '; Secure' : ''}`;
+      document.cookie = `admin_authenticated=true; ${cookieOptions}`;
+      document.cookie = `admin_auth_time=${currentTime}; ${cookieOptions}`;
+
+      // 通知 AuthSync（用于其他地方读取 admin 模式）
+      AuthSync.setAdminMode({
+        id: data.user.id,
+        email: data.user.email || '',
+        name: adminUser.name,
+        role: 'admin',
+      } as any);
+
+      setIsAuthenticated(true);
+      setShowLoginForm(false);
     } catch (error) {
       console.error('管理员登录错误:', error);
       setLoginError('登录失败，请稍后重试');
@@ -94,13 +141,17 @@ export function AdminAuthGuard({ children }: AdminAuthGuardProps) {
   const handleLogout = () => {
     localStorage.removeItem('admin_authenticated');
     localStorage.removeItem('admin_auth_time');
-    
+    localStorage.removeItem('admin_mode');
+    localStorage.removeItem('admin_user');
+    AuthSync.clearAdminMode();
+
     // 清除cookie
     const isSecure = window.location.protocol === 'https:';
     const clearCookieOptions = `path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=strict${isSecure ? '; Secure' : ''}`;
     document.cookie = `admin_authenticated=; ${clearCookieOptions}`;
     document.cookie = `admin_auth_time=; ${clearCookieOptions}`;
-    
+
+    supabase.auth.signOut().catch(() => {});
     router.push('/');
   };
 

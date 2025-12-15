@@ -6,6 +6,7 @@ import Image from 'next/image'
 interface LoadingOverlayContextValue {
   showLoading: (message?: string) => void
   hideLoading: () => void
+  resetLoading: () => void
 }
 
 const LoadingOverlayContext = createContext<LoadingOverlayContextValue | null>(null)
@@ -32,7 +33,15 @@ export function LoadingOverlayProvider({ children }: { children: React.ReactNode
     }
   }, [])
 
-  const value = useMemo<LoadingOverlayContextValue>(() => ({ showLoading, hideLoading }), [showLoading, hideLoading])
+  const resetLoading = useCallback(() => {
+    counterRef.current = 0
+    setState({ visible: false, message: '加载中...' })
+  }, [])
+
+  const value = useMemo<LoadingOverlayContextValue>(
+    () => ({ showLoading, hideLoading, resetLoading }),
+    [showLoading, hideLoading, resetLoading],
+  )
 
   return (
     <LoadingOverlayContext.Provider value={value}>
@@ -56,4 +65,3 @@ export function useLoadingOverlay() {
   }
   return context
 }
-

@@ -31,8 +31,9 @@ interface ContactUsModalProps {
    * - 技术对接（默认）
    * - 用户反馈
    * - 园区对接（园区详情页使用）
+   * - 政策咨询（政策详情页使用）
    */
-  category?: '技术对接' | '用户反馈' | '园区对接';
+  category?: '技术对接' | '用户反馈' | '园区对接' | '政策咨询';
   /**
    * 来源标记，便于后端兜底分类，例如 'park' | 'tech' | 'policy'
    */
@@ -127,6 +128,20 @@ export function ContactUsModal({
   };
 
   const t = translations[locale as keyof typeof translations] || translations.zh;
+  const isPolicyContext = category === '政策咨询' || source === 'policy';
+  const isParkContext = category === '园区对接' || source === 'park';
+  const subjectPrefix =
+    locale === 'en'
+      ? isPolicyContext
+        ? 'About Policy: '
+        : isParkContext
+        ? 'About Park: '
+        : t.aboutTechnology
+      : isPolicyContext
+      ? '关于政策：'
+      : isParkContext
+      ? '关于园区：'
+      : t.aboutTechnology;
   const [formData, setFormData] = useState<ContactFormData>({
     contactName: '',
     contactPhone: '',
@@ -301,10 +316,9 @@ export function ContactUsModal({
           </DialogTitle>
           {technologyName && (
             <p className="text-sm text-gray-600 mt-2">
-              {t.aboutTechnology}<span className="font-medium">{technologyName}</span>
-              {companyName && (
-                <span className="text-gray-500"> - {companyName}</span>
-              )}
+              {subjectPrefix}
+              <span className="font-medium">{technologyName}</span>
+              {companyName && <span className="text-gray-500"> - {companyName}</span>}
             </p>
           )}
         </DialogHeader>

@@ -28,7 +28,41 @@ export function useAuth() {
     try {
       console.log('🔍 检查用户认证状态...')
 
-      // 1. 优先检查自定义认证
+      // 1. 优先检查 Supabase 会话（避免历史自定义 token 干扰 Supabase 登录态）
+      console.log('🔍 检查Supabase认证...')
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (session?.user && !error) {
+        console.log('✅ Supabase认证验证成功')
+        // 如果同时存在自定义认证信息，清理掉，避免后续 API 请求误用自定义 token
+        try {
+          localStorage.removeItem('custom_auth_token')
+          localStorage.removeItem('custom_refresh_token')
+          localStorage.removeItem('custom_user')
+        } catch {
+          // ignore
+        }
+        // 调用 getUser() 获取实时最新的用户信息，避免会话缓存导致的邮箱/手机号不同步
+        const { data: freshUserData, error: freshUserError } = await supabase.auth.getUser();
+        if (freshUserError) {
+          console.warn('获取最新用户信息失败，回退使用会话中的用户:', freshUserError)
+        }
+        const supaUser = freshUserData?.user ?? session.user
+        const mappedUser: UnifiedUser = {
+          id: supaUser.id,
+          email: supaUser.email,
+          phone: supaUser.phone,
+          name: supaUser.user_metadata?.name || supaUser.email?.split('@')[0] || 'User',
+          avatar_url: supaUser.user_metadata?.avatar_url,
+          company_name: supaUser.user_metadata?.company_name,
+          authType: 'supabase'
+        };
+        setUser(mappedUser);
+        setLoading(false);
+        return;
+      }
+
+      // 2. 回退：检查自定义认证
       const customToken = localStorage.getItem('custom_auth_token');
       if (customToken) {
         console.log('🔍 发现自定义认证Token，验证中...')
@@ -57,32 +91,6 @@ export function useAuth() {
           console.error('❌ 自定义认证验证异常:', customError);
           customAuthApi.logout();
         }
-      }
-
-      // 2. 检查 Supabase 会话
-      console.log('🔍 检查Supabase认证...')
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (session?.user && !error) {
-        console.log('✅ Supabase认证验证成功')
-        // 调用 getUser() 获取实时最新的用户信息，避免会话缓存导致的邮箱/手机号不同步
-        const { data: freshUserData, error: freshUserError } = await supabase.auth.getUser();
-        if (freshUserError) {
-          console.warn('获取最新用户信息失败，回退使用会话中的用户:', freshUserError)
-        }
-        const supaUser = freshUserData?.user ?? session.user
-        const mappedUser: UnifiedUser = {
-          id: supaUser.id,
-          email: supaUser.email,
-          phone: supaUser.phone,
-          name: supaUser.user_metadata?.name || supaUser.email?.split('@')[0] || 'User',
-          avatar_url: supaUser.user_metadata?.avatar_url,
-          company_name: supaUser.user_metadata?.company_name,
-          authType: 'supabase'
-        };
-        setUser(mappedUser);
-        setLoading(false);
-        return;
       }
 
       // 3. 检查传统的 token（兼容性）

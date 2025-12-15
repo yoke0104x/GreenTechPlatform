@@ -14,7 +14,7 @@ export interface ContactMessage {
   contact_email: string | null;
   message: string;
   status: 'pending' | 'processed';
-  category?: '技术对接' | '用户反馈' | '园区对接'; // 新增分类字段，包含园区对接
+  category?: '技术对接' | '用户反馈' | '园区对接' | '政策咨询'; // 新增分类字段，包含园区对接与政策咨询
   admin_reply?: string;
   admin_id?: string;
   replied_at?: string;
@@ -31,7 +31,7 @@ export interface CreateContactMessageData {
   contact_phone?: string | null;
   contact_email?: string | null;
   message: string;
-  category?: '技术对接' | '用户反馈' | '园区对接'; // 新增分类字段，包含园区对接
+  category?: '技术对接' | '用户反馈' | '园区对接' | '政策咨询'; // 新增分类字段，包含园区对接与政策咨询
   source?: string; // 可选来源标记（如 park/tech/policy），便于后端兜底分类
 }
 
@@ -75,6 +75,10 @@ export const PARK_MESSAGE_CATEGORIES = [
   '我的关注',
   'My Following',
 ]
+export const POLICY_MESSAGE_CATEGORIES = [
+  '政策咨询',
+  'Policy Consultation',
+]
 export const SHARED_MESSAGE_CATEGORIES = [
   '安全消息',
   'Security Messages',
@@ -84,6 +88,8 @@ export const SHARED_MESSAGE_CATEGORIES = [
 // 默认：技术平台（含历史为空/undefined 分类）
 export const DEFAULT_MESSAGE_CATEGORIES = [
   ...TECH_MESSAGE_CATEGORIES,
+  '政策咨询',
+  'Policy Consultation',
   ...SHARED_MESSAGE_CATEGORIES,
   '',
   'undefined',
@@ -240,7 +246,8 @@ export async function sendInternalMessage(data: SendInternalMessageData): Promis
       const adminMode = localStorage.getItem('admin_mode');
       const adminUser = localStorage.getItem('admin_user');
       if (adminUser) {
-        headers['X-Admin-User'] = btoa(unescape(encodeURIComponent(adminUser)));
+        // 直接使用 JSON 字符串作为 header，服务端会优先按 JSON 解析
+        headers['X-Admin-User'] = adminUser;
       } else if (adminMode === 'true') {
         console.warn('管理员模式已开启但未找到admin_user');
       }
@@ -305,13 +312,14 @@ export async function getReceivedInternalMessages(options?: MessageFilterOptions
 }
 
 /**
- * 根据ID获取单条站内信（支持按分类过滤）
+ * 根据ID获取单条站内信
+ * 说明：
+ * - 这里不再按分类过滤，只依赖服务端根据当前登录用户 + messageId 做权限校验
+ * - 这样可以避免前端 categories 过滤与服务端不一致导致的“消息不存在”误判
  */
-export async function getInternalMessageById(messageId: string, options?: MessageFilterOptions): Promise<InternalMessage> {
+export async function getInternalMessageById(messageId: string, _options?: MessageFilterOptions): Promise<InternalMessage> {
   try {
-    const merged = options ?? { excludeCategories: PARK_MESSAGE_CATEGORIES, includeNull: true };
-    const query = buildCategoryQuery(merged);
-    const response = await safeFetch(`/api/messages/internal?id=${encodeURIComponent(messageId)}${query}`, {
+    const response = await safeFetch(`/api/messages/internal?id=${encodeURIComponent(messageId)}`, {
       method: 'GET',
       useAuth: true,
     });

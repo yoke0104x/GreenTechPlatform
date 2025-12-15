@@ -3,11 +3,14 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight, Cpu, Building2, ScrollText } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ArrowRight, Cpu, Building2, ScrollText, ChevronRight, User } from 'lucide-react'
 import { LanguageSwitcher } from '@/components/common/language-switcher'
 import { getSearchStats } from '@/api/tech'
 import { getParks } from '@/api/parks'
 import { getPolicyList } from '@/api/policy'
+import { getUserCompanyInfo } from '@/api/company'
+import { useAuthContext } from '@/components/auth/auth-provider'
 
 export default function MobilePortalPage({
   params: { locale },
@@ -15,10 +18,20 @@ export default function MobilePortalPage({
   params: { locale: string }
 }) {
   const isEn = locale === 'en'
+  const router = useRouter()
+  const { user, loading: authLoading, logout } = useAuthContext()
 
   const [techCount, setTechCount] = useState<number | null>(null)
   const [parkCount, setParkCount] = useState<number | null>(null)
   const [policyCount, setPolicyCount] = useState<number | null>(null)
+  const [company, setCompany] = useState<{ name: string; logoUrl?: string } | null>(null)
+  const [companyLoading, setCompanyLoading] = useState(false)
+  const displayName =
+    user?.name ||
+    user?.email ||
+    user?.phone ||
+    company?.name ||
+    (user ? (isEn ? 'User' : '用户') : '')
 
   useEffect(() => {
     let cancelled = false
@@ -60,6 +73,46 @@ export default function MobilePortalPage({
     }
   }, [])
 
+  // 加载用户企业信息，用于顶部欢迎区
+  useEffect(() => {
+    let cancelled = false
+    if (!user) {
+      setCompany(null)
+      setCompanyLoading(false)
+      return
+    }
+    setCompanyLoading(true)
+    ;(async () => {
+      try {
+        const resp = await getUserCompanyInfo()
+        if (cancelled) return
+        if (resp.success && resp.data) {
+          const data = resp.data
+          const name =
+            data.name_zh ||
+            data.name_en ||
+            data.name ||
+            user.company_name ||
+            user.name ||
+            ''
+          setCompany({
+            name,
+            logoUrl: data.logo_url || undefined,
+          })
+        } else {
+          setCompany(null)
+        }
+      } catch {
+        if (!cancelled) setCompany(null)
+      } finally {
+        if (!cancelled) setCompanyLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
   const cards = [
     {
       key: 'tech',
@@ -92,22 +145,52 @@ export default function MobilePortalPage({
 
   return (
     <section className="min-h-dvh flex flex-col" style={{ backgroundColor: '#edeef7' }}>
-      {/* 顶部与园区首页一致：logo + 语言切换 */}
+      {/* 顶部欢迎区：企业 logo + 欢迎文案 + 语言切换 */}
       <div
-        className="px-3 pt-1 pb-0 sticky z-40 bg-white shadow-sm"
+        className="px-3 pt-2 pb-2 sticky z-40 bg-white shadow-sm"
         style={{ top: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="relative w-56 h-14">
-              <Image
-                src="/images/logo/图片1.png"
-                alt="绿盟logo"
-                fill
-                className="object-contain"
-                sizes="240px"
-                priority
-              />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="relative w-10 h-10 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center">
+              {company?.logoUrl ? (
+                <Image
+                  src={company.logoUrl}
+                  alt={company.name}
+                  fill
+                  className="object-cover"
+                  sizes="48px"
+                  priority
+                />
+              ) : (
+                <User className="w-6 h-6 text-gray-400" />
+              )}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-[12px] text-gray-500">
+                {user ? (isEn ? 'Welcome back!' : '欢迎回来！') : isEn ? 'Not logged in' : '未登录'}
+              </span>
+              {user ? (
+                <span className="text-[15px] font-semibold text-gray-900 truncate">
+                  {displayName ||
+                    (companyLoading
+                      ? isEn
+                        ? 'Loading...'
+                        : '加载中...'
+                      : isEn
+                        ? 'User'
+                        : '用户')}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => router.push(`/${locale}/m/login`)}
+                  className="inline-flex items-center gap-1 text-[14px] font-medium text-[#2563eb] active:scale-95"
+                >
+                  {isEn ? 'Go to login' : '去登录'}
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
           <LanguageSwitcher className="text-[11px]" hideIcon />
@@ -115,7 +198,19 @@ export default function MobilePortalPage({
       </div>
 
       {/* 三个入口卡片 */}
-      <div className="px-3 pt-4 pb-6 space-y-3 max-w-md mx-auto flex-1 w-full">
+      <div className="px-3 pt-2 pb-4 space-y-3 max-w-md mx-auto flex-1 w-full">
+        <div className="w-full flex justify-center pb-0">
+          <div className="relative w-full max-w-[240px] aspect-[16/5]">
+            <Image
+              src="/images/logo/图片1.png"
+              alt={isEn ? 'Green Tech Platform' : '绿色技术平台'}
+              fill
+              className="object-contain"
+              sizes="(max-width: 640px) 100vw, 240px"
+              priority
+            />
+          </div>
+        </div>
         {cards.map((card) => (
           <div
             key={card.key}
@@ -184,6 +279,20 @@ export default function MobilePortalPage({
         ))}
       </div>
       <div className="px-3 pb-6 text-center text-[11px] text-gray-400">
+        {user ? (
+          <div className="mb-6 text-[12px]">
+            <button
+              type="button"
+              onClick={async () => {
+                await logout()
+                router.push(`/${locale}/m/login`)
+              }}
+              className="text-[#6b6ee2] underline"
+            >
+              {isEn ? 'Log out' : '退出登录'}
+            </button>
+          </div>
+        ) : null}
         © {new Date().getFullYear()} — Green Tech Platform
       </div>
     </section>
