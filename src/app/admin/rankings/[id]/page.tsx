@@ -427,7 +427,7 @@ export default function AdminRankingDetailPage() {
         key: 'is_published',
         title: '发布',
         width: '120px',
-        render: (value: boolean, record: AdminParkRankingYear) => (
+        render: (value: string | number | boolean, record: AdminParkRankingYear) => (
           <label className="inline-flex items-center gap-2 text-sm text-gray-700 select-none">
             <input
               type="checkbox"
@@ -450,7 +450,7 @@ export default function AdminRankingDetailPage() {
         key: 'is_latest',
         title: '设为最新',
         width: '140px',
-        render: (_: boolean, record: AdminParkRankingYear) => (
+        render: (_: string | number | boolean, record: AdminParkRankingYear) => (
           <button
             className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50"
             disabled={record.is_latest}
