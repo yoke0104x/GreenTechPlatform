@@ -287,7 +287,7 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
 
   const handleHonorFieldChange = (
     id: string,
-    field: 'year' | 'title' | 'type' | 'approved_at',
+    field: 'year' | 'title' | 'type' | 'approved_at' | 'sort_order',
     value: string,
   ) => {
     setBrandHonors((prev) =>
@@ -305,6 +305,13 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
         }
         if (field === 'approved_at') {
           return { ...h, approved_at: value.trim() || null }
+        }
+        if (field === 'sort_order') {
+          const trimmed = value.trim()
+          if (!trimmed) return { ...h, sort_order: null }
+          const parsed = Number(trimmed)
+          if (Number.isNaN(parsed)) return h
+          return { ...h, sort_order: parsed }
         }
         return { ...h, title: value }
       }),
