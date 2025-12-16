@@ -412,9 +412,9 @@ export default function AdminRankingDetailPage() {
         key: 'year',
         title: '年度',
         width: '120px',
-        render: (value: number, record: AdminParkRankingYear) => (
+        render: (value: string | number | boolean, record: AdminParkRankingYear) => (
           <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-900">{value}</span>
+            <span className="font-medium text-gray-900">{value as number}</span>
             {record.is_latest ? (
               <span className="inline-flex px-2 py-0.5 text-xs rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
                 最新
