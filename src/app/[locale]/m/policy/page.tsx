@@ -5,6 +5,8 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { Search, SlidersHorizontal, ArrowUpDown, ArrowUpAZ, ArrowDownAZ, Clock, ChevronUp, RotateCcw } from 'lucide-react'
 import { LanguageSwitcher } from '@/components/common/language-switcher'
+import Link from 'next/link'
+import { Menu } from 'lucide-react'
 import { useLoadingOverlay } from '@/components/common/loading-overlay'
 import { getPolicyList, getPolicyTags, type PolicyLevel, type PolicyTag, type PolicyListItem } from '@/api/policy'
 import { useFilterData, transformFilterDataForComponents } from '@/hooks/admin/use-filter-data'
@@ -289,7 +291,16 @@ export default function MobilePolicyHomePage() {
               />
             </div>
           </div>
-          <LanguageSwitcher className="text-[11px]" hideIcon />
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher className="text-[11px]" hideIcon />
+            <Link
+              href={`/${locale}/m`}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100"
+              aria-label={locale === 'en' ? 'Portal' : 'Portal入口'}
+            >
+              <Menu className="w-4 h-4 text-[#00b899]" />
+            </Link>
+          </div>
         </div>
       </div>
 

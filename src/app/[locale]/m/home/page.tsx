@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { useTranslations } from 'next-intl'
-import { Search, SlidersHorizontal, Clock, ArrowDownAZ, ArrowUpAZ, ArrowUpDown, Leaf, Zap, Factory, Car } from 'lucide-react'
+import { Search, SlidersHorizontal, Clock, ArrowDownAZ, ArrowUpAZ, ArrowUpDown, Leaf, Zap, Factory, Car, Menu } from 'lucide-react'
+import Link from 'next/link'
 import { ContactUsModal } from '@/components/contact/contact-us-modal'
 import { LanguageSwitcher } from '@/components/common/language-switcher'
 import { useAuthContext } from '@/components/auth/auth-provider'
@@ -218,7 +219,16 @@ export default function MobileHomePage() {
             </div>
             <h1 className="text-[15px] font-semibold tracking-tight text-gray-900 truncate">{tHome('heroTitle')}</h1>
           </div>
-          <LanguageSwitcher className="text-[11px]" hideIcon />
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher className="text-[11px]" hideIcon />
+            <Link
+              href={`/${locale}/m`}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100"
+              aria-label={locale === 'en' ? 'Portal' : 'Portal入口'}
+            >
+              <Menu className="w-4 h-4 text-[#00b899]" />
+            </Link>
+          </div>
         </div>
       </div>
       {/* Carousel (rounded) */}

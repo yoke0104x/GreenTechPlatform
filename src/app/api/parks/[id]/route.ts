@@ -4,6 +4,57 @@ import { supabaseAdmin } from '@/lib/supabase'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+interface ProvinceRow {
+  id: string
+  name_zh: string
+  name_en: string | null
+  code: string | null
+}
+
+interface DevelopmentZoneRow {
+  id: string
+  name_zh: string
+  name_en: string | null
+  code: string | null
+}
+
+interface TagRelationRow {
+  tag_id: string
+}
+
+interface TagRow {
+  id: string
+  name: string
+  code: string
+}
+
+interface EconRow {
+  year: number
+  gdp_billion: number | null
+  tax_revenue_billion: number | null
+  industrial_output_billion: number | null
+  fixed_asset_investment_billion: number | null
+  utilized_foreign_capital_billion_usd: number | null
+  total_import_export_billion_usd: number | null
+  total_import_billion_usd: number | null
+  total_export_billion_usd: number | null
+  world_top500_count: number | null
+}
+
+interface GreenRow {
+  year: number
+  metrics: Record<string, number | string | null>
+}
+
+interface HonorRow {
+  id: string
+  year: number | null
+  title: string
+  type: string | null
+  approved_at: string | null
+  sort_order: number | null
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: { id: string } },
@@ -47,15 +98,15 @@ export async function GET(
             .from('admin_provinces')
             .select('id, name_zh, name_en, code')
             .eq('id', park.province_id)
-            .maybeSingle()
-        : Promise.resolve({ data: null } as any),
+            .maybeSingle<ProvinceRow>()
+        : Promise.resolve({ data: null as ProvinceRow | null }),
       park.development_zone_id
         ? supabaseAdmin
             .from('admin_development_zones')
             .select('id, name_zh, name_en, code')
             .eq('id', park.development_zone_id)
-            .maybeSingle()
-        : Promise.resolve({ data: null } as any),
+            .maybeSingle<DevelopmentZoneRow>()
+        : Promise.resolve({ data: null as DevelopmentZoneRow | null }),
       supabaseAdmin
         .from('park_tag_relations')
         .select('tag_id')
@@ -63,7 +114,7 @@ export async function GET(
     ])
 
     const tagIds = Array.from(
-      new Set((tagsRelationRows.data || []).map((r: any) => r.tag_id).filter(Boolean)),
+      new Set((tagsRelationRows.data || []).map((r: TagRelationRow) => r.tag_id).filter(Boolean)),
     ) as string[]
 
     const { data: tagRows, error: tagError } = tagIds.length
@@ -71,7 +122,7 @@ export async function GET(
           .from('park_tags')
           .select('id, name, code')
           .in('id', tagIds)
-      : { data: [], error: null as any }
+      : { data: [] as TagRow[], error: null }
 
     if (tagError) {
       console.error('查询园区标签失败:', tagError)
@@ -95,9 +146,11 @@ export async function GET(
 
     const { data: honorRows, error: honorError } = await supabaseAdmin
       .from('park_brand_honors')
-      .select('id, park_id, year, title, type')
+      .select('id, park_id, year, title, type, approved_at, sort_order')
       .eq('park_id', park.id)
       .eq('is_active', true)
+      .order('sort_order', { ascending: true, nullsFirst: true })
+      .order('approved_at', { ascending: false, nullsFirst: false })
       .order('year', { ascending: false })
       .order('created_at', { ascending: false })
 
@@ -123,13 +176,13 @@ export async function GET(
         }
       : null
 
-    const tags = (tagRows || []).map((t: any) => ({
+    const tags = (tagRows || []).map((t: TagRow) => ({
       id: t.id,
       name: t.name,
       code: t.code,
     }))
 
-    const economicStats = (econRows || []).map((row: any) => ({
+    const economicStats = (econRows || []).map((row: EconRow) => ({
       year: row.year,
       gdpBillion: row.gdp_billion,
       taxRevenueBillion: row.tax_revenue_billion,
@@ -142,17 +195,19 @@ export async function GET(
       worldTop500Count: row.world_top500_count,
     }))
 
-    const greenStats = (greenRows || []).map((row: any) => ({
+    const greenStats = (greenRows || []).map((row: GreenRow) => ({
       year: row.year,
       metrics: row.metrics || {},
     }))
 
     let brandHonors =
-      (honorRows || []).map((row: any) => ({
+      (honorRows || []).map((row: HonorRow) => ({
         id: row.id,
         year: row.year,
         title: row.title,
         type: row.type,
+        approvedAt: row.approved_at,
+        sortOrder: row.sort_order,
       })) || []
 
     // 兼容早期直接存储在 parks.brand_honors 数组中的数据
@@ -181,7 +236,7 @@ export async function GET(
           title,
           type: null,
         }
-      }).filter((h: any) => h.title)
+      }).filter((h) => h.title)
     }
 
     const detail = {

@@ -66,6 +66,7 @@ export interface ParkBrandHonor {
   year?: number | null
   title: string
   type?: ParkBrandHonorType | null
+  approvedAt?: string | null
 }
 
 export interface ParkDetail {

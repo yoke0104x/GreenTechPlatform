@@ -152,11 +152,55 @@ export type ParkBrandHonorType =
   | '科技创新类'
   | '社会治理类'
 
+export const PARK_BRAND_HONOR_TYPE_OPTIONS: { value: ParkBrandHonorType; label: string }[] = [
+  { value: '综合类', label: '综合类' },
+  { value: '生态文明类', label: '生态文明类' },
+  { value: '经济发展类', label: '经济发展类' },
+  { value: '外资外贸类', label: '外资外贸类' },
+  { value: '科技创新类', label: '科技创新类' },
+  { value: '社会治理类', label: '社会治理类' },
+]
+
 export interface AdminParkBrandHonor extends BaseEntity {
   park_id: string
   year?: number | null
   title: string
   type?: ParkBrandHonorType | null
+  approved_at?: string | null
+  sort_order?: number | null
+  park?: AdminPark | null
+}
+
+export interface AdminParkBrandList extends BaseEntity {
+  title: string
+  type: ParkBrandHonorType
+  sort_order?: number | null
+}
+
+export type ParkRankingKind = 'ranking' | 'brand'
+export type ParkRankingParkLevel =
+  | '国家级经济技术开发区'
+  | '国家级高新技术产业开发区'
+
+export interface AdminParkRankingList extends BaseEntity {
+  title_zh: string
+  title_en?: string | null
+  park_level: ParkRankingParkLevel
+  kind: ParkRankingKind
+}
+
+export interface AdminParkRankingYear extends BaseEntity {
+  list_id: string
+  year: number
+  is_latest: boolean
+  is_published: boolean
+}
+
+export interface AdminParkRankingEntry extends BaseEntity {
+  year_id: string
+  park_id: string
+  rank: number
+  park?: AdminPark | null
 }
 
 /**

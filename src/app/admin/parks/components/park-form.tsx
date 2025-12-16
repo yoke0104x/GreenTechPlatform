@@ -8,6 +8,7 @@ import {
   AdminDevelopmentZone,
   AdminParkBrandHonor,
   ParkBrandHonorType,
+  PARK_BRAND_HONOR_TYPE_OPTIONS,
 } from '@/lib/types/admin'
 import { getProvincesApi } from '@/lib/api/admin-provinces'
 import { getDevelopmentZonesApi } from '@/lib/api/admin-development-zones'
@@ -36,15 +37,6 @@ const PARK_LEVEL_OPTIONS = [
   { value: '省级经济技术开发区', label: '省级经济技术开发区' },
   { value: '省级高新技术产业开发区', label: '省级高新技术产业开发区' },
   { value: '其他', label: '其他' },
-]
-
-const HONOR_TYPE_OPTIONS: { value: ParkBrandHonorType; label: string }[] = [
-  { value: '综合类', label: '综合类' },
-  { value: '生态文明类', label: '生态文明类' },
-  { value: '经济发展类', label: '经济发展类' },
-  { value: '外资外贸类', label: '外资外贸类' },
-  { value: '科技创新类', label: '科技创新类' },
-  { value: '社会治理类', label: '社会治理类' },
 ]
 
 type TabKey = 'basic' | 'honors' | 'stats' | 'policies' | 'companies' | 'news'
@@ -96,10 +88,14 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
     year: string
     title: string
     type: ParkBrandHonorType | ''
+    approved_at: string
+    sort_order: string
   }>({
     year: '',
     title: '',
     type: '',
+    approved_at: '',
+    sort_order: '',
   })
   const [activeTab, setActiveTab] = useState<TabKey>('basic')
 
@@ -291,7 +287,7 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
 
   const handleHonorFieldChange = (
     id: string,
-    field: 'year' | 'title' | 'type',
+    field: 'year' | 'title' | 'type' | 'approved_at',
     value: string,
   ) => {
     setBrandHonors((prev) =>
@@ -306,6 +302,9 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
         }
         if (field === 'type') {
           return { ...h, type: (value || null) as ParkBrandHonorType | null }
+        }
+        if (field === 'approved_at') {
+          return { ...h, approved_at: value.trim() || null }
         }
         return { ...h, title: value }
       }),
@@ -327,6 +326,7 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
             ? honor.year
             : null,
         type: honor.type ?? null,
+        approved_at: honor.approved_at ?? null,
       }
       const updated = await updateParkBrandHonorApi(honor.id, payload)
       setBrandHonors((prev) =>
@@ -366,7 +366,7 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
     }
     try {
       setCreatingHonor(true)
-      const payload: any = {
+      const payload: Partial<AdminParkBrandHonor> & { park_id: string } = {
         park_id: park.id,
         title: newHonor.title.trim(),
       }
@@ -375,9 +375,18 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
         if (!Number.isNaN(parsed)) payload.year = parsed
       }
       if (newHonor.type) payload.type = newHonor.type
+      if (newHonor.approved_at?.trim()) {
+        payload.approved_at = newHonor.approved_at.trim()
+      }
+      if (newHonor.sort_order.trim()) {
+        const parsedOrder = Number(newHonor.sort_order.trim())
+        if (!Number.isNaN(parsedOrder)) {
+          payload.sort_order = parsedOrder
+        }
+      }
       const created = await createParkBrandHonorApi(payload)
       setBrandHonors((prev) => [created, ...prev])
-      setNewHonor({ year: '', title: '', type: '' })
+      setNewHonor({ year: '', title: '', type: '', approved_at: '', sort_order: '' })
     } catch (error) {
       console.error('新增品牌荣誉失败:', error)
       alert('新增品牌荣誉失败，请稍后重试')
@@ -1087,7 +1096,7 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
                         {brandHonors.map((honor) => (
                           <div
                             key={honor.id}
-                            className="grid grid-cols-1 md:grid-cols-[80px,1fr,160px,90px] gap-3 items-center rounded-md border border-gray-200 px-3 py-2"
+                            className="grid grid-cols-1 md:grid-cols-[80px,1fr,160px,140px,90px,100px] gap-3 items-center rounded-md border border-gray-200 px-3 py-2"
                           >
                             <div>
                               <label className="block text-xs text-gray-500 mb-1">
@@ -1146,14 +1155,47 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
                                 className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm bg-white"
                               >
                                 <option value="">未分类</option>
-                                {HONOR_TYPE_OPTIONS.map((opt) => (
+                                {PARK_BRAND_HONOR_TYPE_OPTIONS.map((opt) => (
                                   <option key={opt.value} value={opt.value}>
                                     {opt.label}
                                   </option>
                                 ))}
                               </select>
                             </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">
+                                获批时间
+                              </label>
+                              <input
+                                type="date"
+                                value={honor.approved_at || ''}
+                                onChange={(e) =>
+                                  handleHonorFieldChange(
+                                    honor.id,
+                                    'approved_at',
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm"
+                              />
+                            </div>
                             <div className="flex items-center justify-end gap-2">
+                              <div className="text-xs text-gray-500 flex items-center gap-1">
+                                <span>优先级</span>
+                                <input
+                                  type="text"
+                                  value={honor.sort_order ?? ''}
+                                  onChange={(e) =>
+                                    handleHonorFieldChange(
+                                      honor.id,
+                                      'sort_order',
+                                      e.target.value,
+                                    )
+                                  }
+                                  className="w-16 px-2 py-1 border border-gray-300 rounded-md text-xs"
+                                  placeholder="-"
+                                />
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => handleSaveHonor(honor)}
@@ -1183,7 +1225,7 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
                     <span className="block text-sm font-medium text-gray-800 mb-2">
                       新增品牌荣誉
                     </span>
-                    <div className="grid grid-cols-1 md:grid-cols-[80px,1fr,160px,100px] gap-3 items-end">
+                    <div className="grid grid-cols-1 md:grid-cols-[80px,1fr,160px,140px,100px,100px] gap-3 items-end">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">
                           年份
@@ -1233,14 +1275,45 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
                           className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm bg-white"
                         >
                           <option value="">未分类</option>
-                          {HONOR_TYPE_OPTIONS.map((opt) => (
+                          {PARK_BRAND_HONOR_TYPE_OPTIONS.map((opt) => (
                             <option key={opt.value} value={opt.value}>
                               {opt.label}
                             </option>
                           ))}
                         </select>
                       </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          获批时间
+                        </label>
+                        <input
+                          type="date"
+                          value={newHonor.approved_at}
+                          onChange={(e) =>
+                            setNewHonor((prev) => ({
+                              ...prev,
+                              approved_at: e.target.value,
+                            }))
+                          }
+                          className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm"
+                        />
+                      </div>
                       <div className="flex justify-end">
+                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                          <span>优先级</span>
+                          <input
+                            type="text"
+                            value={newHonor.sort_order}
+                            onChange={(e) =>
+                              setNewHonor((prev) => ({
+                                ...prev,
+                                sort_order: e.target.value,
+                              }))
+                            }
+                            className="w-16 px-2 py-1 border border-gray-300 rounded-md text-xs"
+                            placeholder="-"
+                          />
+                        </div>
                         <button
                           type="button"
                           onClick={handleCreateHonor}

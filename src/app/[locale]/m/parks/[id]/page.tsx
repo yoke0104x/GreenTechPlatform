@@ -581,21 +581,21 @@ export default function MobileParkDetailPage({
                             </div>
                             <div className="relative flex items-center justify-center">
                               <span
-                                className={`w-2 h-2 rounded-full z-[1] bg-white ${
+                                className={`w-2.5 h-2.5 rounded-full z-[1] border border-white shadow-sm ${
                                   isFirst ? 'bg-[#2f76ff]' : 'bg-[#8fa3d8]'
                                 }`}
                               />
                               {!isLast && (
-                                <div className="absolute left-1/2 top-full -translate-x-1/2 w-px h-10 bg-gray-200 mt-1" />
+                                <div className="absolute left-1/2 top-[10px] -translate-x-1/2 w-px h-14 bg-gray-300" />
                               )}
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
                               {items.map((item) => (
                                 <div
                                   key={item.id}
-                                  className="flex items-center gap-2 rounded-md border border-[#b9cdfb] bg-[#f5f8ff] px-3 py-1.5"
+                                  className="flex items-center gap-1.5 rounded-md border border-[#b9cdfb] bg-[#f5f8ff] px-2.5 py-1"
                                 >
-                                  <div className="relative w-4 h-4 flex-shrink-0">
+                                  <div className="relative w-3.5 h-3.5 flex-shrink-0">
                                     <Image
                                       src="/images/icons/trophy.png"
                                       alt={isEn ? 'Honor' : '荣誉'}
@@ -603,7 +603,7 @@ export default function MobileParkDetailPage({
                                       className="object-contain"
                                     />
                                   </div>
-                                  <span className="text-[12px] text-[#2f5fe9] font-medium whitespace-nowrap">
+                                  <span className="text-[11px] text-[#2f5fe9] font-medium whitespace-nowrap">
                                     {item.title}
                                   </span>
                                 </div>

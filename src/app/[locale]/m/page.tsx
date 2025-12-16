@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Cpu, Building2, ScrollText, ChevronRight, User } from 'lucide-react'
+import { ArrowRight, Cpu, Building2, ScrollText, ChevronRight, User, Menu } from 'lucide-react'
 import { LanguageSwitcher } from '@/components/common/language-switcher'
 import { getSearchStats } from '@/api/tech'
 import { getParks } from '@/api/parks'
@@ -19,7 +19,7 @@ export default function MobilePortalPage({
 }) {
   const isEn = locale === 'en'
   const router = useRouter()
-  const { user, loading: authLoading, logout } = useAuthContext()
+  const { user, logout } = useAuthContext()
 
   const [techCount, setTechCount] = useState<number | null>(null)
   const [parkCount, setParkCount] = useState<number | null>(null)
@@ -42,7 +42,7 @@ export default function MobilePortalPage({
         if (!cancelled && statsResp.success && statsResp.data) {
           setTechCount(statsResp.data.technologyCount)
         }
-      } catch (e) {
+      } catch {
         if (!cancelled) setTechCount(null)
       }
       try {
@@ -171,7 +171,7 @@ export default function MobilePortalPage({
                 {user ? (isEn ? 'Welcome back!' : '欢迎回来！') : isEn ? 'Not logged in' : '未登录'}
               </span>
               {user ? (
-                <span className="text-[15px] font-semibold text-gray-900 truncate">
+                <span className="text-[13px] font-semibold text-blue-600 truncate">
                   {displayName ||
                     (companyLoading
                       ? isEn
@@ -193,7 +193,16 @@ export default function MobilePortalPage({
               )}
             </div>
           </div>
-          <LanguageSwitcher className="text-[11px]" hideIcon />
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher className="text-[11px]" hideIcon />
+            <Link
+              href={`/${locale}/m`}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100"
+              aria-label={locale === 'en' ? 'Portal' : 'Portal入口'}
+            >
+              <Menu className="w-4 h-4 text-[#00b899]" />
+            </Link>
+          </div>
         </div>
       </div>
 

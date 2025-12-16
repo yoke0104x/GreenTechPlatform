@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ReactNode, useEffect, useMemo, useState } from 'react'
-import { Home, Upload, MessageSquare, User } from 'lucide-react'
+import { Home, Upload, MessageSquare, Trophy, User, Grid } from 'lucide-react'
 import { useUnreadMessage } from '@/components/message/unread-message-context'
 
 export function MobileLayoutShell({
@@ -64,6 +64,7 @@ export function MobileLayoutShell({
     if (isParksContext) {
       return [
         { key: 'home', labelZh: '首页', labelEn: 'Home', href: `/${locale}/m/parks`, Icon: Home },
+        { key: 'rankings', labelZh: '榜单', labelEn: 'Rankings', href: `/${locale}/m/parks/rankings`, Icon: Trophy },
         {
           key: 'messages',
           labelZh: '消息',
@@ -121,6 +122,7 @@ export function MobileLayoutShell({
     ) {
       return 'me'
     }
+    if (pathname.startsWith(`/${locale}/m/parks/rankings`)) return 'rankings'
     if (pathname.startsWith(`/${locale}/m/parks`)) return 'home'
 
     // 政策 H5
@@ -160,7 +162,8 @@ export function MobileLayoutShell({
     pathname &&
     pathname.startsWith(`/${locale}/m/parks/`) &&
     !pathname.startsWith(`/${locale}/m/parks/me`) &&
-    !pathname.startsWith(`/${locale}/m/parks/favorites`)
+    !pathname.startsWith(`/${locale}/m/parks/favorites`) &&
+    !pathname.startsWith(`/${locale}/m/parks/rankings`)
   )
 
   const isPortalPage = pathname === `/${locale}/m`

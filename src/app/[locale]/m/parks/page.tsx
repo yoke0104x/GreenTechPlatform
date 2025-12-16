@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Search, SlidersHorizontal, ArrowUpDown, ArrowUpAZ, ArrowDownAZ, Clock, ChevronUp, RotateCcw, ChevronRight } from 'lucide-react'
+import { Search, SlidersHorizontal, ArrowUpDown, ArrowUpAZ, ArrowDownAZ, Clock, ChevronUp, RotateCcw, ChevronRight, Menu } from 'lucide-react'
 import { LanguageSwitcher } from '@/components/common/language-switcher'
+import Link from 'next/link'
 import { useLoadingOverlay } from '@/components/common/loading-overlay'
 import { useFilterData, transformFilterDataForComponents } from '@/hooks/admin/use-filter-data'
 import { getPublicCarouselApi } from '@/lib/api/public-carousel'
@@ -204,7 +205,16 @@ export default function MobileParksHomePage() {
               />
             </div>
           </div>
-          <LanguageSwitcher className="text-[11px]" hideIcon />
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher className="text-[11px]" hideIcon />
+            <Link
+              href={`/${locale}/m`}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100"
+              aria-label={isEn ? 'Portal' : 'Portal入口'}
+            >
+              <Menu className="w-4 h-4 text-[#00b899]" />
+            </Link>
+          </div>
         </div>
       </div>
 

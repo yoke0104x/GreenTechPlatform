@@ -16,7 +16,8 @@ import {
   Users,
   MessageSquare,
   FileText,
-  Tag
+  Tag,
+  Trophy
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAdminStats } from '@/hooks/use-admin-stats'
@@ -78,6 +79,12 @@ const menuItems: MenuItem[] = [
     label: '园区管理',
     icon: Building2,
     href: '/admin/parks'
+  },
+  {
+    id: 'rankings',
+    label: '榜单/品牌',
+    icon: Trophy,
+    href: '/admin/rankings'
   },
   {
     id: 'users',

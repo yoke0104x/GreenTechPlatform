@@ -53,6 +53,7 @@
 │   │   │   ├── parks/                  # 绿色园区H5入口（独立于政策）
 │   │   │   │   ├── page.tsx            # 园区列表与筛选首页（轮播+搜索+筛选+卡片）
 │   │   │   │   ├── [id]/page.tsx       # 园区详情页（基本信息/统计数据/园区政策等 + 品牌与荣誉时间轴展示 + 底部联系咨询按钮触发“园区对接”留言弹窗）
+│   │   │   │   ├── rankings/page.tsx   # 园区榜单页（筛选：园区级别/榜单类型/年度；卡片可展开查看完整榜单）
 │   │   │   │   ├── me/page.tsx         # 园区平台“我的”页面（入口指向园区收藏）
 │   │   │   │   └── favorites/page.tsx  # 我的园区收藏列表
 │   │   │   ├── me/                     # 移动端我的相关页面（技术&政策平台）
@@ -85,6 +86,8 @@
 │   │       │   └── search-stats/route.ts    # 搜索统计数据
 │   │       ├── parks/        # 园区H5相关API
 │   │       │   ├── list/route.ts       # 园区列表与筛选
+│   │       │   ├── rankings/route.ts   # 园区榜单（按年度/榜单类型/园区级别筛选）
+│   │       │   ├── brand-directory/route.ts # 园区品牌名录（按“品牌名录名称”标签筛选）
 │   │       │   ├── [id]/route.ts       # 园区详情（基础信息+统计数据）
 │   │       │   ├── [id]/policies/route.ts # 园区下园区政策列表
 │   │       │   └── tags/route.ts       # 园区标签列表
@@ -111,7 +114,13 @@
 │   │           │   ├── route.ts        # GET/POST 园区（列表、创建）
 │   │           │   └── [id]/route.ts   # GET/PUT/DELETE 单条园区
 │   │           ├── park-brand-honors/  # 园区品牌与荣誉管理API
-│   │           │   └── route.ts        # GET/POST/PUT/DELETE 单条或列表品牌荣誉
+│   │           │   └── route.ts        # GET/POST/PUT/DELETE 品牌荣誉（支持按 parkId 或全局列表分页；含 approved_at 获批时间）
+│   │           ├── park-brand-lists/   # 品牌名录类别管理API（新增）
+│   │           │   └── route.ts        # GET/POST/PUT/DELETE 品牌名录类别（可在类别下维护园区名单）
+│   │           ├── park-rankings/      # 园区榜单/品牌名单管理API
+│   │           │   ├── lists/route.ts  # 榜单定义 CRUD
+│   │           │   ├── years/route.ts  # 榜单年度 CRUD（支持设置最新/发布）
+│   │           │   └── entries/route.ts# 榜单条目 CRUD（按名次关联园区）
 │   │           ├── tertiary-categories/   # 三级分类管理API（新增）
 │   │           │   ├── route.ts           # GET/POST 三级分类
 │   │           │   └── [id]/route.ts      # PUT/DELETE 三级分类
@@ -212,7 +221,10 @@
 - 政策H5部委筛选默认仅展示主要部委（发改委、生态环境部、商务部、工信部、自然资源部、财政部、交通运输部、科技部），其余通过“更多”展开。
 - 新增绿色园区H5独立入口 `/[locale]/m/parks` 及子页面（`/[locale]/m/parks/[id]`、`/[locale]/m/parks/me`、`/[locale]/m/parks/favorites`），共用账号体系与消息中心，但拥有独立“我的园区收藏”。
 - 新增园区相关 Supabase 表 `parks`、`park_economic_stats`、`park_green_stats`、`park_tags`、`park_tag_relations`、`park_favorites`、`park_brand_honors`（由 Supabase SQL Editor 执行建表脚本）。
-- 新增园区 API：`/api/parks/list`（列表与筛选）、`/api/parks/[id]`（园区详情）、`/api/parks/[id]/policies`（园区政策）、`/api/parks/tags`（标签）、`/api/user/park-favorites`（园区收藏）。
+- 新增园区 API：`/api/parks/list`（列表与筛选）、`/api/parks/rankings`（榜单）、`/api/parks/brand-directory`（品牌名录）、`/api/parks/[id]`（园区详情）、`/api/parks/[id]/policies`（园区政策）、`/api/parks/tags`（标签）、`/api/user/park-favorites`（园区收藏）。
+- 新增园区榜单/品牌名单：园区 H5 底部导航新增“榜单”入口（`/[locale]/m/parks/rankings`），管理员后台新增“榜单/品牌”菜单（`/admin/rankings`）维护榜单定义/年度/名次关联园区；数据库迁移 `supabase/migrations/022_create_park_rankings.sql` 新增 `park_rank_lists / park_rank_years / park_rank_entries`。
+- 品牌名录与园区品牌荣誉打通：H5 “品牌名录” Tab 使用 `park_brand_honors` 作为数据源；管理员后台 `/admin/rankings` 先维护 `park_brand_lists`（品牌名录类别），再进入 `/admin/rankings/brands/[id]` 维护该类别下的园区名单与获批年份（写入 `park_brand_honors`，与 `/admin/parks` 的“品牌与荣誉”共享同一份数据并同步）。
+- 品牌名录新增迁移：`supabase/migrations/023_add_approved_at_to_park_brand_honors.sql`（获批时间）、`supabase/migrations/024_add_sort_order_to_park_brand_honors.sql`（优先级）、`supabase/migrations/025_create_park_brand_lists.sql`（品牌名录类别，type 必填且为 6 类）、`supabase/migrations/026_enforce_park_brand_lists_type.sql`（对已有库强制补齐与校验 type）。
 - 扩展轮播图支持 `scene` 字段，并通过 `/api/public/carousel?scene=home|parks` 区分技术首页与园区首页 H5 轮播；管理端轮播图页面支持按场景管理。
 - 园区数据导入：已将 `/data/park_info.sql` + `/data/dict.sql` 导入并同步到 `public.parks`，但下列国家级经开区尚未匹配到 `admin_development_zones`（省份/经开区外键为空，待手动清洗匹配）：北海经济技术开发区、成都国际铁路港经济技术开发区、长春汽车经济技术开发区、广州南沙经济技术开发区、杭州湾上虞经济技术开发区、杭州余杭经济技术开发区、襄阳经济技术开发区、西青经济技术开发区、武汉临空港经济技术开发区、南昌小蓝经济技术开发区、宁波大榭开发区、宁波杭州湾经济技术开发区、宁波石化经济技术开发区、天津子牙经济技术开发区、绥化经济技术开发区、嵩明杨林经济技术开发区、上海金桥出口加工区、沈阳辉山经济技术开发区。
 - 管理端新增 三级/四级 分类管理 API 与前端表单组件：支持在“产业分类管理”中对每个子分类继续维护两级子类目（无需图片）。
