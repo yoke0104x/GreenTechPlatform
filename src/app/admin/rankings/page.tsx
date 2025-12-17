@@ -462,7 +462,9 @@ export default function AdminRankingsPage() {
         key: 'sort_order',
         title: '优先级',
         width: '100px',
-        render: (value: number | null) => <span className="text-sm text-gray-700">{value ?? 0}</span>,
+        render: (value: string | number | boolean | null | undefined) => (
+          <span className="text-sm text-gray-700">{(value as number | null) ?? 0}</span>
+        ),
       },
       {
         key: 'is_active',
