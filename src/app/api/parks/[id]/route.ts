@@ -236,7 +236,7 @@ export async function GET(
           title,
           type: null,
         }
-      }).filter((h) => h.title)
+      }).filter((h: { title: string }) => h.title)
     }
 
     const detail = {
