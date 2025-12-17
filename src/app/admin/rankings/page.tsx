@@ -454,7 +454,9 @@ export default function AdminRankingsPage() {
         key: 'type',
         title: '类型',
         width: '180px',
-        render: (value: string | null) => <span className="text-sm text-gray-700">{value || '-'}</span>,
+        render: (value: string | number | boolean | null | undefined) => (
+          <span className="text-sm text-gray-700">{(value as string) || '-'}</span>
+        ),
       },
       {
         key: 'sort_order',
