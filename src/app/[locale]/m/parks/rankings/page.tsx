@@ -32,9 +32,9 @@ const PARK_LEVEL_OPTIONS: { value: ParkRankingParkLevel; labelZh: string; labelE
 
 function yearLabel(option: ParkRankingYearOption, locale: 'zh' | 'en') {
   if (locale === 'en') {
-    return option.isLatest ? `${option.year} (Latest)` : String(option.year)
+    return option.isLatest ? `${option.year}\u200B(Latest)` : String(option.year)
   }
-  return option.isLatest ? `${option.year}年（最新）` : `${option.year}年`
+  return option.isLatest ? `${option.year}年\u200B（最新）` : `${option.year}年`
 }
 
 function RankNumber({ value }: { value: number }) {
@@ -52,12 +52,12 @@ function RankNumber({ value }: { value: number }) {
 
 function RankChangeIndicator({ current, previous }: { current: number; previous?: number | null }) {
   if (previous === null || previous === undefined) {
-    return <span className="w-12 text-center text-[11px] text-gray-400">—</span>
+    return <span className="w-7 text-center text-[11px] text-gray-400">—</span>
   }
   const delta = previous - current
   if (delta > 0) {
     return (
-      <span className="w-12 inline-flex items-center justify-center gap-1 text-[11px] text-green-600">
+      <span className="w-7 inline-flex items-center justify-center gap-1 text-[11px] text-green-600">
         <Triangle className="w-2.5 h-2.5 fill-green-500 stroke-green-500" />
         <span className="tabular-nums">{delta}</span>
       </span>
@@ -65,13 +65,13 @@ function RankChangeIndicator({ current, previous }: { current: number; previous?
   }
   if (delta < 0) {
     return (
-      <span className="w-12 inline-flex items-center justify-center gap-1 text-[11px] text-red-500">
+      <span className="w-7 inline-flex items-center justify-center gap-1 text-[11px] text-red-500">
         <Triangle className="w-2.5 h-2.5 rotate-180 fill-red-500 stroke-red-500" />
         <span className="tabular-nums">{Math.abs(delta)}</span>
       </span>
     )
   }
-  return <span className="w-12 text-center text-[11px] text-amber-500">-</span>
+  return <span className="w-7 text-center text-[11px] text-amber-500">-</span>
 }
 
 function formatApprovedAt(raw: string | null | undefined, fallbackYear?: number | null) {
@@ -124,11 +124,11 @@ const RankingCard = React.forwardRef<HTMLDivElement, {
               return (
                 <div
                   key={`${item.id}-${row.rank}-${park?.id || 'x'}`}
-                  className="py-2 flex items-center gap-2"
+                  className="py-2 flex items-center gap-0.5 pl-1"
                 >
                   <RankNumber value={row.rank} />
                   <RankChangeIndicator current={row.rank} previous={row.previousRank} />
-                  <div className="w-9 h-9 relative rounded-lg overflow-hidden bg-gray-100">
+                  <div className="w-9 h-9 relative rounded-lg overflow-hidden bg-gray-100 ml-4">
                     {park?.logoUrl ? (
                       <Image src={park.logoUrl} alt={name} fill className="object-cover" />
                     ) : (
@@ -449,9 +449,9 @@ export default function MobileParkRankingsPage() {
 
         {kind === 'ranking' ? (
           // 筛选器：园区级别、榜单、时间
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <Select value={parkLevel} onValueChange={(v) => setParkLevel(v as ParkRankingParkLevel)}>
-              <SelectTrigger className="h-8 rounded-md bg-gray-50 text-xs text-gray-500 px-3 py-1 border-0 focus:ring-0 focus:outline-none">
+              <SelectTrigger className="h-8 rounded-md bg-gray-50 text-xs text-gray-500 px-3 py-1 border-0 focus:ring-0 focus:outline-none w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -464,7 +464,7 @@ export default function MobileParkRankingsPage() {
             </Select>
 
             <Select value={selectedListId} onValueChange={(v) => setSelectedListId(v)}>
-              <SelectTrigger className="h-8 rounded-md bg-gray-50 text-xs text-gray-500 px-3 py-1 min-w-[120px] border-0 focus:ring-0 focus:outline-none">
+              <SelectTrigger className="h-8 rounded-md bg-gray-50 text-xs text-gray-500 px-3 py-1 border-0 focus:ring-0 focus:outline-none w-full">
                 <SelectValue placeholder={locale === 'en' ? 'All lists' : '全部榜单'} />
               </SelectTrigger>
               <SelectContent>
@@ -488,7 +488,7 @@ export default function MobileParkRankingsPage() {
                 setYear(Number.isNaN(parsed) ? 'latest' : parsed)
               }}
             >
-              <SelectTrigger className="h-8 rounded-md bg-gray-50 text-xs text-gray-500 px-3 py-1 border-0 focus:ring-0 focus:outline-none">
+              <SelectTrigger className="h-8 rounded-md bg-gray-50 text-xs text-gray-500 px-3 py-1 border-0 focus:ring-0 focus:outline-none w-full">
                 <SelectValue placeholder={selectedYearLabel} />
               </SelectTrigger>
               <SelectContent>
