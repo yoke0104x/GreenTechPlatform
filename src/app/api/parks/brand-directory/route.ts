@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
-    const rows = (data || []) as HonorRow[]
+    const rows = (data || []) as unknown as HonorRow[]
 
     const groups = new Map<string, HonorRow[]>()
     for (const r of rows) {
