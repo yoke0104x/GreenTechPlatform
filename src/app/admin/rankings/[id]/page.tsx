@@ -516,8 +516,8 @@ export default function AdminRankingDetailPage() {
         key: 'rank',
         title: '名次',
         width: '80px',
-        render: (value: number) => (
-          <span className="font-medium text-gray-900">{value}</span>
+        render: (value: string | number | boolean | AdminPark | null | undefined) => (
+          <span className="font-medium text-gray-900">{value as number}</span>
         ),
       },
       {
