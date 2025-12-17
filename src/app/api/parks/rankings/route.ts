@@ -197,7 +197,7 @@ export async function GET(request: NextRequest) {
           console.error('查询榜单条目失败:', { listId: l.id, error: entryError })
           return { listId: l.id, entries: [] as EntryRow[], prevMap }
         }
-        return { listId: l.id, entries: (entryRows || []) as EntryRow[], prevMap }
+        return { listId: l.id, entries: (entryRows || []) as unknown as EntryRow[], prevMap }
       }),
     )
 
