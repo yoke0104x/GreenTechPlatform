@@ -372,7 +372,7 @@ export default function AdminRankingsPage() {
         key: 'is_active',
         title: '状态',
         width: '100px',
-        render: (value: boolean) => <ActiveBadge active={!!value} />,
+        render: (value: string | boolean | null | undefined) => <ActiveBadge active={!!value} />,
       },
       {
         key: 'actions',
