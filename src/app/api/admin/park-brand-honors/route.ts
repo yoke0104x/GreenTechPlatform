@@ -4,7 +4,7 @@ import { PARK_BRAND_HONOR_TYPE_OPTIONS } from '@/lib/types/admin'
 
 type ParkIdRow = { id: string }
 
-const ALLOWED_TYPES = new Set(PARK_BRAND_HONOR_TYPE_OPTIONS.map((o) => o.value))
+const ALLOWED_TYPES = new Set<string>(PARK_BRAND_HONOR_TYPE_OPTIONS.map((o) => o.value))
 
 // 使用 service role key 创建 Supabase 客户端（绕过 RLS，仅供管理端使用）
 const supabaseUrl =
