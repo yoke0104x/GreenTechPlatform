@@ -343,10 +343,10 @@ export default function AdminBrandListDetailPage() {
         key: 'is_active',
         title: '状态',
         width: '100px',
-        render: (value: boolean) => (
+        render: (value: string | number | boolean | AdminPark | null | undefined) => (
           <span
             className={
-              value
+              !!value
                 ? 'inline-flex px-2 py-1 text-xs rounded-full bg-green-50 text-green-700 border border-green-100'
                 : 'inline-flex px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600 border border-gray-200'
             }
