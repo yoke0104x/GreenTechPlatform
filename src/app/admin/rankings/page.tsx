@@ -364,7 +364,9 @@ export default function AdminRankingsPage() {
         key: 'park_level',
         title: '园区级别',
         width: '200px',
-        render: (value: ParkRankingParkLevel) => <span className="text-sm text-gray-700">{value}</span>,
+        render: (value: string | boolean | null | undefined) => (
+          <span className="text-sm text-gray-700">{value as ParkRankingParkLevel}</span>
+        ),
       },
       {
         key: 'is_active',
