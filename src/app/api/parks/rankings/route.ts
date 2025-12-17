@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        const { data: entryRows, error: entryError } = await supabaseAdmin
+        const { data: entryRows, error: entryError } = await supabaseAdmin!
           .from('park_rank_entries')
           .select(
             `
