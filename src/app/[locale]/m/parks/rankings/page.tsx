@@ -202,10 +202,10 @@ const BrandDirectoryCard = React.forwardRef<HTMLDivElement, {
           <button
             type="button"
             onClick={onToggleSort}
-            className="text-xs text-[#2563eb] rounded-md px-2 py-1 border border-gray-200 hover:bg-gray-50"
+            className="text-[11px] text-gray-700 rounded-md px-2.5 py-1 border border-gray-300 hover:bg-gray-100"
           >
             <span className="inline-flex items-center gap-1">
-              <ArrowUpDown className="w-3 h-3" />
+              <ArrowUpDown className="w-3 h-3 text-gray-700" />
               {sortOrder === 'asc' ? (locale === 'en' ? 'Year ↑' : '年份升序') : (locale === 'en' ? 'Year ↓' : '年份降序')}
             </span>
           </button>

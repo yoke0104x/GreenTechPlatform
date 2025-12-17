@@ -335,7 +335,9 @@ export default function AdminBrandListDetailPage() {
         key: 'sort_order',
         title: '优先级',
         width: '100px',
-        render: (value: number | null) => <span className="text-sm text-gray-700">{value ?? '-'}</span>,
+        render: (value: string | number | boolean | AdminPark | null | undefined) => (
+          <span className="text-sm text-gray-700">{(value as number | null) ?? '-'}</span>
+        ),
       },
       {
         key: 'is_active',
