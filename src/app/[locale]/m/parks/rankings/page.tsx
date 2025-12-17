@@ -211,12 +211,14 @@ const BrandDirectoryCard = React.forwardRef<HTMLDivElement, {
       </div>
 
       <div className="px-4 pt-3 pb-2">
-        <div className="grid grid-cols-[minmax(0,1fr)_92px_78px] items-center gap-3 text-[12px] font-semibold text-gray-700 bg-gray-50 rounded-lg py-2 mb-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_100px_70px] items-center gap-3 text-[12px] font-semibold text-gray-700 bg-gray-50 rounded-lg py-2 mb-2">
           <div className="flex items-center gap-3">
-            <span className="w-9 shrink-0" aria-hidden />
+            <span className="w-8 shrink-0" aria-hidden />
             <span>{locale === 'en' ? 'Park' : '园区名称'}</span>
           </div>
-          <span className="text-left whitespace-nowrap">{locale === 'en' ? 'Province' : '所在省市'}</span>
+          <span className="text-left whitespace-nowrap pl-[18px] pr-1">
+            {locale === 'en' ? 'Province' : '所在省市'}
+          </span>
           <span className="text-right whitespace-nowrap pr-4">{locale === 'en' ? 'Year' : '获批年份'}</span>
         </div>
         {empty ? (
@@ -238,10 +240,10 @@ const BrandDirectoryCard = React.forwardRef<HTMLDivElement, {
               return (
                 <div
                   key={row.id}
-                  className="py-2.5 grid grid-cols-[minmax(0,1fr)_92px_78px] gap-3 items-center text-[12px] text-gray-900"
+                  className="py-2.5 grid grid-cols-[minmax(0,1fr)_100px_70px] gap-2 items-center text-[12px] text-gray-900"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 relative rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="w-7 h-7 relative rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                       {park?.logoUrl ? (
                         <Image src={park.logoUrl} alt={name} fill className="object-cover" />
                       ) : (
@@ -250,11 +252,13 @@ const BrandDirectoryCard = React.forwardRef<HTMLDivElement, {
                         </div>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                    <div className="flex-1 min-w-0 flex items-center gap-0.5">
                       <div className="truncate">{name}</div>
                     </div>
                   </div>
-                  <div className="text-left whitespace-nowrap">{provinceLabel}</div>
+                  <div className="text-left whitespace-nowrap pl-[18px] pr-1 truncate">
+                    {provinceLabel}
+                  </div>
                   <div className="text-right whitespace-nowrap pr-4">{approvedAtLabel}</div>
                 </div>
               )
