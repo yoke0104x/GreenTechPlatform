@@ -353,7 +353,7 @@ export default function AdminRankingsPage() {
       {
         key: 'title_zh',
         title: '标题',
-        render: (_: string, record: AdminParkRankingList) => (
+        render: (_: string | boolean | null | undefined, record: AdminParkRankingList) => (
           <div>
             <div className="font-medium text-gray-900">{record.title_zh}</div>
             {record.title_en ? <div className="text-sm text-gray-500">{record.title_en}</div> : null}
