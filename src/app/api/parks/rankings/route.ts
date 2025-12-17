@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
 
         let prevMap = new Map<string, number>()
         const prevYearId = listToPrevYearId.get(l.id)
-        if (prevYearId) {
+        if (prevYearId && supabaseAdmin) {
           const { data: prevRows, error: prevErr } = await supabaseAdmin
             .from('park_rank_entries')
             .select('rank, park_id')
