@@ -13,6 +13,10 @@ export interface OAuthUrlResponse {
   state: string
 }
 
+export interface SubscribeUrlResponse {
+  url: string
+}
+
 export interface WeChatLoginResponse extends CustomAuthResult {
   isNewUser: boolean
 }
@@ -27,6 +31,18 @@ export const wechatAuthApi = {
       return data
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : '获取微信登录链接失败' }
+    }
+  },
+
+  // 获取公众号订阅通知确认页 URL（用户在确认页同意后跳回 redirect）
+  async getSubscribeUrl(redirectUri: string): Promise<ApiResponse<SubscribeUrlResponse>> {
+    try {
+      const url = `/api/wechat/subscribe-url?redirect=${encodeURIComponent(redirectUri)}`
+      const res = await safeFetch(url, { method: 'GET' })
+      const data = await handleApiResponse(res)
+      return data
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : '获取订阅通知链接失败' }
     }
   },
 
@@ -62,4 +78,3 @@ export const wechatAuthApi = {
     } catch {}
   }
 }
-

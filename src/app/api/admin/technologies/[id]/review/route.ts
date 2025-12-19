@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { sendWeChatServiceTextMessage } from '@/lib/wechat/service-account'
+import {
+  isWeChatSubscribeConfigured,
+  sendWeChatServiceSubscribeMessage,
+  sendWeChatServiceTextMessage,
+} from '@/lib/wechat/service-account'
+
+function getRequestOrigin(request: NextRequest) {
+  const proto = request.headers.get('x-forwarded-proto') || 'https'
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host')
+  if (host) return `${proto}://${host}`
+  return new URL(request.url).origin
+}
 
 // 使用service role key创建Supabase客户端
 const supabaseUrl = 'https://qpeanozckghazlzzhrni.supabase.co'
@@ -63,6 +74,7 @@ export async function POST(
           technology: data,
           action,
           reason,
+          origin: getRequestOrigin(request),
         })
       } catch (notificationError) {
         console.error('发送审核通知失败:', notificationError)
@@ -83,12 +95,14 @@ async function sendReviewNotification({
   technology,
   action,
   reason,
+  origin,
 }: {
   userId: string | null
   customUserId: string | null
   technology: { name_zh: string; id: string }
   action: string
   reason?: string
+  origin: string
 }) {
   console.log('🔔 开始发送审核通知:', { userId, customUserId, action, technologyName: technology.name_zh })
   
@@ -137,8 +151,31 @@ async function sendReviewNotification({
       } else {
         const openId = (customUser?.wechat_openid || (customUser?.user_metadata as any)?.wechat_openid) as string | undefined
         if (openId) {
-          const wechatText = `${messageData.title}\n\n${messageContent}\n\n请在【消息中心】查看详情。`
-          await sendWeChatServiceTextMessage({ openId, content: wechatText })
+          const insertedId = Array.isArray(data) && data[0]?.id ? String(data[0].id) : ''
+          const detailUrl = insertedId ? `${origin}/zh/m/chat/${encodeURIComponent(insertedId)}` : `${origin}/zh/m/chat`
+
+          let wechatSent = false
+          if (isWeChatSubscribeConfigured()) {
+            try {
+              await sendWeChatServiceSubscribeMessage({
+                openId,
+                title:
+                  String(messageData.title || '').length > 18
+                    ? `${String(messageData.title || '').slice(0, 18)}…`
+                    : String(messageData.title || ''),
+                content: '绿色技术平台管理员',
+                url: detailUrl,
+              })
+              wechatSent = true
+            } catch (subscribeErr) {
+              console.warn('🔔 微信订阅通知发送失败，尝试降级客服消息:', subscribeErr)
+            }
+          }
+
+          if (!wechatSent) {
+            const wechatText = `绿色技术平台\n\n${messageData.title}\n\n${messageContent}\n\n请在【消息中心】查看详情。`
+            await sendWeChatServiceTextMessage({ openId, content: wechatText })
+          }
           console.log('🔔 微信服务号消息发送成功')
         } else {
           console.log('🔔 用户缺少微信 openid，跳过服务号推送')

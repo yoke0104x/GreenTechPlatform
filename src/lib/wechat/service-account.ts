@@ -49,6 +49,77 @@ export interface SendServiceMessageOptions {
   content: string
 }
 
+export interface SendServiceSubscribeMessageOptions {
+  openId: string
+  title: string
+  content: string
+  platform?: string
+  url?: string
+  scene?: number
+}
+
+function getSubscribeConfig() {
+  const templateId = sanitizeHeaderValue(process.env.WECHAT_SUBSCRIBE_TEMPLATE_ID || '')
+  const titleKey = sanitizeHeaderValue(process.env.WECHAT_SUBSCRIBE_TITLE_KEY || '')
+  const contentKey = sanitizeHeaderValue(process.env.WECHAT_SUBSCRIBE_CONTENT_KEY || '')
+  const platformKey = sanitizeHeaderValue(process.env.WECHAT_SUBSCRIBE_PLATFORM_KEY || '')
+  const timeKey = sanitizeHeaderValue(process.env.WECHAT_SUBSCRIBE_TIME_KEY || '')
+  return { templateId, titleKey, contentKey, platformKey, timeKey }
+}
+
+export function isWeChatSubscribeConfigured() {
+  const { templateId, titleKey, contentKey } = getSubscribeConfig()
+  return Boolean(templateId && titleKey && contentKey)
+}
+
+export async function sendWeChatServiceSubscribeMessage(opts: SendServiceSubscribeMessageOptions) {
+  if (!opts.openId) {
+    throw new Error('缺少 openId，无法发送微信订阅通知')
+  }
+
+  const { templateId, titleKey, contentKey, platformKey, timeKey } = getSubscribeConfig()
+  if (!templateId || !titleKey || !contentKey) {
+    throw new Error('WECHAT_SUBSCRIBE_TEMPLATE_ID / WECHAT_SUBSCRIBE_TITLE_KEY / WECHAT_SUBSCRIBE_CONTENT_KEY 未完整配置')
+  }
+
+  const token = await getAccessToken()
+  const url = `https://api.weixin.qq.com/cgi-bin/message/subscribe/bizsend?access_token=${encodeURIComponent(token)}`
+
+  const data: Record<string, { value: string }> = {
+    [titleKey]: { value: opts.title },
+    [contentKey]: { value: opts.content },
+  }
+
+  if (platformKey && opts.platform) {
+    data[platformKey] = { value: opts.platform }
+  }
+  if (timeKey) {
+    data[timeKey] = { value: new Date().toLocaleString('zh-CN', { hour12: false }) }
+  }
+
+  const body: Record<string, unknown> = {
+    touser: opts.openId,
+    template_id: templateId,
+    data,
+  }
+  if (opts.url) body.url = opts.url
+  if (typeof opts.scene === 'number') body.scene = opts.scene
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+  const out = await res.json() as { errcode?: number; errmsg?: string }
+  if (!res.ok || (out.errcode && out.errcode !== 0)) {
+    const err = `发送微信订阅通知失败: ${out.errcode ?? res.status} ${out.errmsg ?? ''}`
+    throw new Error(err.trim())
+  }
+  return true
+}
+
 export async function sendWeChatServiceTextMessage({ openId, content }: SendServiceMessageOptions) {
   if (!openId) {
     throw new Error('缺少 openId，无法发送微信消息')
@@ -76,4 +147,3 @@ export async function sendWeChatServiceTextMessage({ openId, content }: SendServ
   }
   return true
 }
-

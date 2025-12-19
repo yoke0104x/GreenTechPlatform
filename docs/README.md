@@ -94,6 +94,7 @@
 │   │       ├── _utils/auth.ts # API路由共享认证工具
 │   │       ├── wechat/
 │   │       │   ├── oauth-url/route.ts      # 生成微信网页授权URL（设置state）
+│   │       │   ├── subscribe-url/route.ts  # 生成公众号订阅通知确认页URL（用于开启微信通知）
 │   │       │   └── callback/route.ts       # 微信回调：换取openid/用户信息并登录
 │   │       ├── messages/
 │   │       │   └── internal/

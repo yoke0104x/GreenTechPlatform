@@ -1,7 +1,11 @@
 import { Buffer } from 'buffer'
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequestUser, serviceSupabase } from '@/app/api/_utils/auth'
-import { sendWeChatServiceTextMessage } from '@/lib/wechat/service-account'
+import {
+  isWeChatSubscribeConfigured,
+  sendWeChatServiceSubscribeMessage,
+  sendWeChatServiceTextMessage,
+} from '@/lib/wechat/service-account'
 
 interface AdminOverrideUser {
   id: string
@@ -11,6 +15,22 @@ interface AdminOverrideUser {
 }
 
 export const dynamic = 'force-dynamic'
+
+function getRequestOrigin(request: NextRequest) {
+  const proto = request.headers.get('x-forwarded-proto') || 'https'
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host')
+  if (host) return `${proto}://${host}`
+  return new URL(request.url).origin
+}
+
+function inferMessageContext(category?: string | null) {
+  const c = (category || '').trim()
+  const isPark = ['园区对接', 'Park Connection'].includes(c)
+  const isPolicy = ['政策咨询', 'Policy Consultation'].includes(c)
+  if (isPark) return { from: 'parks' as const, platform: '园区平台' }
+  if (isPolicy) return { from: 'policy' as const, platform: '政策平台' }
+  return { from: null, platform: '绿色技术平台' }
+}
 
 function parseAdminOverride(header: string | null): AdminOverrideUser | null {
   if (!header) return null
@@ -253,6 +273,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: '发送站内信失败' }, { status: 500 })
   }
 
+  const inserted = Array.isArray(data) ? data[0] : data
+
   // 推送到微信（仅自定义用户且存在 openid）
   let wechatSent = false
   try {
@@ -265,9 +287,35 @@ export async function POST(request: NextRequest) {
       if (!cuError) {
         const openId = (customUser?.wechat_openid || (customUser?.user_metadata as any)?.wechat_openid) as string | undefined
         if (openId) {
-          const text = `${title}\n\n${content}\n\n请前往【消息中心】查看详情。`
-          await sendWeChatServiceTextMessage({ openId, content: text })
-          wechatSent = true
+          const { from, platform } = inferMessageContext(inserted?.category)
+          const origin = getRequestOrigin(request)
+          const messageId = inserted?.id ? String(inserted.id) : ''
+          const detailUrl = messageId
+            ? `${origin}/zh/m/chat/${encodeURIComponent(messageId)}${from ? `?from=${from}` : ''}`
+            : `${origin}/zh/m/chat${from ? `?from=${from}` : ''}`
+
+          if (isWeChatSubscribeConfigured()) {
+            try {
+              await sendWeChatServiceSubscribeMessage({
+                openId,
+                // 适配常见订阅模板字段类型：thing(短文本) + name(短文本)
+                // 默认将“回复内容”填为站内信标题（更短），将“回复人”填为平台管理员
+                title: title.length > 18 ? `${title.slice(0, 18)}…` : title,
+                content: `${platform}管理员`,
+                platform,
+                url: detailUrl,
+              })
+              wechatSent = true
+            } catch (subscribeErr) {
+              console.warn('微信订阅通知发送失败，尝试降级客服消息:', subscribeErr)
+            }
+          }
+
+          if (!wechatSent) {
+            const text = `${platform}\n\n${title}\n\n${content}\n\n请前往【消息中心】查看详情。`
+            await sendWeChatServiceTextMessage({ openId, content: text })
+            wechatSent = true
+          }
         }
       }
     }
@@ -275,5 +323,5 @@ export async function POST(request: NextRequest) {
     console.error('微信推送失败（已忽略）:', wxErr)
   }
 
-  return NextResponse.json({ success: true, data: Array.isArray(data) ? data[0] : data, wechatSent, adminOverride })
+  return NextResponse.json({ success: true, data: inserted, wechatSent, adminOverride })
 }

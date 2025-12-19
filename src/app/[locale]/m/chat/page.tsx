@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { useUnreadMessage } from '@/components/message/unread-message-context'
 import { useLoadingOverlay } from '@/components/common/loading-overlay'
+import { wechatAuthApi } from '@/api/wechat'
 import {
   type InternalMessage,
   getReceivedInternalMessages,
@@ -74,6 +75,12 @@ function MobileChatPage() {
   const [filters, setFilters] = useState<MessageFilters>({ category: 'all', status: 'all', searchKeyword: '' })
   const requestIdRef = useRef(0)
   const authRetryRef = useRef(false)
+  const [subscribeLoading, setSubscribeLoading] = useState(false)
+
+  const isWeChatEnv = useMemo(() => {
+    if (typeof navigator === 'undefined') return false
+    return /MicroMessenger/i.test(navigator.userAgent || '')
+  }, [])
 
   useEffect(() => {
     resetLoading()
@@ -557,9 +564,42 @@ function MobileChatPage() {
     <section className="min-h-dvh" style={{ backgroundColor: '#edeef7' }}>
       {/* Header with title and tabs */}
       <div className="sticky top-0 z-40 px-3 pt-3 pb-2">
-        <h1 className="text-[18px] font-bold text-gray-900 mb-2">
-          {locale === 'en' ? 'My Messages' : '我的消息'}
-        </h1>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <h1 className="text-[18px] font-bold text-gray-900">
+            {locale === 'en' ? 'My Messages' : '我的消息'}
+          </h1>
+          {isWeChatEnv && (
+            <button
+              type="button"
+              disabled={subscribeLoading}
+              onClick={async () => {
+                if (typeof window === 'undefined') return
+                if (subscribeLoading) return
+                setSubscribeLoading(true)
+                try {
+                  const origin = window.location.origin
+                  const redirect = `${origin}/${locale}/m/chat${isParkContext ? '?from=parks' : isPolicyContext ? '?from=policy' : ''}`
+                  const resp = await wechatAuthApi.getSubscribeUrl(redirect)
+                  if (!resp.success || !resp.data?.url) {
+                    throw new Error(resp.error || '获取订阅通知链接失败')
+                  }
+                  window.location.href = resp.data.url
+                } catch (e) {
+                  toast({
+                    title: locale === 'en' ? 'Failed' : '操作失败',
+                    description: e instanceof Error ? e.message : locale === 'en' ? 'Failed to subscribe' : '订阅失败，请稍后再试',
+                    variant: 'destructive',
+                  })
+                } finally {
+                  setSubscribeLoading(false)
+                }
+              }}
+              className="h-8 px-3 rounded-full bg-white border border-gray-200 text-[12px] text-gray-700 disabled:opacity-60"
+            >
+              {subscribeLoading ? (locale === 'en' ? 'Opening…' : '打开中…') : (locale === 'en' ? 'Enable WeChat Notice' : '开启微信通知')}
+            </button>
+          )}
+        </div>
         {/* Category filter chips */}
         <div className="flex gap-2 overflow-x-auto no-scrollbar">
           {chips.map((c) => {

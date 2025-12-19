@@ -207,17 +207,23 @@ export default function MobileHomePage() {
 
   const pageContent = (
     <section className="min-h-dvh" style={{ backgroundColor: '#edeef7' }}>
-      {/* Header: title aligned with language switcher; header is sticky at top */}
+      {/* Header */}
       <div
-        className="px-3 pt-4 pb-2 sticky z-50 bg-white shadow-sm"
+        className="px-3 pt-1 pb-0 sticky z-50 bg-white shadow-sm"
         style={{ top: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1 min-w-0">
-            <div className="relative w-6 h-6">
-              <Image src="/images/logo/绿盟logo.png" alt="logo" fill className="object-contain" />
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="relative w-56 h-14">
+              <Image
+                src="/images/logo/图片1.png"
+                alt="绿盟logo"
+                fill
+                className="object-contain"
+                sizes="240px"
+                priority
+              />
             </div>
-            <h1 className="text-[15px] font-semibold tracking-tight text-gray-900 truncate">{tHome('heroTitle')}</h1>
           </div>
           <div className="flex items-center gap-2">
             <LanguageSwitcher className="text-[11px]" hideIcon />
