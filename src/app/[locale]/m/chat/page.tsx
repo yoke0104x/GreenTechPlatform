@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Bell, Mail } from 'lucide-react'
+import Script from 'next/script'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuthContext } from '@/components/auth/auth-provider'
@@ -36,6 +37,7 @@ interface MessageFilters {
 export default function MobileChatPageWrapper() {
   return (
     <Suspense fallback={<section className="min-h-dvh" />}>
+      <Script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js" strategy="afterInteractive" />
       <MobileChatPage />
     </Suspense>
   )
@@ -81,6 +83,56 @@ function MobileChatPage() {
     if (typeof navigator === 'undefined') return false
     return /MicroMessenger/i.test(navigator.userAgent || '')
   }, [])
+
+  const openWeChatSubscribe = async (templateId?: string) => {
+    if (typeof window === 'undefined') return false
+    const wx = (window as any).wx
+    if (!wx || !templateId) return false
+
+    const currentUrl = window.location.href.split('#')[0]
+    const cfgRes = await fetch(`/api/wechat/js-sdk-config?url=${encodeURIComponent(currentUrl)}`, { cache: 'no-store' })
+    const cfgJson = await cfgRes.json().catch(() => null) as any
+    if (!cfgRes.ok || !cfgJson?.success || !cfgJson?.data) {
+      const msg = cfgJson?.error || cfgJson?.message || '获取微信 JS-SDK 配置失败'
+      throw new Error(msg)
+    }
+
+    const cfg = cfgJson.data as { appId: string; timestamp: number; nonceStr: string; signature: string }
+
+    const readyResult: boolean = await new Promise((resolve) => {
+      try {
+        wx.config({
+          debug: false,
+          appId: cfg.appId,
+          timestamp: cfg.timestamp,
+          nonceStr: cfg.nonceStr,
+          signature: cfg.signature,
+          jsApiList: ['openSubscribeMessage'],
+        })
+        wx.ready(() => resolve(true))
+        wx.error(() => resolve(false))
+      } catch {
+        resolve(false)
+      }
+    })
+
+    if (!readyResult) return false
+
+    const ok: boolean = await new Promise((resolve) => {
+      try {
+        wx.openSubscribeMessage({
+          tmplIds: [templateId],
+          success: () => resolve(true),
+          fail: () => resolve(false),
+          complete: () => {},
+        })
+      } catch {
+        resolve(false)
+      }
+    })
+
+    return ok
+  }
 
   useEffect(() => {
     resetLoading()
@@ -583,7 +635,34 @@ function MobileChatPage() {
                   if (!resp.success || !resp.data?.url) {
                     throw new Error(resp.error || '获取订阅通知链接失败')
                   }
-                  window.location.href = resp.data.url
+
+                  // 优先使用 JS-SDK 订阅接口（更稳定）
+                  const wx = (window as any).wx
+                  if (!wx) {
+                    toast({
+                      title: locale === 'en' ? 'Please retry' : '请稍后重试',
+                      description: locale === 'en' ? 'WeChat JS-SDK is loading' : '微信能力加载中，请稍后再试',
+                    })
+                    return
+                  }
+
+                  const templateId = (resp.data as any).templateId as string | undefined
+                  const usedJsSdk = await openWeChatSubscribe(templateId).catch((err) => {
+                    toast({
+                      title: locale === 'en' ? 'Failed' : '操作失败',
+                      description: err instanceof Error ? err.message : String(err),
+                      variant: 'destructive',
+                    })
+                    return false
+                  })
+
+                  if (!usedJsSdk) {
+                    toast({
+                      title: locale === 'en' ? 'Failed' : '订阅失败',
+                      description: locale === 'en' ? 'Unable to open subscribe dialog' : '无法打开订阅授权弹窗，请稍后再试',
+                      variant: 'destructive',
+                    })
+                  }
                 } catch (e) {
                   toast({
                     title: locale === 'en' ? 'Failed' : '操作失败',
