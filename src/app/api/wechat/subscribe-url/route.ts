@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sanitizeHeaderValue } from '@/lib/header-utils'
 
+export const dynamic = 'force-dynamic'
+
 function getRequestOrigin(request: NextRequest) {
   const proto = request.headers.get('x-forwarded-proto') || 'https'
   const host = request.headers.get('x-forwarded-host') || request.headers.get('host')
@@ -49,7 +51,10 @@ export async function GET(request: NextRequest) {
       `&redirect_url=${encodeURIComponent(redirectUrl)}` +
       `#wechat_redirect`
 
-    return NextResponse.json({ success: true, data: { url: subscribeConfirmUrl } })
+    return NextResponse.json(
+      { success: true, data: { url: subscribeConfirmUrl, appId, templateId } },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
   } catch (e) {
     return NextResponse.json(
       { success: false, error: e instanceof Error ? e.message : '生成订阅通知链接失败' },
@@ -57,4 +62,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-
