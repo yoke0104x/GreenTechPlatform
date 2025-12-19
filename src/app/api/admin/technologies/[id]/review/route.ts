@@ -159,11 +159,11 @@ async function sendReviewNotification({
             try {
               await sendWeChatServiceSubscribeMessage({
                 openId,
-                title:
-                  String(messageData.title || '').length > 18
-                    ? `${String(messageData.title || '').slice(0, 18)}…`
-                    : String(messageData.title || ''),
-                content: '绿色技术平台管理员',
+                title: messageContent.length > 18 ? `${messageContent.slice(0, 18)}…` : messageContent,
+                content:
+                  `绿色技术平台｜${String(messageData.title || '')}`.length > 18
+                    ? `${`绿色技术平台｜${String(messageData.title || '')}`.slice(0, 18)}…`
+                    : `绿色技术平台｜${String(messageData.title || '')}`,
                 url: detailUrl,
               })
               wechatSent = true

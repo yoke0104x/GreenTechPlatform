@@ -298,10 +298,9 @@ export async function POST(request: NextRequest) {
             try {
               await sendWeChatServiceSubscribeMessage({
                 openId,
-                // 适配常见订阅模板字段类型：thing(短文本) + name(短文本)
-                // 默认将“回复内容”填为站内信标题（更短），将“回复人”填为平台管理员
-                title: title.length > 18 ? `${title.slice(0, 18)}…` : title,
-                content: `${platform}管理员`,
+                // 适配订阅模板：thing(回复内容) / thing(咨询标题) / time(回复时间)
+                title: content.length > 18 ? `${content.slice(0, 18)}…` : content,
+                content: `${platform}｜${title}`.length > 18 ? `${`${platform}｜${title}`.slice(0, 18)}…` : `${platform}｜${title}`,
                 platform,
                 url: detailUrl,
               })
