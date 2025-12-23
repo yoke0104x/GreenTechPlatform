@@ -95,6 +95,7 @@
 │   │       ├── wechat/
 │   │       │   ├── oauth-url/route.ts      # 生成微信网页授权URL（设置state）
 │   │       │   ├── js-sdk-config/route.ts  # 生成微信 JS-SDK 签名（用于 openSubscribeMessage）
+│   │       │   ├── gateway-health/route.ts # 网关连通性检测（/healthz）
 │   │       │   ├── subscribe-url/route.ts  # 生成公众号订阅通知确认页URL（用于开启微信通知）
 │   │       │   └── callback/route.ts       # 微信回调：换取openid/用户信息并登录
 │   │       ├── messages/

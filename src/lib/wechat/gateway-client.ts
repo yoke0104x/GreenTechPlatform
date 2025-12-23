@@ -38,15 +38,23 @@ export async function sendSubscribeMessageViaGateway(payload: GatewaySubscribeSe
   const ts = String(Math.floor(Date.now() / 1000))
   const sig = signBodyHmac(cfg.secret, ts, body)
 
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-wechat-gateway-ts': ts,
-      'x-wechat-gateway-signature': sig,
-    },
-    body,
-  })
+  let res: Response
+  try {
+    res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-wechat-gateway-ts': ts,
+        'x-wechat-gateway-signature': sig,
+      },
+      body,
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10_000),
+    })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    throw new Error(`无法连接微信网关: ${endpoint} (${msg})`)
+  }
 
   const out = (await res.json().catch(() => null)) as { success?: boolean; error?: string } | null
   if (!res.ok || !out?.success) {
@@ -77,15 +85,23 @@ export async function getJsSdkConfigViaGateway(payload: GatewayJsSdkConfigPayloa
   const ts = String(Math.floor(Date.now() / 1000))
   const sig = signBodyHmac(cfg.secret, ts, body)
 
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-wechat-gateway-ts': ts,
-      'x-wechat-gateway-signature': sig,
-    },
-    body,
-  })
+  let res: Response
+  try {
+    res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-wechat-gateway-ts': ts,
+        'x-wechat-gateway-signature': sig,
+      },
+      body,
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10_000),
+    })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    throw new Error(`无法连接微信网关: ${endpoint} (${msg})`)
+  }
 
   const out = (await res.json().catch(() => null)) as
     | { success?: boolean; error?: string; data?: GatewayJsSdkConfigResponseData }
