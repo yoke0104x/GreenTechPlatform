@@ -622,21 +622,13 @@ node scripts/mcp/run-mcp-tool.js \
 
 ### 当前问题（阻塞）
 
-- 当前 `WECHAT_GATEWAY_URL` 指向微信云托管后，Vercel 侧已不再直接调用微信接口；但网关侧调用微信 OpenAPI 时仍报错：`self-signed certificate`，导致：
-  - `POST /wechat/js-sdk-config` 无法生成签名（H5 无法弹出订阅授权）
-  - `POST /wechat/subscribe-send` 无法发送订阅通知
-- 典型原因：网关容器镜像缺少系统 CA 证书/SSL 环境异常（或配置了代理导致 TLS 被自签名证书拦截）。
+- 网关容器内直连 `https://api.weixin.qq.com` 可能出现 `self-signed certificate`（云托管链路证书），导致无法通过传统 `access_token` 方式调通微信 OpenAPI。
 
 ### 解决方案（后续实现路径）
 
-- 先修复网关 TLS 环境（推荐）：
-  - 若网关 Docker 基于 `node:alpine`：安装 CA 证书 `apk add --no-cache ca-certificates && update-ca-certificates`
-  - 更简单：直接改为 `FROM node:20-slim`（通常可避免 CA/SSL 相关坑）
-  - 重新部署后，验证 `POST /wechat/js-sdk-config` 返回 `success:true`
-- 若修复 TLS 后仍出现 `40164 invalid ip ... not in whitelist`：
-  - 方案 A：公众号后台关闭「接口调用 IP 白名单」（不推荐，安全性下降）
-  - 方案 B：将网关部署到具备固定出口 IP 的环境并加入白名单（自建服务器/固定 NAT）
-  - 方案 C：使用微信云托管提供的“免鉴权调用公众号接口”能力（按微信云托管文档接入，避免白名单约束）
+- 推荐（已验证可用）：启用微信云托管「开放接口服务」（云调用免鉴权），按接口文档原样调用但不传 `access_token`，并默认使用 `http://api.weixin.qq.com` 避免 TLS 证书问题。
+  - 云托管控制台开启「开放接口服务」开关，并在「微信令牌权限配置」添加接口路径白名单（如 `/cgi-bin/ticket/getticket`、`/cgi-bin/message/subscribe/bizsend`）
+  - 若环境由小程序开通，需给公众号做「资源复用」绑定，否则调用公众号相关接口会 `api unauthorized`
 
 ### 微信云托管网关（当前采用的集成方式）
 

@@ -42,6 +42,9 @@ data/
 #scripts
 /middle_process_scripts
 
+#others
+ref/
+
 # Logs and databases #
 ######################
 *.log

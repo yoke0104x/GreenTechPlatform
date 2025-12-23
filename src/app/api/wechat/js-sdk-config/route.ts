@@ -81,7 +81,6 @@ function sha1(input: string) {
 
 export async function GET(request: NextRequest) {
   try {
-    const { appId } = getAppCredentials()
     const rawUrl = request.nextUrl.searchParams.get('url')
     if (!rawUrl) return NextResponse.json({ success: false, error: '缺少 url 参数' }, { status: 400 })
 
@@ -94,6 +93,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, data }, { headers: { 'Cache-Control': 'no-store' } })
     }
 
+    const { appId } = getAppCredentials()
     const ticket = await getJsApiTicket()
     const noncestr = nonceStr()
     const timestamp = Math.floor(Date.now() / 1000)

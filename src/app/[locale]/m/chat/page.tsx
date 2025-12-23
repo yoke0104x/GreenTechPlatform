@@ -95,13 +95,36 @@ function MobileChatPage() {
     return msg
   }
 
+  const getWeChatSignUrl = () => {
+    if (typeof window === 'undefined') return ''
+    const currentUrl = window.location.href.split('#')[0]
+    const ua = window.navigator?.userAgent || ''
+    const isIOS = /iphone|ipad|ipod/i.test(ua)
+
+    // iOS WKWebView 下，微信 JS-SDK 签名 URL 常以首次进入页面 URL 为准（SPA 路由切换会导致签名不匹配）
+    try {
+      const key = 'wx_sign_url'
+      const stored = window.sessionStorage.getItem(key)
+      if (!stored) {
+        window.sessionStorage.setItem(key, currentUrl)
+        return currentUrl
+      }
+      return isIOS ? stored : currentUrl
+    } catch {
+      return currentUrl
+    }
+  }
+
   const openWeChatSubscribe = async (templateId?: string) => {
     if (typeof window === 'undefined') return false
     const wx = (window as any).wx
     if (!wx || !templateId) return false
+    if (typeof wx.openSubscribeMessage !== 'function') {
+      throw new Error(locale === 'en' ? 'Current WeChat version does not support subscribe dialog' : '当前微信版本不支持订阅授权弹窗')
+    }
 
-    const currentUrl = window.location.href.split('#')[0]
-    const cfgRes = await fetch(`/api/wechat/js-sdk-config?url=${encodeURIComponent(currentUrl)}`, { cache: 'no-store' })
+    const signUrl = getWeChatSignUrl()
+    const cfgRes = await fetch(`/api/wechat/js-sdk-config?url=${encodeURIComponent(signUrl)}`, { cache: 'no-store' })
     const cfgJson = await cfgRes.json().catch(() => null) as any
     if (!cfgRes.ok || !cfgJson?.success || !cfgJson?.data) {
       const msg = cfgJson?.error || cfgJson?.message || '获取微信 JS-SDK 配置失败'
@@ -110,39 +133,61 @@ function MobileChatPage() {
 
     const cfg = cfgJson.data as { appId: string; timestamp: number; nonceStr: string; signature: string }
 
-    const readyResult: boolean = await new Promise((resolve) => {
+    const wxDebug = typeof window !== 'undefined' && window.location.search.includes('wxdebug=1')
+
+    await new Promise<void>((resolve, reject) => {
       try {
         wx.config({
-          debug: false,
+          debug: wxDebug,
           appId: cfg.appId,
           timestamp: cfg.timestamp,
           nonceStr: cfg.nonceStr,
           signature: cfg.signature,
           jsApiList: ['openSubscribeMessage'],
         })
-        wx.ready(() => resolve(true))
-        wx.error(() => resolve(false))
-      } catch {
-        resolve(false)
+        wx.ready(() => resolve())
+        wx.error((err: any) => {
+          const em = err?.errMsg || err?.message || 'wx.config error'
+          reject(new Error(`${em}${signUrl ? ` (signUrl=${signUrl})` : ''}`))
+        })
+      } catch (e) {
+        reject(e instanceof Error ? e : new Error('wx.config error'))
       }
     })
 
-    if (!readyResult) return false
-
-    const ok: boolean = await new Promise((resolve) => {
+    const apiOk: boolean = await new Promise((resolve) => {
       try {
-        wx.openSubscribeMessage({
-          tmplIds: [templateId],
-          success: () => resolve(true),
+        wx.checkJsApi({
+          jsApiList: ['openSubscribeMessage'],
+          success: (res: any) => resolve(Boolean(res?.checkResult?.openSubscribeMessage)),
           fail: () => resolve(false),
-          complete: () => {},
         })
       } catch {
         resolve(false)
       }
     })
 
-    return ok
+    if (!apiOk) {
+      throw new Error(locale === 'en' ? 'WeChat JS API not available: openSubscribeMessage' : '微信能力不可用：openSubscribeMessage')
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      try {
+        wx.openSubscribeMessage({
+          tmplIds: [templateId],
+          success: () => resolve(),
+          fail: (err: any) => {
+            const em = err?.errMsg || err?.message || 'openSubscribeMessage failed'
+            reject(new Error(em))
+          },
+          complete: () => {},
+        })
+      } catch (e) {
+        reject(e instanceof Error ? e : new Error('openSubscribeMessage failed'))
+      }
+    })
+
+    return true
   }
 
   useEffect(() => {
