@@ -2,11 +2,12 @@
 
 export const dynamic = 'force-dynamic'
 
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Bell, Mail } from 'lucide-react'
 import Script from 'next/script'
 import { Badge } from '@/components/ui/badge'
+import Link from 'next/link'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { useUnreadMessage } from '@/components/message/unread-message-context'
@@ -78,6 +79,10 @@ function MobileChatPage() {
   const requestIdRef = useRef(0)
   const authRetryRef = useRef(false)
   const [subscribeLoading, setSubscribeLoading] = useState(false)
+  const [subscribeTemplateId, setSubscribeTemplateId] = useState<string | null>(null)
+  const [subscribeConfirmUrl, setSubscribeConfirmUrl] = useState<string | null>(null)
+  const [openTagReady, setOpenTagReady] = useState(false)
+  const openSubscribeTagRef = useRef<HTMLElement | null>(null)
 
   const isWeChatEnv = useMemo(() => {
     if (typeof navigator === 'undefined') return false
@@ -113,6 +118,47 @@ function MobileChatPage() {
     } catch {
       return currentUrl
     }
+  }
+
+  const ensureWeChatOpenTagReady = async () => {
+    if (typeof window === 'undefined') return false
+    const wx = (window as any).wx
+    if (!wx) return false
+
+    const signUrl = getWeChatSignUrl()
+    const cfgRes = await fetch(`/api/wechat/js-sdk-config?url=${encodeURIComponent(signUrl)}`, { cache: 'no-store' })
+    const cfgJson = (await cfgRes.json().catch(() => null)) as any
+    if (!cfgRes.ok || !cfgJson?.success || !cfgJson?.data) {
+      const msg = cfgJson?.error || cfgJson?.message || '获取微信 JS-SDK 配置失败'
+      throw new Error(msg)
+    }
+
+    const cfg = cfgJson.data as { appId: string; timestamp: number; nonceStr: string; signature: string }
+    const wxDebug = typeof window !== 'undefined' && window.location.search.includes('wxdebug=1')
+
+    await new Promise<void>((resolve, reject) => {
+      try {
+        wx.config({
+          debug: wxDebug,
+          appId: cfg.appId,
+          timestamp: cfg.timestamp,
+          nonceStr: cfg.nonceStr,
+          signature: cfg.signature,
+          jsApiList: ['checkJsApi'],
+          openTagList: ['wx-open-subscribe'],
+        })
+        wx.ready(() => resolve())
+        wx.error((err: any) => {
+          const em = err?.errMsg || err?.message || 'wx.config error'
+          reject(new Error(`${em}${signUrl ? ` (signUrl=${signUrl})` : ''}`))
+        })
+      } catch (e) {
+        reject(e instanceof Error ? e : new Error('wx.config error'))
+      }
+    })
+
+    setOpenTagReady(true)
+    return true
   }
 
   const openWeChatSubscribe = async (templateId?: string) => {
@@ -189,6 +235,97 @@ function MobileChatPage() {
 
     return true
   }
+
+  // 预加载订阅模板ID（用于 wx-open-subscribe 与确认页兜底链接）
+  useEffect(() => {
+    if (!isWeChatEnv) return
+    if (typeof window === 'undefined') return
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        const origin = window.location.origin
+        const redirect = `${origin}/${locale}/m/chat${isParkContext ? '?from=parks' : isPolicyContext ? '?from=policy' : ''}`
+        const resp = await wechatAuthApi.getSubscribeUrl(redirect)
+        if (cancelled) return
+        const dataAny = (resp as any)?.data as any
+        if (resp.success && dataAny?.templateId) {
+          setSubscribeTemplateId(String(dataAny.templateId))
+          setSubscribeConfirmUrl(dataAny.url ? String(dataAny.url) : null)
+        }
+      } catch {
+        // ignore
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isWeChatEnv, isParkContext, isPolicyContext, locale])
+
+  // 预先完成 openTagList 申请，避免用户点击需要二次触发
+  useEffect(() => {
+    if (!isWeChatEnv) return
+    if (!subscribeTemplateId) return
+    if (openTagReady) return
+    if (typeof window === 'undefined') return
+    const wx = (window as any).wx
+    if (!wx) return
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        await ensureWeChatOpenTagReady()
+      } catch (e) {
+        if (cancelled) return
+        toast({
+          title: locale === 'en' ? 'Failed' : '操作失败',
+          description: formatWeChatSubscribeError(e),
+          variant: 'destructive',
+        })
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isWeChatEnv, openTagReady, subscribeTemplateId, locale, toast])
+
+  // 绑定 wx-open-subscribe 的 success/error 事件
+  useEffect(() => {
+    const el = openSubscribeTagRef.current
+    if (!el) return
+
+    const onSuccess = (e: any) => {
+      try {
+        const detail = e?.detail || {}
+        const subscribeDetails = detail.subscribeDetails ? String(detail.subscribeDetails) : ''
+        toast({
+          title: locale === 'en' ? 'Subscribed' : '订阅成功',
+          description: subscribeDetails ? subscribeDetails : locale === 'en' ? 'Subscription enabled' : '已开启微信通知订阅',
+        })
+      } catch {
+        toast({ title: locale === 'en' ? 'Subscribed' : '订阅成功' })
+      }
+    }
+
+    const onError = (e: any) => {
+      const detail = e?.detail || {}
+      const code = detail.errCode ? String(detail.errCode) : ''
+      const msg = detail.errMsg ? String(detail.errMsg) : 'subscribe error'
+      toast({
+        title: locale === 'en' ? 'Failed' : '订阅失败',
+        description: `${code ? `${code} ` : ''}${msg}`.trim(),
+        variant: 'destructive',
+      })
+    }
+
+    el.addEventListener('success', onSuccess as any)
+    el.addEventListener('error', onError as any)
+    return () => {
+      el.removeEventListener('success', onSuccess as any)
+      el.removeEventListener('error', onError as any)
+    }
+  }, [locale, toast])
 
   useEffect(() => {
     resetLoading()
@@ -677,62 +814,74 @@ function MobileChatPage() {
             {locale === 'en' ? 'My Messages' : '我的消息'}
           </h1>
           {isWeChatEnv && (
-            <button
-              type="button"
-              disabled={subscribeLoading}
-              onClick={async () => {
-                if (typeof window === 'undefined') return
-                if (subscribeLoading) return
-                setSubscribeLoading(true)
-                try {
-                  const origin = window.location.origin
-                  const redirect = `${origin}/${locale}/m/chat${isParkContext ? '?from=parks' : isPolicyContext ? '?from=policy' : ''}`
-                  const resp = await wechatAuthApi.getSubscribeUrl(redirect)
-                  if (!resp.success || !resp.data?.url) {
-                    throw new Error(resp.error || '获取订阅通知链接失败')
-                  }
+            <div className="flex items-center gap-2">
+              {/* 优先使用开放标签：wx-open-subscribe */}
+              {subscribeTemplateId ? (
+                <div className="flex items-center">
+                  {(() => {
+                    const buttonText = openTagReady
+                      ? (locale === 'en' ? 'Enable WeChat Notice' : '开启微信通知')
+                      : (locale === 'en' ? 'Loading…' : '加载中…')
+                    const templateHtml = `<button class="wx-subscribe-btn">${buttonText}</button>`
+                    const styleHtml =
+                      `.wx-subscribe-btn{height:32px;padding:0 12px;border-radius:9999px;background:#fff;border:1px solid #e5e7eb;font-size:12px;color:#374151;}` +
+                      `.wx-subscribe-btn:disabled{opacity:.6;}`
 
-                  // 优先使用 JS-SDK 订阅接口（更稳定）
-                  const wx = (window as any).wx
-                  if (!wx) {
-                    toast({
-                      title: locale === 'en' ? 'Please retry' : '请稍后重试',
-                      description: locale === 'en' ? 'WeChat JS-SDK is loading' : '微信能力加载中，请稍后再试',
-                    })
-                    return
-                  }
+                    return (
+                      <>
+                        {!openTagReady ? (
+                          <button
+                            type="button"
+                            className="h-8 px-3 rounded-full bg-white border border-gray-200 text-[12px] text-gray-700 disabled:opacity-60"
+                            disabled={subscribeLoading}
+                          >
+                            {buttonText}
+                          </button>
+                        ) : (
+                          React.createElement(
+                            'wx-open-subscribe' as any,
+                            {
+                              template: subscribeTemplateId,
+                              id: 'wx-open-subscribe',
+                              ref: (node: any) => {
+                                openSubscribeTagRef.current = node
+                              },
+                            },
+                            React.createElement('script', {
+                              type: 'text/wxtag-template',
+                              dangerouslySetInnerHTML: { __html: templateHtml },
+                            }),
+                            React.createElement('script', {
+                              type: 'text/wxtag-template',
+                              slot: 'style',
+                              dangerouslySetInnerHTML: { __html: styleHtml },
+                            }),
+                          )
+                        )}
+                      </>
+                    )
+                  })()}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="h-8 px-3 rounded-full bg-white border border-gray-200 text-[12px] text-gray-700 opacity-60"
+                >
+                  {locale === 'en' ? 'Enable WeChat Notice' : '开启微信通知'}
+                </button>
+              )}
 
-                  const templateId = (resp.data as any).templateId as string | undefined
-                  const usedJsSdk = await openWeChatSubscribe(templateId).catch((err) => {
-                    toast({
-                      title: locale === 'en' ? 'Failed' : '操作失败',
-                      description: formatWeChatSubscribeError(err),
-                      variant: 'destructive',
-                    })
-                    return false
-                  })
-
-                  if (!usedJsSdk) {
-                    toast({
-                      title: locale === 'en' ? 'Failed' : '订阅失败',
-                      description: locale === 'en' ? 'Unable to open subscribe dialog' : '无法打开订阅授权弹窗，请稍后再试',
-                      variant: 'destructive',
-                    })
-                  }
-                } catch (e) {
-                  toast({
-                    title: locale === 'en' ? 'Failed' : '操作失败',
-                    description: formatWeChatSubscribeError(e) || (locale === 'en' ? 'Failed to subscribe' : '订阅失败，请稍后再试'),
-                    variant: 'destructive',
-                  })
-                } finally {
-                  setSubscribeLoading(false)
-                }
-              }}
-              className="h-8 px-3 rounded-full bg-white border border-gray-200 text-[12px] text-gray-700 disabled:opacity-60"
-            >
-              {subscribeLoading ? (locale === 'en' ? 'Opening…' : '打开中…') : (locale === 'en' ? 'Enable WeChat Notice' : '开启微信通知')}
-            </button>
+              {/* 兜底：直接跳公众号订阅确认页 */}
+              {subscribeConfirmUrl && (
+                <Link
+                  href={subscribeConfirmUrl}
+                  className="text-[12px] text-gray-500 underline underline-offset-4"
+                >
+                  {locale === 'en' ? 'Subscribe page' : '订阅页'}
+                </Link>
+              )}
+            </div>
           )}
         </div>
         {/* Category filter chips */}
