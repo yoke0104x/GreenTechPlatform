@@ -172,7 +172,8 @@ async function sendReviewNotification({
             }
           }
 
-          if (!wechatSent) {
+          // 客服消息同样需要 access_token；Vercel 环境可能被 IP 白名单拦截。此处保持不阻塞主流程。
+          if (!wechatSent && false) {
             const wechatText = `绿色技术平台\n\n${messageData.title}\n\n${messageContent}\n\n请在【消息中心】查看详情。`
             await sendWeChatServiceTextMessage({ openId, content: wechatText })
           }

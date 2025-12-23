@@ -1,4 +1,5 @@
 import { sanitizeHeaderValue } from '@/lib/header-utils'
+import { getWeChatGatewayConfig, sendSubscribeMessageViaGateway } from '@/lib/wechat/gateway-client'
 
 interface TokenCache {
   token: string
@@ -69,7 +70,8 @@ function getSubscribeConfig() {
 
 export function isWeChatSubscribeConfigured() {
   const { templateId, titleKey, contentKey } = getSubscribeConfig()
-  return Boolean(templateId && titleKey && contentKey)
+  const gw = getWeChatGatewayConfig()
+  return Boolean(templateId && titleKey && contentKey && gw?.baseUrl && gw?.secret)
 }
 
 export async function sendWeChatServiceSubscribeMessage(opts: SendServiceSubscribeMessageOptions) {
@@ -81,9 +83,6 @@ export async function sendWeChatServiceSubscribeMessage(opts: SendServiceSubscri
   if (!templateId || !titleKey || !contentKey) {
     throw new Error('WECHAT_SUBSCRIBE_TEMPLATE_ID / WECHAT_SUBSCRIBE_TITLE_KEY / WECHAT_SUBSCRIBE_CONTENT_KEY 未完整配置')
   }
-
-  const token = await getAccessToken()
-  const url = `https://api.weixin.qq.com/cgi-bin/message/subscribe/bizsend?access_token=${encodeURIComponent(token)}`
 
   const data: Record<string, { value: string }> = {
     [titleKey]: { value: opts.title },
@@ -97,27 +96,14 @@ export async function sendWeChatServiceSubscribeMessage(opts: SendServiceSubscri
     data[timeKey] = { value: new Date().toLocaleString('zh-CN', { hour12: false }) }
   }
 
-  const body: Record<string, unknown> = {
-    touser: opts.openId,
-    template_id: templateId,
+  // Vercel 出口 IP 不固定时会被公众号 IP 白名单拦截，订阅通知需通过固定出口的网关服务发送（微信云托管/自建固定IP）
+  return await sendSubscribeMessageViaGateway({
+    openId: opts.openId,
+    templateId,
     data,
-  }
-  if (opts.url) body.url = opts.url
-  if (typeof opts.scene === 'number') body.scene = opts.scene
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
+    url: opts.url,
+    scene: opts.scene,
   })
-  const out = await res.json() as { errcode?: number; errmsg?: string }
-  if (!res.ok || (out.errcode && out.errcode !== 0)) {
-    const err = `发送微信订阅通知失败: ${out.errcode ?? res.status} ${out.errmsg ?? ''}`
-    throw new Error(err.trim())
-  }
-  return true
 }
 
 export async function sendWeChatServiceTextMessage({ openId, content }: SendServiceMessageOptions) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { sanitizeHeaderValue } from '@/lib/header-utils'
+import { getJsSdkConfigViaGateway, getWeChatGatewayConfig } from '@/lib/wechat/gateway-client'
 
 export const dynamic = 'force-dynamic'
 
@@ -87,6 +88,12 @@ export async function GET(request: NextRequest) {
     // JS-SDK签名 URL 必须是去掉 hash 的完整 URL
     const url = rawUrl.split('#')[0]
 
+    // 优先通过微信云托管/固定IP网关生成签名，避免 Vercel 出口 IP 白名单问题
+    if (getWeChatGatewayConfig()) {
+      const data = await getJsSdkConfigViaGateway({ url })
+      return NextResponse.json({ success: true, data }, { headers: { 'Cache-Control': 'no-store' } })
+    }
+
     const ticket = await getJsApiTicket()
     const noncestr = nonceStr()
     const timestamp = Math.floor(Date.now() / 1000)
@@ -109,4 +116,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-

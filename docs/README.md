@@ -606,6 +606,56 @@ node scripts/mcp/run-mcp-tool.js \
 4. 推送到分支 (`git push origin feature/amazing-feature`)
 5. 创建 Pull Request
 
+## TODO：站内信同步公众号通知
+
+目标：将三端（绿色技术平台 / 园区平台 / 政策平台）的用户站内消息（`internal_messages`）同步推送到微信服务号通知，点击后跳转到 H5 消息中心 `/${locale}/m/chat`。
+
+### 已完成进展（代码已接入，待验证上线条件）
+
+- H5「开启微信通知」入口：`src/app/[locale]/m/chat/page.tsx`（微信环境下显示按钮）
+- 订阅授权（JS-SDK）：`wx.openSubscribeMessage` + 服务端签名 `src/app/api/wechat/js-sdk-config/route.ts`
+- 订阅确认页 URL 生成（备用）：`src/app/api/wechat/subscribe-url/route.ts`
+- 发送链路：站内信写入后尝试“订阅通知发送”，失败时降级“客服消息”（48h 窗口）：
+  - `src/app/api/messages/internal/route.ts`
+  - 发送实现：`src/lib/wechat/service-account.ts`
+
+### 当前问题（阻塞）
+
+- 微信接口返回 `40164 invalid ip ... not in whitelist`，导致无法获取 `access_token` / `jsapi_ticket`，从而：
+  - JS-SDK 签名失败（无法弹出订阅授权）
+  - 订阅通知发送失败
+- 原因：公众号启用了「接口调用 IP 白名单」，但 Vercel Serverless 出口 IP 不固定，无法稳定加入白名单。
+
+### 解决方案（后续实现路径）
+
+- 快速验证：公众号后台清空/关闭「IP 白名单」限制（风险：降低接口调用限制）。
+- 长期方案（推荐）：
+  - 将微信相关接口调用（取 `access_token`、取 `jsapi_ticket`、发订阅通知）迁移到具备固定出口 IP 的后端服务（自建服务器/固定 NAT）或微信云托管。
+  - 由 Next.js 仅转发请求到该固定服务，保持公众号 IP 白名单可用。
+  - token/ticket 做缓存（可用 Upstash Redis），并实现失败重试与幂等记录。
+
+### 微信云托管网关（当前采用的集成方式）
+
+为了确保不影响现有业务：Next.js 侧仅在配置了网关环境变量时才尝试推送，失败不阻塞站内信写入。
+
+- Next.js 侧需要配置：
+  - `WECHAT_GATEWAY_URL`：微信云托管服务的公网地址（不带末尾 `/`）
+  - `WECHAT_GATEWAY_SECRET`：Vercel → 云托管的请求签名密钥（用于 HMAC 校验）
+  - 以及模板字段映射：
+    - `WECHAT_SUBSCRIBE_TEMPLATE_ID`
+    - `WECHAT_SUBSCRIBE_TITLE_KEY`（例如 `thing1`）
+    - `WECHAT_SUBSCRIBE_CONTENT_KEY`（例如 `thing4`）
+    - `WECHAT_SUBSCRIBE_TIME_KEY`（例如 `time2`，可选）
+- 网关需要实现接口：
+  - `POST /wechat/subscribe-send`
+    - 入参：`{ openId, templateId, data, url?, scene? }`
+    - 校验 Header：`x-wechat-gateway-ts` + `x-wechat-gateway-signature`
+    - `signature = HMAC_SHA256(secret, ts + "." + rawBodyJson)`（hex）
+  - `POST /wechat/js-sdk-config`
+    - 入参：`{ url }`（完整页面URL，需去掉 `#` 后的 hash）
+    - 出参：`{ appId, timestamp, nonceStr, signature }`
+    - 校验 Header：同上（签名同样基于 rawBodyJson）
+
 ## 许可证
 
 本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。

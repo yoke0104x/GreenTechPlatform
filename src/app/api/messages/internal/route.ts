@@ -310,7 +310,8 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          if (!wechatSent) {
+          // 未配置网关/订阅失败时：不阻塞站内信写入；客服消息同样需要 access_token，Vercel 环境可能被 IP 白名单拦截
+          if (!wechatSent && false) {
             const text = `${platform}\n\n${title}\n\n${content}\n\n请前往【消息中心】查看详情。`
             await sendWeChatServiceTextMessage({ openId, content: text })
             wechatSent = true
