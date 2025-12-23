@@ -47,37 +47,24 @@ export function Header() {
     <header className="bg-white shadow-sm border-b border-gray-100">
       <div className="flex justify-between items-center h-16 px-6">
           {/* Logo和标题 */}
-          <div className="flex items-center space-x-3">
-            {/* Logo */}
-            <div className="relative">
+          <div className="flex items-center gap-2 min-w-0">
+            <Link
+              href={`/${locale}`}
+              className="relative w-56 h-14"
+              aria-label={locale === 'en' ? t('platformNameEn') : t('platformName')}
+            >
               <Image
-                src="/images/logo/绿盟logo.png"
-                alt="绿色技术平台Logo"
-                width={40}
-                height={40}
-                className="rounded-full object-cover"
+                src="/images/logo/图片1.png"
+                alt="绿盟logo"
+                fill
+                className="object-contain"
+                sizes="224px"
                 priority
-                onError={(e) => {
-                  // 如果图片加载失败，显示默认的绿色圆形Logo
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  target.nextElementSibling?.classList.remove('hidden');
-                }}
               />
-              {/* 备用绿色圆形Logo */}
-              <div className="hidden w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg">U</span>
-              </div>
-            </div>
-            
-            <div>
-              <h1 className={`font-bold text-gray-900 ${locale === 'en' ? 'text-lg' : 'text-xl'}`}>
-                {locale === 'en' ? 'National Economic Development Zone Green Low-Carbon Technology Promotion Platform' : '国家级经济技术开发区绿色技术产品推广平台'}
-              </h1>
-              <p className="text-xs text-gray-500">
-                National Economic Development Zone Green Low-Carbon Technology Promotion Platform
-              </p>
-            </div>
+            </Link>
+            <h1 className="sr-only">
+              {locale === 'en' ? t('platformNameEn') : t('platformName')}
+            </h1>
           </div>
 
           {/* 导航菜单 */}

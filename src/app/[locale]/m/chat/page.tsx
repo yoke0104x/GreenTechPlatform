@@ -84,6 +84,17 @@ function MobileChatPage() {
     return /MicroMessenger/i.test(navigator.userAgent || '')
   }, [])
 
+  const formatWeChatSubscribeError = (err: unknown) => {
+    const msg = err instanceof Error ? err.message : String(err)
+    const lower = msg.toLowerCase()
+    if (lower.includes('self-signed certificate') || lower.includes('self signed certificate')) {
+      return locale === 'en'
+        ? 'WeChat gateway TLS verification failed (self-signed certificate). Please fix the gateway image CA/SSL settings and redeploy.'
+        : '微信云托管网关 TLS 校验失败（self-signed certificate）。请在云托管镜像安装 CA 证书/修复 SSL 环境后重新部署。'
+    }
+    return msg
+  }
+
   const openWeChatSubscribe = async (templateId?: string) => {
     if (typeof window === 'undefined') return false
     const wx = (window as any).wx
@@ -650,7 +661,7 @@ function MobileChatPage() {
                   const usedJsSdk = await openWeChatSubscribe(templateId).catch((err) => {
                     toast({
                       title: locale === 'en' ? 'Failed' : '操作失败',
-                      description: err instanceof Error ? err.message : String(err),
+                      description: formatWeChatSubscribeError(err),
                       variant: 'destructive',
                     })
                     return false
@@ -666,7 +677,7 @@ function MobileChatPage() {
                 } catch (e) {
                   toast({
                     title: locale === 'en' ? 'Failed' : '操作失败',
-                    description: e instanceof Error ? e.message : locale === 'en' ? 'Failed to subscribe' : '订阅失败，请稍后再试',
+                    description: formatWeChatSubscribeError(e) || (locale === 'en' ? 'Failed to subscribe' : '订阅失败，请稍后再试'),
                     variant: 'destructive',
                   })
                 } finally {

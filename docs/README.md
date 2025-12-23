@@ -616,24 +616,27 @@ node scripts/mcp/run-mcp-tool.js \
 - H5「开启微信通知」入口：`src/app/[locale]/m/chat/page.tsx`（微信环境下显示按钮）
 - 订阅授权（JS-SDK）：`wx.openSubscribeMessage` + 服务端签名 `src/app/api/wechat/js-sdk-config/route.ts`
 - 订阅确认页 URL 生成（备用）：`src/app/api/wechat/subscribe-url/route.ts`
-- 发送链路：站内信写入后尝试“订阅通知发送”，失败时降级“客服消息”（48h 窗口）：
+- 发送链路：站内信写入后尝试“订阅通知发送”，失败不阻塞站内信写入（暂不启用“客服消息”降级，避免 access_token/IP 白名单带来的不确定性）：
   - `src/app/api/messages/internal/route.ts`
   - 发送实现：`src/lib/wechat/service-account.ts`
 
 ### 当前问题（阻塞）
 
-- 微信接口返回 `40164 invalid ip ... not in whitelist`，导致无法获取 `access_token` / `jsapi_ticket`，从而：
-  - JS-SDK 签名失败（无法弹出订阅授权）
-  - 订阅通知发送失败
-- 原因：公众号启用了「接口调用 IP 白名单」，但 Vercel Serverless 出口 IP 不固定，无法稳定加入白名单。
+- 当前 `WECHAT_GATEWAY_URL` 指向微信云托管后，Vercel 侧已不再直接调用微信接口；但网关侧调用微信 OpenAPI 时仍报错：`self-signed certificate`，导致：
+  - `POST /wechat/js-sdk-config` 无法生成签名（H5 无法弹出订阅授权）
+  - `POST /wechat/subscribe-send` 无法发送订阅通知
+- 典型原因：网关容器镜像缺少系统 CA 证书/SSL 环境异常（或配置了代理导致 TLS 被自签名证书拦截）。
 
 ### 解决方案（后续实现路径）
 
-- 快速验证：公众号后台清空/关闭「IP 白名单」限制（风险：降低接口调用限制）。
-- 长期方案（推荐）：
-  - 将微信相关接口调用（取 `access_token`、取 `jsapi_ticket`、发订阅通知）迁移到具备固定出口 IP 的后端服务（自建服务器/固定 NAT）或微信云托管。
-  - 由 Next.js 仅转发请求到该固定服务，保持公众号 IP 白名单可用。
-  - token/ticket 做缓存（可用 Upstash Redis），并实现失败重试与幂等记录。
+- 先修复网关 TLS 环境（推荐）：
+  - 若网关 Docker 基于 `node:alpine`：安装 CA 证书 `apk add --no-cache ca-certificates && update-ca-certificates`
+  - 更简单：直接改为 `FROM node:20-slim`（通常可避免 CA/SSL 相关坑）
+  - 重新部署后，验证 `POST /wechat/js-sdk-config` 返回 `success:true`
+- 若修复 TLS 后仍出现 `40164 invalid ip ... not in whitelist`：
+  - 方案 A：公众号后台关闭「接口调用 IP 白名单」（不推荐，安全性下降）
+  - 方案 B：将网关部署到具备固定出口 IP 的环境并加入白名单（自建服务器/固定 NAT）
+  - 方案 C：使用微信云托管提供的“免鉴权调用公众号接口”能力（按微信云托管文档接入，避免白名单约束）
 
 ### 微信云托管网关（当前采用的集成方式）
 
