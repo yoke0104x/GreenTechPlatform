@@ -49,11 +49,17 @@ export async function sendSubscribeMessageViaGateway(payload: GatewaySubscribeSe
       },
       body,
       cache: 'no-store',
+      redirect: 'manual',
       signal: AbortSignal.timeout(10_000),
     })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     throw new Error(`无法连接微信网关: ${endpoint} (${msg})`)
+  }
+
+  if (res.status >= 300 && res.status < 400) {
+    const loc = res.headers.get('location') || ''
+    throw new Error(`微信网关重定向(${res.status})到: ${loc || '(unknown)'}；请使用可用的 HTTPS 网关域名或修复自定义域名证书`)
   }
 
   const out = (await res.json().catch(() => null)) as { success?: boolean; error?: string } | null
@@ -96,11 +102,17 @@ export async function getJsSdkConfigViaGateway(payload: GatewayJsSdkConfigPayloa
       },
       body,
       cache: 'no-store',
+      redirect: 'manual',
       signal: AbortSignal.timeout(10_000),
     })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     throw new Error(`无法连接微信网关: ${endpoint} (${msg})`)
+  }
+
+  if (res.status >= 300 && res.status < 400) {
+    const loc = res.headers.get('location') || ''
+    throw new Error(`微信网关重定向(${res.status})到: ${loc || '(unknown)'}；请使用可用的 HTTPS 网关域名或修复自定义域名证书`)
   }
 
   const out = (await res.json().catch(() => null)) as
