@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js'
 import {
   isWeChatSubscribeConfigured,
   sendWeChatServiceSubscribeMessage,
-  sendWeChatServiceTextMessage,
 } from '@/lib/wechat/service-account'
 
 function getRequestOrigin(request: NextRequest) {
@@ -172,11 +171,7 @@ async function sendReviewNotification({
             }
           }
 
-          // 客服消息同样需要 access_token；Vercel 环境可能被 IP 白名单拦截。此处保持不阻塞主流程。
-          if (!wechatSent && false) {
-            const wechatText = `绿色技术平台\n\n${messageData.title}\n\n${messageContent}\n\n请在【消息中心】查看详情。`
-            await sendWeChatServiceTextMessage({ openId, content: wechatText })
-          }
+          // 订阅通知失败时不阻塞主流程（客服消息同样需要 access_token，且 Vercel 环境可能被 IP 白名单拦截）
           console.log('🔔 微信服务号消息发送成功')
         } else {
           console.log('🔔 用户缺少微信 openid，跳过服务号推送')
