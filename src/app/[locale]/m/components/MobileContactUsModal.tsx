@@ -166,7 +166,7 @@ export function MobileContactUsModal({
       errorMessage: '提交失败，请稍后重试',
       subscribeTitle: '开启微信通知',
       subscribeDesc: '为了将管理员回复推送到你的微信，请在微信弹窗中确认订阅通知。',
-      skip: '暂不设置',
+      skip: '取消',
       done: '完成',
     },
     en: {
@@ -203,7 +203,7 @@ export function MobileContactUsModal({
       errorMessage: 'Submission failed, please try again later',
       subscribeTitle: 'Enable WeChat Notice',
       subscribeDesc: 'To receive admin replies on WeChat, please confirm the subscription in the WeChat popup.',
-      skip: 'Skip',
+      skip: 'Cancel',
       done: 'Done',
     },
   }
@@ -600,7 +600,12 @@ export function MobileContactUsModal({
             <div className="text-[14px] font-medium text-gray-900">{t.subscribeTitle}</div>
             <div className="mt-1 text-[12px] text-gray-600">{t.subscribeDesc}</div>
 
-            <div className="mt-3">
+            {prepareError && <div className="mt-2 text-[12px] text-red-600 break-all">{prepareError}</div>}
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Button type="button" variant="outline" className="w-full" onClick={() => setShowSubscribe(false)}>
+                {t.skip}
+              </Button>
               {subscribeTemplateId && openTagReady ? (
                 React.createElement(
                   'wx-open-subscribe' as any,
@@ -616,28 +621,30 @@ export function MobileContactUsModal({
                     type: 'text/wxtag-template',
                     slot: 'style',
                     dangerouslySetInnerHTML: {
-                      __html: `<style>.subscribe-btn{color:#fff;background-color:#07c160;border:none;border-radius:8px;height:44px;width:100%;font-size:14px;}</style>`,
+                      __html:
+                        `<style>` +
+                        `.subscribe-btn{color:#fff;background-color:#07c160;border:none;border-radius:12px;height:44px;width:100%;font-size:14px;}` +
+                        `.subscribe-btn:active{opacity:.9;}` +
+                        `</style>`,
                     },
                   }),
                   React.createElement('script', {
                     type: 'text/wxtag-template',
                     dangerouslySetInnerHTML: {
-                      __html: `<button class="subscribe-btn">${locale === 'en' ? 'Subscribe' : '一次性模版消息订阅'}</button>`,
+                      __html: `<button class="subscribe-btn">${locale === 'en' ? 'Agree' : '同意订阅'}</button>`,
                     },
                   }),
                 )
               ) : (
-                <Button type="button" className="w-full" disabled={!prepareError} onClick={() => setPrepareNonce((v) => v + 1)}>
+                <Button
+                  type="button"
+                  className="w-full bg-[#07c160] hover:bg-[#06ad57] text-white"
+                  disabled={!prepareError}
+                  onClick={() => setPrepareNonce((v) => v + 1)}
+                >
                   {prepareError ? (locale === 'en' ? 'Retry' : '重试') : locale === 'en' ? 'Preparing…' : '准备中…'}
                 </Button>
               )}
-            </div>
-
-            {prepareError && <div className="mt-2 text-[12px] text-red-600 break-all">{prepareError}</div>}
-            <div className="mt-3">
-              <Button type="button" variant="outline" className="w-full" onClick={() => setShowSubscribe(false)}>
-                {t.skip}
-              </Button>
             </div>
           </div>
         </div>
