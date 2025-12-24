@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { getTechnologyById } from '@/api/tech'
 import { addFavorite, getFavoriteStatus, removeFavorite } from '@/api/favorites'
 import { Share2, Heart, Phone, ArrowLeft } from 'lucide-react'
-import { ContactUsModal } from '@/components/contact/contact-us-modal'
+import { MobileContactUsModal } from '@/app/[locale]/m/components/MobileContactUsModal'
 import { useAuthContext } from '@/components/auth/auth-provider'
 // Wrap useSearchParams usage in Suspense at page level
 export default function MobileTechDetailPageWrapper({
@@ -360,7 +360,15 @@ function MobileTechDetailPage({ id }: { id: string }) {
       </div>
 
       {/* Contact modal */}
-      <ContactUsModal isOpen={contactOpen} onClose={()=>setContactOpen(false)} technologyId={data.id} technologyName={title} companyName={data.companyName} locale={locale as any} />
+      <MobileContactUsModal
+        isOpen={contactOpen}
+        onClose={() => setContactOpen(false)}
+        technologyId={data.id}
+        technologyName={title}
+        companyName={data.companyName}
+        locale={locale}
+        source="tech"
+      />
     </div>
   )
 }

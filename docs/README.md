@@ -41,6 +41,8 @@
 │   │   ├── [locale]/m/         # 移动端(H5)路由（与Web并存）
 │   │   │   ├── (auth)/login/page.tsx   # 移动端登录
 │   │   │   ├── (auth)/wechat/callback/page.tsx # 移动端微信登录回调页
+│   │   │   ├── components/             # 移动端(H5)复用组件
+│   │   │   │   └── MobileContactUsModal.tsx # H5「联系咨询」弹窗（含“允许回复推送到微信”勾选 + 提交后弹出订阅授权）
 │   │   │   ├── layout.tsx              # 移动端共享布局（底部Tab：技术/政策/园区共用，园区入口下“消息”指向园区对接消息中心）
 │   │   │   ├── page.tsx                # 重定向到 /home
 │   │   │   ├── home/page.tsx           # 移动端首页（绿色技术平台）
@@ -613,7 +615,7 @@ node scripts/mcp/run-mcp-tool.js \
 
 ### 已完成进展（代码已接入，待验证上线条件）
 
-- H5「开启微信通知」入口：`src/app/[locale]/m/chat/page.tsx`（微信环境下显示按钮）
+- H5「开启微信通知」入口：详情页「联系咨询」弹窗中“允许回复消息发送到我的微信”（默认勾选），提交留言成功后弹出订阅授权：`src/app/[locale]/m/components/MobileContactUsModal.tsx`
 - 订阅授权（H5开放标签优先）：`wx-open-subscribe`（需要 `openTagList: ['wx-open-subscribe']`）+ 服务端签名 `src/app/api/wechat/js-sdk-config/route.ts`
 - 订阅确认页 URL 生成（备用）：`src/app/api/wechat/subscribe-url/route.ts`
 - 发送链路：站内信写入后尝试“订阅通知发送”，失败不阻塞站内信写入（暂不启用“客服消息”降级，避免 access_token/IP 白名单带来的不确定性）：

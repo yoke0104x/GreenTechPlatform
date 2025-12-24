@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { useTranslations } from 'next-intl'
 import { Search, SlidersHorizontal, Clock, ArrowDownAZ, ArrowUpAZ, ArrowUpDown, Leaf, Zap, Factory, Car, Menu } from 'lucide-react'
 import Link from 'next/link'
-import { ContactUsModal } from '@/components/contact/contact-us-modal'
+import { MobileContactUsModal } from '@/app/[locale]/m/components/MobileContactUsModal'
 import { LanguageSwitcher } from '@/components/common/language-switcher'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { useLoadingOverlay } from '@/components/common/loading-overlay'
@@ -756,7 +756,15 @@ export default function MobileHomePage() {
       )}
 
       {/* Contact modal */}
-      <ContactUsModal isOpen={contactOpen} onClose={()=>setContactOpen(false)} technologyId={contactTech?.id||''} technologyName={contactTech?.name||''} companyName={contactTech?.company||''} locale={modalLocale} />
+      <MobileContactUsModal
+        isOpen={contactOpen}
+        onClose={() => setContactOpen(false)}
+        technologyId={contactTech?.id}
+        technologyName={contactTech?.name}
+        companyName={contactTech?.company}
+        locale={modalLocale}
+        source="tech"
+      />
     </section>
   )
 

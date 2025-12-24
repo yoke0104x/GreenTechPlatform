@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { ArrowLeft, Heart, Loader2, Share2, Phone, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { useLoadingOverlay } from '@/components/common/loading-overlay'
-import { ContactUsModal } from '@/components/contact/contact-us-modal'
+import { MobileContactUsModal } from '@/app/[locale]/m/components/MobileContactUsModal'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import {
   getParkDetail,
@@ -927,7 +927,7 @@ export default function MobileParkDetailPage({
         </div>
       </div>
       {/* 联系我们弹窗：园区对接 */}
-      <ContactUsModal
+      <MobileContactUsModal
         isOpen={contactOpen}
         onClose={() => setContactOpen(false)}
         technologyId={park.id}

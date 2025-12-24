@@ -11,7 +11,7 @@ import {
   removePolicyFavorite,
   type PolicyDetail,
 } from '@/api/policy'
-import { ContactUsModal } from '@/components/contact/contact-us-modal'
+import { MobileContactUsModal } from '@/app/[locale]/m/components/MobileContactUsModal'
 import { useAuthContext } from '@/components/auth/auth-provider'
 
 export default function MobilePolicyDetailPage({
@@ -420,7 +420,7 @@ export default function MobilePolicyDetailPage({
         </div>
       </div>
       {/* 联系我们弹窗：政策咨询 */}
-      <ContactUsModal
+      <MobileContactUsModal
         isOpen={contactOpen}
         onClose={() => setContactOpen(false)}
         technologyId={policy.id}
