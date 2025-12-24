@@ -7,6 +7,8 @@ import { ArrowLeft, Heart, Loader2, Share2, Phone, ChevronRight, ChevronDown, Ch
 import { useLoadingOverlay } from '@/components/common/loading-overlay'
 import { MobileContactUsModal } from '@/app/[locale]/m/components/MobileContactUsModal'
 import { useAuthContext } from '@/components/auth/auth-provider'
+import { useToast } from '@/components/ui/use-toast'
+import { getWeChatShareHint, useWeChatShare } from '@/app/[locale]/m/hooks/useWeChatShare'
 import {
   getParkDetail,
   getParkPolicies,
@@ -19,6 +21,11 @@ import {
 
 type TabKey = 'basic' | 'stats' | 'policies' | 'companies' | 'news'
 
+function isWeChatEnv() {
+  if (typeof navigator === 'undefined') return false
+  return /MicroMessenger/i.test(navigator.userAgent || '')
+}
+
 export default function MobileParkDetailPage({
   params: { id },
 }: {
@@ -30,6 +37,7 @@ export default function MobileParkDetailPage({
   const isEn = locale === 'en'
   const { showLoading, hideLoading } = useLoadingOverlay()
   const { user } = useAuthContext()
+  const { toast } = useToast()
 
   const [park, setPark] = useState<ParkDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -88,6 +96,16 @@ export default function MobileParkDetailPage({
     }
   }, [id, hideLoading, showLoading])
 
+  useWeChatShare(
+    park
+      ? {
+          title: park.name,
+          desc: (isEn ? park.briefEn || park.briefZh : park.briefZh || park.briefEn) || park.name,
+          imgUrl: park.logoUrl || '/images/green-parks.jpg',
+        }
+      : null,
+  )
+
   useEffect(() => {
     if (!park?.economicStats?.length) return
     const years = [...new Set(park.economicStats.map((s) => s.year))].sort((a, b) => a - b)
@@ -122,6 +140,10 @@ export default function MobileParkDetailPage({
   }
 
   const handleShare = async () => {
+    if (isWeChatEnv()) {
+      toast({ title: getWeChatShareHint(isEn ? 'en' : 'zh') })
+      return
+    }
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({

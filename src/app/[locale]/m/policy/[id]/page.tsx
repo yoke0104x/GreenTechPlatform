@@ -13,6 +13,13 @@ import {
 } from '@/api/policy'
 import { MobileContactUsModal } from '@/app/[locale]/m/components/MobileContactUsModal'
 import { useAuthContext } from '@/components/auth/auth-provider'
+import { useToast } from '@/components/ui/use-toast'
+import { getWeChatShareHint, useWeChatShare } from '@/app/[locale]/m/hooks/useWeChatShare'
+
+function isWeChatEnv() {
+  if (typeof navigator === 'undefined') return false
+  return /MicroMessenger/i.test(navigator.userAgent || '')
+}
 
 export default function MobilePolicyDetailPage({
   params: { id },
@@ -25,6 +32,7 @@ export default function MobilePolicyDetailPage({
   const isEn = locale === 'en'
   const { showLoading, hideLoading } = useLoadingOverlay()
   const { user } = useAuthContext()
+  const { toast } = useToast()
 
   const [policy, setPolicy] = useState<PolicyDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -70,6 +78,16 @@ export default function MobilePolicyDetailPage({
     }
   }, [id, hideLoading, showLoading])
 
+  useWeChatShare(
+    policy
+      ? {
+          title: policy.name,
+          desc: policy.summary || policy.name,
+          imgUrl: '/images/climatepolicy.jpg',
+        }
+      : null,
+  )
+
   // 检查登录状态并提示（复用园区详情页逻辑）
   const checkAuthAndPrompt = () => {
     if (!user) {
@@ -109,6 +127,10 @@ export default function MobilePolicyDetailPage({
   }
 
   const handleShare = async () => {
+    if (isWeChatEnv()) {
+      toast({ title: getWeChatShareHint(locale as 'zh' | 'en') })
+      return
+    }
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({

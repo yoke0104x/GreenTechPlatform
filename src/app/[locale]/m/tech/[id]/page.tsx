@@ -8,6 +8,13 @@ import { addFavorite, getFavoriteStatus, removeFavorite } from '@/api/favorites'
 import { Share2, Heart, Phone, ArrowLeft } from 'lucide-react'
 import { MobileContactUsModal } from '@/app/[locale]/m/components/MobileContactUsModal'
 import { useAuthContext } from '@/components/auth/auth-provider'
+import { useToast } from '@/components/ui/use-toast'
+import { getWeChatShareHint, useWeChatShare } from '@/app/[locale]/m/hooks/useWeChatShare'
+
+function isWeChatEnv() {
+  if (typeof navigator === 'undefined') return false
+  return /MicroMessenger/i.test(navigator.userAgent || '')
+}
 // Wrap useSearchParams usage in Suspense at page level
 export default function MobileTechDetailPageWrapper({
   params: { id },
@@ -26,6 +33,7 @@ function MobileTechDetailPage({ id }: { id: string }) {
   const router = useRouter()
   const locale = pathname.startsWith('/en') ? 'en' : 'zh'
   const { user } = useAuthContext()
+  const { toast } = useToast()
   const basePath = locale === 'en' ? '/en' : '/zh'
   const [from, setFrom] = useState<string | null>(null)
 
@@ -86,6 +94,47 @@ function MobileTechDetailPage({ id }: { id: string }) {
     })()
     return () => { mounted = false }
   }, [id])
+
+  const shareTitle = (() => {
+    if (!data) return ''
+    return locale === 'en' ? (data.solutionTitleEn || data.solutionTitle) : data.solutionTitle
+  })()
+  const shareDesc = (() => {
+    if (!data) return ''
+    if (locale === 'en') return data.solutionDescriptionEn || data.fullDescriptionEn || shareTitle
+    return data.solutionDescription || data.fullDescription || shareTitle
+  })()
+  const shareImg = (data?.solutionImage as string | undefined) || '/images/portal-tech.jpg'
+
+  useWeChatShare(
+    data
+      ? {
+          title: shareTitle,
+          desc: shareDesc,
+          imgUrl: shareImg,
+        }
+      : null,
+  )
+
+  const handleShare = async () => {
+    if (isWeChatEnv()) {
+      toast({ title: getWeChatShareHint(locale as 'zh' | 'en') })
+      return
+    }
+    if (checkAuthAndPrompt()) {
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: shareTitle,
+            text: shareTitle,
+            url: typeof window !== 'undefined' ? window.location.href : '',
+          })
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }
 
   useEffect(() => {
     let active = true
@@ -329,15 +378,7 @@ function MobileTechDetailPage({ id }: { id: string }) {
                 </span>
               </button>
               <button
-                onClick={async()=>{
-                  if (checkAuthAndPrompt()) {
-                    if (navigator.share) {
-                      try {
-                        await navigator.share({ title, text: title, url: typeof window!=='undefined'?window.location.href:'' })
-                      } catch {}
-                    }
-                  }
-                }}
+                onClick={handleShare}
                 className="h-10 rounded-xl bg-white border border-gray-200 text-gray-800 text-[13px] inline-flex items-center justify-center gap-1.5 transition-none"
               >
                 <Share2 className="w-4 h-4" />

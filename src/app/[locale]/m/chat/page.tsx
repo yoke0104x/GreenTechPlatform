@@ -5,7 +5,6 @@ export const dynamic = 'force-dynamic'
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Bell, Mail } from 'lucide-react'
-import Script from 'next/script'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuthContext } from '@/components/auth/auth-provider'
@@ -36,7 +35,6 @@ interface MessageFilters {
 export default function MobileChatPageWrapper() {
   return (
     <Suspense fallback={<section className="min-h-dvh" />}>
-      <Script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js" strategy="afterInteractive" />
       <MobileChatPage />
     </Suspense>
   )

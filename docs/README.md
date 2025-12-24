@@ -43,6 +43,8 @@
 │   │   │   ├── (auth)/wechat/callback/page.tsx # 移动端微信登录回调页
 │   │   │   ├── components/             # 移动端(H5)复用组件
 │   │   │   │   └── MobileContactUsModal.tsx # H5「联系咨询」弹窗（含“允许回复推送到微信”勾选 + 提交后弹出订阅授权）
+│   │   │   ├── hooks/                  # 移动端(H5) Hooks
+│   │   │   │   └── useWeChatShare.ts   # 微信H5分享（JS-SDK签名+设置好友/群聊&朋友圈分享数据）
 │   │   │   ├── layout.tsx              # 移动端共享布局（底部Tab：技术/政策/园区共用，园区入口下“消息”指向园区对接消息中心）
 │   │   │   ├── page.tsx                # 重定向到 /home
 │   │   │   ├── home/page.tsx           # 移动端首页（绿色技术平台）

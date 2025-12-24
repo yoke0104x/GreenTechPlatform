@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import Script from 'next/script'
 import { flushSync } from 'react-dom'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -516,9 +515,6 @@ export function MobileContactUsModal({
 
   return (
     <>
-      {/* 确保微信 JS-SDK 可用（开放标签也依赖该脚本） */}
-      <Script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js" strategy="afterInteractive" />
-
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-[520px] h-[92vh] max-h-[92vh] overflow-hidden flex flex-col">
           <DialogHeader>
