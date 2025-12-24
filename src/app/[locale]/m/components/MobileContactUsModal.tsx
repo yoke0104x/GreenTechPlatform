@@ -129,6 +129,7 @@ export function MobileContactUsModal({
   const [prepareNonce, setPrepareNonce] = useState(0)
   const [showSubscribe, setShowSubscribe] = useState(false)
   const subscribeTagRef = useRef<HTMLElement | null>(null)
+  const autoClickRef = useRef(false)
 
   const translations = {
     zh: {
@@ -240,15 +241,14 @@ export function MobileContactUsModal({
     }))
   }, [user])
 
-  // 关闭弹窗时重置状态
+  // 关闭弹窗时重置状态（注意：提交后会关闭弹窗但需要继续展示订阅按钮，所以 showSubscribe 时不要清理）
   useEffect(() => {
-    if (isOpen) return
+    if (isOpen || showSubscribe) return
     setWeChatPrepared(false)
     setSubscribeTemplateId(null)
     setOpenTagReady(false)
     setPrepareError(null)
-    setShowSubscribe(false)
-  }, [isOpen])
+  }, [isOpen, showSubscribe])
 
   const handleInputChange = (field: keyof ContactFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -288,24 +288,28 @@ export function MobileContactUsModal({
 
   const shouldPromptSubscribe = useMemo(() => Boolean(isWeChatEnv() && allowWeChatReply), [allowWeChatReply])
 
-  const triggerWeChatSubscribePanel = () => {
-    if (!subscribeTemplateId || !subscribeTagRef.current) return false
-    try {
-      // 尝试在同一用户手势链路内触发（有的微信版本允许）
-      ;(subscribeTagRef.current as any).click?.()
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  // 绑定 wx-open-subscribe success/error 事件
   useEffect(() => {
-    const el = subscribeTagRef.current
+    if (!showSubscribe) return
+    if (typeof document === 'undefined') return
+
+    const el = document.getElementById('subscribe-btn') as any
     if (!el) return
 
-    const onSuccess = () => {
-      toast({ title: locale === 'en' ? 'Subscribed' : '订阅成功' })
+    subscribeTagRef.current = el
+
+    const onSuccess = (e: any) => {
+      const detail = e?.detail || {}
+      const decision = subscribeTemplateId ? detail?.[subscribeTemplateId] : undefined
+      if (decision === 'accept') {
+        toast({ title: locale === 'en' ? 'Subscribed' : '订阅成功' })
+      } else if (decision === 'reject') {
+        toast({
+          title: locale === 'en' ? 'Not enabled' : '未开启',
+          description: locale === 'en' ? 'You can enable it later.' : '你可以稍后再开启。',
+        })
+      } else {
+        toast({ title: locale === 'en' ? 'Done' : '已完成' })
+      }
       setShowSubscribe(false)
     }
     const onError = (e: any) => {
@@ -325,11 +329,11 @@ export function MobileContactUsModal({
       el.removeEventListener('success', onSuccess as any)
       el.removeEventListener('error', onError as any)
     }
-  }, [locale, toast, onClose])
+  }, [showSubscribe, subscribeTemplateId, locale, toast])
 
-  // 打开弹窗时预热：拿模板ID + wx.config（openTagList）
+  // 打开弹窗/展示订阅按钮时预热：拿模板ID + wx.config（openTagList）
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen && !showSubscribe) return
     if (!isWeChatEnv()) return
     if (typeof window === 'undefined') return
     if (!allowWeChatReply) return
@@ -386,7 +390,29 @@ export function MobileContactUsModal({
     return () => {
       cancelled = true
     }
-  }, [isOpen, allowWeChatReply, locale, toast, isParkContext, isPolicyContext, prepareNonce])
+  }, [isOpen, showSubscribe, allowWeChatReply, locale, toast, isParkContext, isPolicyContext, prepareNonce])
+
+  // 订阅按钮出现后：尝试自动触发一次（若被微信拦截，用户仍可手动点击按钮）
+  useEffect(() => {
+    if (!showSubscribe) {
+      autoClickRef.current = false
+      return
+    }
+    if (!openTagReady || !subscribeTemplateId) return
+    if (autoClickRef.current) return
+    if (typeof document === 'undefined') return
+
+    const el = document.getElementById('subscribe-btn') as any
+    if (!el?.click) return
+    autoClickRef.current = true
+    setTimeout(() => {
+      try {
+        el.click()
+      } catch {
+        // ignore
+      }
+    }, 0)
+  }, [showSubscribe, openTagReady, subscribeTemplateId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -397,16 +423,6 @@ export function MobileContactUsModal({
     if (!validateForm()) return
 
     setLoading(true)
-
-    // 按你的要求：点击提交后先关闭“联系我们”弹窗，再在底部触发微信原生授权面板
-    const willSubscribe = Boolean(shouldPromptSubscribe && wechatPrepared && subscribeTemplateId)
-    if (willSubscribe) {
-      onClose()
-      flushSync(() => setShowSubscribe(true))
-      // 尝试自动触发（若被微信拦截，页面上也会有官方示例按钮，用户可再点一次）
-      triggerWeChatSubscribePanel()
-    }
-
     try {
       await createContactMessage({
         technology_id: technologyId,
@@ -428,7 +444,11 @@ export function MobileContactUsModal({
         message: '',
       })
 
-      if (!willSubscribe) {
+      if (shouldPromptSubscribe) {
+        // 先显示订阅按钮再关闭弹窗，避免状态被关闭回调清空
+        flushSync(() => setShowSubscribe(true))
+        onClose()
+      } else {
         onClose()
       }
     } catch (error) {
@@ -447,6 +467,7 @@ export function MobileContactUsModal({
       message: '',
     })
     setShowSubscribe(false)
+    autoClickRef.current = false
     onClose()
   }
 
@@ -457,6 +478,7 @@ export function MobileContactUsModal({
       setOpenTagReady(false)
       setPrepareError(null)
       setShowSubscribe(false)
+      autoClickRef.current = false
       onClose()
     }
   }
