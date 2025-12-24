@@ -90,7 +90,8 @@ async function ensureWxOpenTagReady() {
         timestamp: cfg.timestamp,
         nonceStr: cfg.nonceStr,
         signature: cfg.signature,
-        jsApiList: ['checkJsApi', 'openSubscribeMessage'],
+        jsApiList: ['checkJsApi'],
+        openTagList: ['wx-open-subscribe'],
       })
       wx.ready(() => resolve())
       wx.error((err: any) => {
@@ -122,6 +123,11 @@ export function MobileContactUsModal({
   const [allowWeChatReply, setAllowWeChatReply] = useState(true)
   const [wechatPrepared, setWeChatPrepared] = useState(false)
   const [subscribeTemplateId, setSubscribeTemplateId] = useState<string | null>(null)
+  const [openTagReady, setOpenTagReady] = useState(false)
+  const [prepareError, setPrepareError] = useState<string | null>(null)
+  const [prepareNonce, setPrepareNonce] = useState(0)
+  const [showSubscribe, setShowSubscribe] = useState(false)
+  const subscribeTagRef = useRef<HTMLElement | null>(null)
 
   const translations = {
     zh: {
@@ -238,6 +244,9 @@ export function MobileContactUsModal({
     if (isOpen) return
     setWeChatPrepared(false)
     setSubscribeTemplateId(null)
+    setOpenTagReady(false)
+    setPrepareError(null)
+    setShowSubscribe(false)
   }, [isOpen])
 
   const handleInputChange = (field: keyof ContactFormData, value: string) => {
@@ -278,42 +287,36 @@ export function MobileContactUsModal({
 
   const shouldPromptSubscribe = useMemo(() => Boolean(isWeChatEnv() && allowWeChatReply), [allowWeChatReply])
 
-  const tryOpenWeChatSubscribePopup = () => {
-    if (typeof window === 'undefined') return
-    const wx = (window as any).wx
-    if (!wx) {
-      toast({ title: locale === 'en' ? 'Failed' : '操作失败', description: '微信能力加载中，请稍后再试', variant: 'destructive' })
-      return
-    }
-    if (!subscribeTemplateId) {
-      toast({ title: locale === 'en' ? 'Failed' : '操作失败', description: '订阅模板未准备好，请稍后再试', variant: 'destructive' })
-      return
-    }
-    try {
-      wx.openSubscribeMessage({
-        tmplIds: [subscribeTemplateId],
-        success: (res: any) => {
-          // res 形如：{ errMsg:"openSubscribeMessage:ok", [templateId]:"accept"|"reject" }
-          const decision = res?.[subscribeTemplateId]
-          if (decision === 'accept') {
-            toast({ title: locale === 'en' ? 'Subscribed' : '订阅成功' })
-          } else if (decision === 'reject') {
-            toast({ title: locale === 'en' ? 'Not enabled' : '未开启', description: locale === 'en' ? 'You can enable it later.' : '你可以稍后再开启。' })
-          } else {
-            toast({ title: locale === 'en' ? 'Done' : '已完成' })
-          }
-        },
-        fail: (err: any) => {
-          const msg = err?.errMsg || err?.message || 'openSubscribeMessage failed'
-          toast({ title: locale === 'en' ? 'Failed' : '操作失败', description: String(msg), variant: 'destructive' })
-        },
-      })
-    } catch (e) {
-      toast({ title: locale === 'en' ? 'Failed' : '操作失败', description: e instanceof Error ? e.message : String(e), variant: 'destructive' })
-    }
-  }
+  // 绑定 wx-open-subscribe success/error 事件
+  useEffect(() => {
+    const el = subscribeTagRef.current
+    if (!el) return
 
-  // 打开弹窗时预热：拿模板ID + wx.config（避免提交点击后再等待，导致无法弹出原生订阅面板）
+    const onSuccess = () => {
+      toast({ title: locale === 'en' ? 'Subscribed' : '订阅成功' })
+      setShowSubscribe(false)
+      onClose()
+    }
+    const onError = (e: any) => {
+      const detail = e?.detail || {}
+      const code = detail.errCode ? String(detail.errCode) : ''
+      const msg = detail.errMsg ? String(detail.errMsg) : 'subscribe error'
+      toast({
+        title: locale === 'en' ? 'Failed' : '订阅失败',
+        description: `${code ? `${code} ` : ''}${msg}`.trim(),
+        variant: 'destructive',
+      })
+    }
+
+    el.addEventListener('success', onSuccess as any)
+    el.addEventListener('error', onError as any)
+    return () => {
+      el.removeEventListener('success', onSuccess as any)
+      el.removeEventListener('error', onError as any)
+    }
+  }, [locale, toast, onClose])
+
+  // 打开弹窗时预热：拿模板ID + wx.config（openTagList）
   useEffect(() => {
     if (!isOpen) return
     if (!isWeChatEnv()) return
@@ -321,6 +324,8 @@ export function MobileContactUsModal({
     if (!allowWeChatReply) return
 
     let cancelled = false
+    setOpenTagReady(false)
+    setPrepareError(null)
     ;(async () => {
       try {
         const origin = window.location.origin
@@ -352,10 +357,13 @@ export function MobileContactUsModal({
 
         if (!cancelled) {
           setWeChatPrepared(true)
+          setOpenTagReady(true)
         }
       } catch (e) {
         if (cancelled) return
         setWeChatPrepared(false)
+        setOpenTagReady(false)
+        setPrepareError(e instanceof Error ? e.message : String(e))
         toast({
           title: locale === 'en' ? 'Failed' : '操作失败',
           description: e instanceof Error ? e.message : String(e),
@@ -367,7 +375,7 @@ export function MobileContactUsModal({
     return () => {
       cancelled = true
     }
-  }, [isOpen, allowWeChatReply, locale, toast, isParkContext, isPolicyContext])
+  }, [isOpen, allowWeChatReply, locale, toast, isParkContext, isPolicyContext, prepareNonce])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -378,26 +386,18 @@ export function MobileContactUsModal({
     if (!validateForm()) return
 
     setLoading(true)
-    const submitPromise = createContactMessage({
-      technology_id: technologyId,
-      technology_name: technologyName,
-      company_name: companyName,
-      contact_name: formData.contactName,
-      contact_phone: formData.contactPhone,
-      contact_email: formData.contactEmail,
-      message: formData.message,
-      category: category ?? '技术对接',
-      source,
-    })
-
-    // 关键：为了触发“微信自带的订阅授权面板”，需要在用户点击提交的交互链路里调用（避免异步 await 后再调用失去用户手势）
-    if (shouldPromptSubscribe && wechatPrepared) {
-      toast({ title: t.subscribeTitle, description: t.subscribeDesc })
-      tryOpenWeChatSubscribePopup()
-    }
-
     try {
-      await submitPromise
+      await createContactMessage({
+        technology_id: technologyId,
+        technology_name: technologyName,
+        company_name: companyName,
+        contact_name: formData.contactName,
+        contact_phone: formData.contactPhone,
+        contact_email: formData.contactEmail,
+        message: formData.message,
+        category: category ?? '技术对接',
+        source,
+      })
 
       toast({ title: t.submitSuccess, description: t.successMessage })
       setFormData({
@@ -407,7 +407,11 @@ export function MobileContactUsModal({
         message: '',
       })
 
-      onClose()
+      if (shouldPromptSubscribe) {
+        setShowSubscribe(true)
+      } else {
+        onClose()
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : t.errorMessage
       toast({ title: t.submitError, description: errorMessage, variant: 'destructive' })
@@ -423,6 +427,7 @@ export function MobileContactUsModal({
       contactEmail: user?.email || '',
       message: '',
     })
+    setShowSubscribe(false)
     onClose()
   }
 
@@ -430,6 +435,9 @@ export function MobileContactUsModal({
     if (!open) {
       setWeChatPrepared(false)
       setSubscribeTemplateId(null)
+      setOpenTagReady(false)
+      setPrepareError(null)
+      setShowSubscribe(false)
       onClose()
     }
   }
@@ -531,10 +539,53 @@ export function MobileContactUsModal({
               <Button type="button" variant="outline" onClick={handleCancel}>
                 {t.cancel}
               </Button>
-              <Button type="submit" disabled={loading} className="bg-[#00b899] hover:bg-[#00a77f]">
-                {loading ? t.submitting : t.submit}
-              </Button>
+              {showSubscribe && shouldPromptSubscribe ? (
+                subscribeTemplateId && openTagReady ? (
+                  // 官方文档写法：wx-open-subscribe + default/style 插槽模板
+                  React.createElement(
+                    'wx-open-subscribe' as any,
+                    {
+                      template: subscribeTemplateId,
+                      id: 'wx-open-subscribe-default',
+                      ref: (node: any) => {
+                        subscribeTagRef.current = node
+                      },
+                    },
+                    React.createElement('script', {
+                      type: 'text/wxtag-template',
+                      dangerouslySetInnerHTML: {
+                        __html: `<button class="wx-open-subscribe-btn">${locale === 'en' ? 'Subscribe' : '订阅通知'}</button>`,
+                      },
+                    }),
+                    React.createElement('script', {
+                      type: 'text/wxtag-template',
+                      slot: 'style',
+                      dangerouslySetInnerHTML: {
+                        __html:
+                          `.wx-open-subscribe-btn{width:100%;height:44px;border-radius:8px;background:#07c160;color:#fff;font-size:14px;border:none;}` +
+                          `.wx-open-subscribe-btn:active{opacity:.9;}`,
+                      },
+                    }),
+                  )
+                ) : (
+                  <Button
+                    type="button"
+                    disabled={!prepareError}
+                    className="bg-[#00b899] hover:bg-[#00a77f]"
+                    onClick={() => setPrepareNonce((v) => v + 1)}
+                  >
+                    {prepareError ? (locale === 'en' ? 'Retry' : '重试') : locale === 'en' ? 'Preparing…' : '准备中…'}
+                  </Button>
+                )
+              ) : (
+                <Button type="submit" disabled={loading} className="bg-[#00b899] hover:bg-[#00a77f]">
+                  {loading ? t.submitting : t.submit}
+                </Button>
+              )}
             </DialogFooter>
+            {showSubscribe && prepareError && (
+              <div className="text-[12px] text-red-600 break-all">{prepareError}</div>
+            )}
           </form>
         </DialogContent>
       </Dialog>
