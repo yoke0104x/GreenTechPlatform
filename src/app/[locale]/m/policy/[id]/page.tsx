@@ -13,8 +13,8 @@ import {
 } from '@/api/policy'
 import { MobileContactUsModal } from '@/app/[locale]/m/components/MobileContactUsModal'
 import { useAuthContext } from '@/components/auth/auth-provider'
-import { useToast } from '@/components/ui/use-toast'
-import { getWeChatShareHint, useWeChatShare } from '@/app/[locale]/m/hooks/useWeChatShare'
+import { useWeChatShare } from '@/app/[locale]/m/hooks/useWeChatShare'
+import { WeChatShareHintOverlay } from '@/app/[locale]/m/components/WeChatShareHintOverlay'
 
 function isWeChatEnv() {
   if (typeof navigator === 'undefined') return false
@@ -32,7 +32,7 @@ export default function MobilePolicyDetailPage({
   const isEn = locale === 'en'
   const { showLoading, hideLoading } = useLoadingOverlay()
   const { user } = useAuthContext()
-  const { toast } = useToast()
+  const [shareHintOpen, setShareHintOpen] = useState(false)
 
   const [policy, setPolicy] = useState<PolicyDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -128,7 +128,7 @@ export default function MobilePolicyDetailPage({
 
   const handleShare = async () => {
     if (isWeChatEnv()) {
-      toast({ title: getWeChatShareHint(locale as 'zh' | 'en') })
+      setShareHintOpen(true)
       return
     }
     if (typeof navigator !== 'undefined' && navigator.share) {
@@ -450,6 +450,12 @@ export default function MobilePolicyDetailPage({
         locale={locale}
         category="政策咨询"
         source="policy"
+      />
+
+      <WeChatShareHintOverlay
+        open={shareHintOpen}
+        onClose={() => setShareHintOpen(false)}
+        locale={locale as 'zh' | 'en'}
       />
     </div>
   )

@@ -8,8 +8,8 @@ import { addFavorite, getFavoriteStatus, removeFavorite } from '@/api/favorites'
 import { Share2, Heart, Phone, ArrowLeft } from 'lucide-react'
 import { MobileContactUsModal } from '@/app/[locale]/m/components/MobileContactUsModal'
 import { useAuthContext } from '@/components/auth/auth-provider'
-import { useToast } from '@/components/ui/use-toast'
-import { getWeChatShareHint, useWeChatShare } from '@/app/[locale]/m/hooks/useWeChatShare'
+import { useWeChatShare } from '@/app/[locale]/m/hooks/useWeChatShare'
+import { WeChatShareHintOverlay } from '@/app/[locale]/m/components/WeChatShareHintOverlay'
 
 function isWeChatEnv() {
   if (typeof navigator === 'undefined') return false
@@ -33,7 +33,7 @@ function MobileTechDetailPage({ id }: { id: string }) {
   const router = useRouter()
   const locale = pathname.startsWith('/en') ? 'en' : 'zh'
   const { user } = useAuthContext()
-  const { toast } = useToast()
+  const [shareHintOpen, setShareHintOpen] = useState(false)
   const basePath = locale === 'en' ? '/en' : '/zh'
   const [from, setFrom] = useState<string | null>(null)
 
@@ -118,7 +118,7 @@ function MobileTechDetailPage({ id }: { id: string }) {
 
   const handleShare = async () => {
     if (isWeChatEnv()) {
-      toast({ title: getWeChatShareHint(locale as 'zh' | 'en') })
+      setShareHintOpen(true)
       return
     }
     if (checkAuthAndPrompt()) {
@@ -409,6 +409,12 @@ function MobileTechDetailPage({ id }: { id: string }) {
         companyName={data.companyName}
         locale={locale}
         source="tech"
+      />
+
+      <WeChatShareHintOverlay
+        open={shareHintOpen}
+        onClose={() => setShareHintOpen(false)}
+        locale={locale as 'zh' | 'en'}
       />
     </div>
   )

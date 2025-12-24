@@ -7,8 +7,8 @@ import { ArrowLeft, Heart, Loader2, Share2, Phone, ChevronRight, ChevronDown, Ch
 import { useLoadingOverlay } from '@/components/common/loading-overlay'
 import { MobileContactUsModal } from '@/app/[locale]/m/components/MobileContactUsModal'
 import { useAuthContext } from '@/components/auth/auth-provider'
-import { useToast } from '@/components/ui/use-toast'
-import { getWeChatShareHint, useWeChatShare } from '@/app/[locale]/m/hooks/useWeChatShare'
+import { useWeChatShare } from '@/app/[locale]/m/hooks/useWeChatShare'
+import { WeChatShareHintOverlay } from '@/app/[locale]/m/components/WeChatShareHintOverlay'
 import {
   getParkDetail,
   getParkPolicies,
@@ -37,7 +37,7 @@ export default function MobileParkDetailPage({
   const isEn = locale === 'en'
   const { showLoading, hideLoading } = useLoadingOverlay()
   const { user } = useAuthContext()
-  const { toast } = useToast()
+  const [shareHintOpen, setShareHintOpen] = useState(false)
 
   const [park, setPark] = useState<ParkDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -141,7 +141,7 @@ export default function MobileParkDetailPage({
 
   const handleShare = async () => {
     if (isWeChatEnv()) {
-      toast({ title: getWeChatShareHint(isEn ? 'en' : 'zh') })
+      setShareHintOpen(true)
       return
     }
     if (typeof navigator !== 'undefined' && navigator.share) {
@@ -958,6 +958,12 @@ export default function MobileParkDetailPage({
         locale={locale}
         category="园区对接"
         source="park"
+      />
+
+      <WeChatShareHintOverlay
+        open={shareHintOpen}
+        onClose={() => setShareHintOpen(false)}
+        locale={isEn ? 'en' : 'zh'}
       />
     </div>
   )
