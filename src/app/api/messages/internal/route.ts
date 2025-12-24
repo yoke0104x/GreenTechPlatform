@@ -173,6 +173,7 @@ export async function POST(request: NextRequest) {
   let user = await authenticateRequestUser(request)
   let adminOverride = false
   let inquiryContent: string | null = null
+  let wechatError: string | null = null
 
   const adminHeader = request.headers.get('x-admin-user')
   const parsedOverride: AdminOverrideUser | null = !user ? parseAdminOverride(adminHeader) : null
@@ -334,12 +335,13 @@ export async function POST(request: NextRequest) {
                 content: `${platform}｜${title}`.length > 18 ? `${`${platform}｜${title}`.slice(0, 18)}…` : `${platform}｜${title}`,
                 platform,
                 remark: '点击立即查看',
-                inquiryContent: inquiryContent ? (inquiryContent.length > 50 ? `${inquiryContent.slice(0, 50)}…` : inquiryContent) : undefined,
+                inquiryContent: inquiryContent ? (inquiryContent.length > 20 ? `${inquiryContent.slice(0, 20)}…` : inquiryContent) : undefined,
                 url: jumpUrl,
               })
               wechatSent = true
             } catch (subscribeErr) {
-              console.warn('微信订阅通知发送失败，尝试降级客服消息:', subscribeErr)
+              wechatError = subscribeErr instanceof Error ? subscribeErr.message : String(subscribeErr)
+              console.warn('微信订阅通知发送失败（已忽略）:', wechatError)
             }
           }
 
@@ -348,8 +350,9 @@ export async function POST(request: NextRequest) {
       }
     }
   } catch (wxErr) {
-    console.error('微信推送失败（已忽略）:', wxErr)
+    wechatError = wxErr instanceof Error ? wxErr.message : String(wxErr)
+    console.error('微信推送失败（已忽略）:', wechatError)
   }
 
-  return NextResponse.json({ success: true, data: inserted, wechatSent, adminOverride })
+  return NextResponse.json({ success: true, data: inserted, wechatSent, wechatError, adminOverride })
 }
