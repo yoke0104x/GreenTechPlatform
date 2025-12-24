@@ -338,6 +338,8 @@ export async function POST(request: NextRequest) {
 
   // 推送到微信（仅自定义用户且存在 openid）
   let wechatSent = false
+  let wechatJumpUrl: string | null = null
+  let wechatFrom: 'parks' | 'policy' | null = null
   try {
     if (resolvedCustomToUserId) {
       const { data: customUser, error: cuError } = await serviceSupabase
@@ -349,9 +351,11 @@ export async function POST(request: NextRequest) {
           const openId = (customUser?.wechat_openid || (customUser?.user_metadata as any)?.wechat_openid) as string | undefined
         if (openId) {
           const { from, platform, remark } = inferMessageContext(inserted?.category)
+          wechatFrom = from
           const origin = getPlatformOrigin(request, from)
           const messageId = inserted?.id ? String(inserted.id) : null
           const jumpUrl = buildH5ChatDetailUrl(origin, from, messageId, 'zh')
+          wechatJumpUrl = jumpUrl
 
           if (isWeChatSubscribeConfigured()) {
             try {
@@ -365,6 +369,7 @@ export async function POST(request: NextRequest) {
                 remark,
                 inquiryContent: inquiryContent ? (inquiryContent.length > 20 ? `${inquiryContent.slice(0, 20)}…` : inquiryContent) : undefined,
                 url: jumpUrl,
+                scene: 1000,
               })
               wechatSent = true
             } catch (subscribeErr) {
@@ -382,5 +387,5 @@ export async function POST(request: NextRequest) {
     console.error('微信推送失败（已忽略）:', wechatError)
   }
 
-  return NextResponse.json({ success: true, data: inserted, wechatSent, wechatError, adminOverride })
+  return NextResponse.json({ success: true, data: inserted, wechatSent, wechatError, wechatJumpUrl, wechatFrom, adminOverride })
 }
