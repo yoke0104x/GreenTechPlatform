@@ -31,7 +31,7 @@ async function ensureWxReady() {
   let wx = (window as any).wx
   if (!wx) {
     const start = Date.now()
-    while (!wx && Date.now() - start < 2500) {
+    while (!wx && Date.now() - start < 10_000) {
       await new Promise((r) => setTimeout(r, 50))
       wx = (window as any).wx
     }
@@ -117,7 +117,8 @@ export type WeChatShareData = {
 
 export function useWeChatShare(data: WeChatShareData | null, opts?: { enabled?: boolean }) {
   const enabled = opts?.enabled ?? true
-  const lastKeyRef = useRef<string>('')
+  const appliedKeyRef = useRef<string>('')
+  const inFlightKeyRef = useRef<string>('')
 
   useEffect(() => {
     if (!enabled) return
@@ -130,45 +131,54 @@ export function useWeChatShare(data: WeChatShareData | null, opts?: { enabled?: 
       l: data.link || '',
       i: data.imgUrl || '',
     })
-    if (lastKeyRef.current === key) return
-    lastKeyRef.current = key
+    if (appliedKeyRef.current === key) return
+    if (inFlightKeyRef.current === key) return
+    inFlightKeyRef.current = key
 
     let cancelled = false
 
     ;(async () => {
-      const wx = await ensureWxReady()
-      if (cancelled || !wx) return
-
-      const signUrl = getWeChatSignUrl()
-      const cfgRes = await fetch(`/api/wechat/js-sdk-config?url=${encodeURIComponent(signUrl)}`, { cache: 'no-store' })
-      const cfgJson = (await cfgRes.json().catch(() => null)) as any
-      if (!cfgRes.ok || !cfgJson?.success || !cfgJson?.data) return
-
-      const cfg = cfgJson.data as { appId: string; timestamp: number; nonceStr: string; signature: string }
-      const link = (data.link || (typeof window !== 'undefined' ? window.location.href : '')).split('#')[0]
-      const imgUrl = toAbsoluteUrl(data.imgUrl || '/images/portal-tech.jpg')
-      const title = truncateText(data.title, 48)
-      const desc = truncateText(data.desc || data.title, 80)
-
-      await wxConfigWithRetry(wx, cfg).catch(() => null)
-
-      if (cancelled) return
-
       try {
-        if (typeof wx.updateAppMessageShareData === 'function') {
-          wx.updateAppMessageShareData({ title, desc, link, imgUrl })
+        const wx = await ensureWxReady()
+        if (cancelled || !wx) return
+
+        const signUrl = getWeChatSignUrl()
+        const cfgRes = await fetch(`/api/wechat/js-sdk-config?url=${encodeURIComponent(signUrl)}`, { cache: 'no-store' })
+        const cfgJson = (await cfgRes.json().catch(() => null)) as any
+        if (!cfgRes.ok || !cfgJson?.success || !cfgJson?.data) return
+
+        const cfg = cfgJson.data as { appId: string; timestamp: number; nonceStr: string; signature: string }
+        const link = (data.link || (typeof window !== 'undefined' ? window.location.href : '')).split('#')[0]
+        const imgUrl = toAbsoluteUrl(data.imgUrl || '/images/portal-tech.jpg')
+        const title = truncateText(data.title, 48)
+        const desc = truncateText(data.desc || data.title, 80)
+
+        await wxConfigWithRetry(wx, cfg).catch(() => null)
+        if (cancelled) return
+
+        try {
+          if (typeof wx.updateAppMessageShareData === 'function') {
+            wx.updateAppMessageShareData({ title, desc, link, imgUrl })
+          }
+          if (typeof wx.updateTimelineShareData === 'function') {
+            wx.updateTimelineShareData({ title, link, imgUrl })
+          }
+          if (typeof wx.onMenuShareAppMessage === 'function') {
+            wx.onMenuShareAppMessage({ title, desc, link, imgUrl })
+          }
+          if (typeof wx.onMenuShareTimeline === 'function') {
+            wx.onMenuShareTimeline({ title, link, imgUrl })
+          }
+        } catch {
+          // ignore
         }
-        if (typeof wx.updateTimelineShareData === 'function') {
-          wx.updateTimelineShareData({ title, link, imgUrl })
+
+        // 仅当完成一轮设置后才标记“已应用”，避免 wx 尚未加载/配置失败导致后续不再重试
+        appliedKeyRef.current = key
+      } finally {
+        if (inFlightKeyRef.current === key) {
+          inFlightKeyRef.current = ''
         }
-        if (typeof wx.onMenuShareAppMessage === 'function') {
-          wx.onMenuShareAppMessage({ title, desc, link, imgUrl })
-        }
-        if (typeof wx.onMenuShareTimeline === 'function') {
-          wx.onMenuShareTimeline({ title, link, imgUrl })
-        }
-      } catch {
-        // ignore
       }
     })()
 
