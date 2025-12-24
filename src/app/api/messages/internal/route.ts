@@ -66,7 +66,14 @@ function getPlatformOrigin(request: NextRequest, from: 'parks' | 'policy' | null
         ? process.env.POLICY_H5_ORIGIN
         : process.env.TECH_H5_ORIGIN
   const normalized = normalizeOrigin(envOrigin || '')
-  return normalized || getRequestOrigin(request)
+  if (normalized) return normalized
+
+  // 兜底：当站内信由管理端域名触发时，request origin 可能不是 H5 域名（会导致订阅通知“查看详情”入口不展示或不可跳转）。
+  // 建议至少配置一个统一的 H5 域名作为跳转基准（例如 https://gtech.greendev.org.cn）。
+  const fallback = normalizeOrigin(process.env.WECHAT_H5_ORIGIN || '')
+  if (fallback) return fallback
+
+  return getRequestOrigin(request)
 }
 
 function buildH5ChatDetailUrl(

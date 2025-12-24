@@ -639,6 +639,7 @@ node scripts/mcp/run-mcp-tool.js \
 - Next.js 侧需要配置：
   - `WECHAT_GATEWAY_URL`：微信云托管服务的公网地址（不带末尾 `/`）
   - `WECHAT_GATEWAY_SECRET`：Vercel → 云托管的请求签名密钥（用于 HMAC 校验）
+  - `WECHAT_H5_ORIGIN`（可选）：订阅通知“查看详情”的跳转域名兜底（当未配置 `TECH_H5_ORIGIN`/`PARK_H5_ORIGIN`/`POLICY_H5_ORIGIN` 且请求来自管理端域名时使用）
   - 以及模板字段映射：
     - `WECHAT_SUBSCRIBE_TEMPLATE_ID`
   - `WECHAT_SUBSCRIBE_TITLE_KEY`（例如 `thing1`）
@@ -647,7 +648,7 @@ node scripts/mcp/run-mcp-tool.js \
   - `WECHAT_SUBSCRIBE_REMARK_KEY`（例如 `thing5`，可选；用于展示平台：绿色园区平台/绿色技术平台/绿色政策平台）
   - `WECHAT_SUBSCRIBE_INQUIRY_KEY`（例如 `thing14`，可选，用于展示用户留言内容）
   - 注意：微信模板关键词（如 `thing14`）通常有长度限制；过长会导致发送失败，需截断或在 H5 详情页查看完整内容
-  - 注意：订阅通知的“查看详情”入口取决于发送时是否带 `url`/`miniprogram`；且跳转域名需在公众号后台配置为“业务域名”，并建议使用 `https`
+  - 注意：订阅通知的“查看详情”入口取决于发送时是否带 `url`/`miniprogram`；且跳转域名需在公众号后台配置为“业务域名”，并建议使用 `https`（例如仅配置了 `gtech.greendev.org.cn` 时，发送的 `url` 必须使用该域名；可通过 `WECHAT_H5_ORIGIN=https://gtech.greendev.org.cn` 兜底）
 - 网关需要实现接口：
   - `POST /wechat/subscribe-send`
     - 入参：`{ openId, templateId, data, url?, scene? }`
