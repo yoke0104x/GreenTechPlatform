@@ -615,7 +615,7 @@ node scripts/mcp/run-mcp-tool.js \
 
 ### 已完成进展（代码已接入，待验证上线条件）
 
-- H5「开启微信通知」入口：详情页「联系咨询」弹窗中“允许回复消息发送到我的微信”（默认勾选），提交留言成功后弹出订阅授权：`src/app/[locale]/m/components/MobileContactUsModal.tsx`
+- H5「开启微信通知」入口：详情页「联系咨询」弹窗中“允许回复消息发送到我的微信”（默认勾选），提交留言成功后直接展示 `wx-open-subscribe` 按钮完成订阅授权：`src/app/[locale]/m/components/MobileContactUsModal.tsx`
 - 订阅授权（H5开放标签优先）：`wx-open-subscribe`（需要 `openTagList: ['wx-open-subscribe']`）+ 服务端签名 `src/app/api/wechat/js-sdk-config/route.ts`
 - 订阅确认页 URL 生成（备用）：`src/app/api/wechat/subscribe-url/route.ts`
 - 发送链路：站内信写入后尝试“订阅通知发送”，失败不阻塞站内信写入（暂不启用“客服消息”降级，避免 access_token/IP 白名单带来的不确定性）：

@@ -121,7 +121,7 @@ export function MobileContactUsModal({
 
   const [loading, setLoading] = useState(false)
   const [allowWeChatReply, setAllowWeChatReply] = useState(true)
-  const [subscribePromptOpen, setSubscribePromptOpen] = useState(false)
+  const [step, setStep] = useState<'form' | 'subscribe'>('form')
   const [subscribeTemplateId, setSubscribeTemplateId] = useState<string | null>(null)
   const [openTagReady, setOpenTagReady] = useState(false)
   const [prepareError, setPrepareError] = useState<string | null>(null)
@@ -238,6 +238,15 @@ export function MobileContactUsModal({
     }))
   }, [user])
 
+  // 关闭弹窗时重置 step，避免下次打开仍停留在订阅步骤
+  useEffect(() => {
+    if (isOpen) return
+    setStep('form')
+    setSubscribeTemplateId(null)
+    setOpenTagReady(false)
+    setPrepareError(null)
+  }, [isOpen])
+
   const handleInputChange = (field: keyof ContactFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
@@ -285,7 +294,8 @@ export function MobileContactUsModal({
 
     const onSuccess = (_e: any) => {
       toast({ title: locale === 'en' ? 'Subscribed' : '订阅成功' })
-      setSubscribePromptOpen(false)
+      setStep('form')
+      onClose()
     }
     const onError = (e: any) => {
       const detail = e?.detail || {}
@@ -304,11 +314,11 @@ export function MobileContactUsModal({
       el.removeEventListener('success', onSuccess as any)
       el.removeEventListener('error', onError as any)
     }
-  }, [locale, toast])
+  }, [locale, toast, onClose])
 
-  // 打开订阅弹窗时：准备 openTagList + 获取 templateId
+  // 进入订阅步骤时：准备 openTagList + 获取 templateId
   useEffect(() => {
-    if (!subscribePromptOpen) return
+    if (step !== 'subscribe') return
     if (!isWeChatEnv()) return
     if (typeof window === 'undefined') return
 
@@ -359,7 +369,7 @@ export function MobileContactUsModal({
     return () => {
       cancelled = true
     }
-  }, [subscribePromptOpen, locale, toast, isParkContext, isPolicyContext, prepareNonce])
+  }, [step, locale, toast, isParkContext, isPolicyContext, prepareNonce])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -391,9 +401,10 @@ export function MobileContactUsModal({
         message: '',
       })
 
-      onClose()
       if (shouldPromptSubscribe) {
-        setSubscribePromptOpen(true)
+        setStep('subscribe')
+      } else {
+        onClose()
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : t.errorMessage
@@ -404,6 +415,7 @@ export function MobileContactUsModal({
   }
 
   const handleCancel = () => {
+    setStep('form')
     setFormData({
       contactName: user?.name || '',
       contactPhone: user?.phone || '',
@@ -413,15 +425,27 @@ export function MobileContactUsModal({
     onClose()
   }
 
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setStep('form')
+      setSubscribeTemplateId(null)
+      setOpenTagReady(false)
+      setPrepareError(null)
+      onClose()
+    }
+  }
+
   return (
     <>
       {/* 确保微信 JS-SDK 可用（开放标签也依赖该脚本） */}
       <Script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js" strategy="afterInteractive" />
 
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">{t.contactUs}</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">
+              {step === 'subscribe' ? t.subscribeTitle : t.contactUs}
+            </DialogTitle>
             {technologyName && (
               <p className="text-sm text-gray-600 mt-2">
                 {subjectPrefix}
@@ -429,154 +453,163 @@ export function MobileContactUsModal({
                 {companyName && <span className="text-gray-500"> - {companyName}</span>}
               </p>
             )}
+            {step === 'subscribe' && <p className="text-[13px] text-gray-600 mt-2">{t.subscribeDesc}</p>}
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="contactName">
-                {t.contactName} <span className="text-red-500">{t.required}</span>
-              </Label>
-              <Input
-                id="contactName"
-                type="text"
-                placeholder={t.placeholders.name}
-                value={formData.contactName}
-                onChange={(e) => handleInputChange('contactName', e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contactPhone">
-                {t.contactPhone} <span className="text-red-500">{t.required}</span>
-              </Label>
-              <Input
-                id="contactPhone"
-                type="tel"
-                placeholder={t.placeholders.phone}
-                value={formData.contactPhone}
-                onChange={(e) => handleInputChange('contactPhone', e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contactEmail">
-                {t.contactEmail} <span className="text-red-500">{t.required}</span>
-              </Label>
-              <Input
-                id="contactEmail"
-                type="email"
-                placeholder={t.placeholders.email}
-                value={formData.contactEmail}
-                onChange={(e) => handleInputChange('contactEmail', e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="message">
-                {t.message} <span className="text-red-500">{t.required}</span>
-              </Label>
-              <Textarea
-                id="message"
-                placeholder={t.placeholders.message}
-                value={formData.message}
-                onChange={(e) => handleInputChange('message', e.target.value)}
-                rows={4}
-                className="resize-none"
-                required
-              />
-            </div>
-
-            {isWeChatEnv() && (
-              <div className="rounded-xl border border-gray-200 bg-white px-3 py-2">
-                <label className="flex items-start gap-2">
-                  <input
-                    type="checkbox"
-                    className="mt-1"
-                    checked={allowWeChatReply}
-                    onChange={(e) => setAllowWeChatReply(e.target.checked)}
-                  />
-                  <div className="min-w-0">
-                    <div className="text-[13px] font-medium text-gray-900">{t.allowWeChatReply}</div>
-                    <div className="text-[12px] text-gray-500">{t.allowWeChatDesc}</div>
-                  </div>
-                </label>
-              </div>
-            )}
-
-            <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={handleCancel}>
-                {t.cancel}
-              </Button>
-              <Button type="submit" disabled={loading} className="bg-[#00b899] hover:bg-[#00a77f]">
-                {loading ? t.submitting : t.submit}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* 提交成功后：弹出微信开放标签订阅授权 */}
-      <Dialog open={subscribePromptOpen} onOpenChange={setSubscribePromptOpen}>
-        <DialogContent className="sm:max-w-[420px]">
-          <DialogHeader>
-            <DialogTitle className="text-[18px] font-semibold">{t.subscribeTitle}</DialogTitle>
-            <p className="text-[13px] text-gray-600 mt-2">{t.subscribeDesc}</p>
-          </DialogHeader>
-
-          <div className="pt-2">
-            {subscribeTemplateId && openTagReady ? (
-              React.createElement(
-                'wx-open-subscribe' as any,
-                {
-                  template: subscribeTemplateId,
-                  id: 'wx-open-subscribe-after-submit',
-                  ref: (node: any) => {
-                    subscribeTagRef.current = node
-                  },
-                },
-                React.createElement('script', {
-                  type: 'text/wxtag-template',
-                  dangerouslySetInnerHTML: {
-                    __html: `<button class="wx-subscribe-btn">${locale === 'en' ? 'Allow WeChat Notice' : '同意并开启微信通知'}</button>`,
-                  },
-                }),
-                React.createElement('script', {
-                  type: 'text/wxtag-template',
-                  slot: 'style',
-                  dangerouslySetInnerHTML: {
-                    __html:
-                      `.wx-subscribe-btn{width:100%;height:44px;border-radius:12px;background:#00b899;color:#fff;font-size:14px;border:none;}` +
-                      `.wx-subscribe-btn:active{opacity:.9;}`,
-                  },
-                }),
-              )
-            ) : (
+          {step === 'form' ? (
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Button
-                  disabled={!prepareError}
-                  className="w-full"
-                  onClick={() => setPrepareNonce((v) => v + 1)}
-                >
-                  {prepareError ? (locale === 'en' ? 'Retry' : '重试') : locale === 'en' ? 'Preparing…' : '准备中…'}
+                <Label htmlFor="contactName">
+                  {t.contactName} <span className="text-red-500">{t.required}</span>
+                </Label>
+                <Input
+                  id="contactName"
+                  type="text"
+                  placeholder={t.placeholders.name}
+                  value={formData.contactName}
+                  onChange={(e) => handleInputChange('contactName', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contactPhone">
+                  {t.contactPhone} <span className="text-red-500">{t.required}</span>
+                </Label>
+                <Input
+                  id="contactPhone"
+                  type="tel"
+                  placeholder={t.placeholders.phone}
+                  value={formData.contactPhone}
+                  onChange={(e) => handleInputChange('contactPhone', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contactEmail">
+                  {t.contactEmail} <span className="text-red-500">{t.required}</span>
+                </Label>
+                <Input
+                  id="contactEmail"
+                  type="email"
+                  placeholder={t.placeholders.email}
+                  value={formData.contactEmail}
+                  onChange={(e) => handleInputChange('contactEmail', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="message">
+                  {t.message} <span className="text-red-500">{t.required}</span>
+                </Label>
+                <Textarea
+                  id="message"
+                  placeholder={t.placeholders.message}
+                  value={formData.message}
+                  onChange={(e) => handleInputChange('message', e.target.value)}
+                  rows={4}
+                  className="resize-none"
+                  required
+                />
+              </div>
+
+              {isWeChatEnv() && (
+                <div className="rounded-xl border border-gray-200 bg-white px-3 py-2">
+                  <label className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={allowWeChatReply}
+                      onChange={(e) => setAllowWeChatReply(e.target.checked)}
+                    />
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-medium text-gray-900">{t.allowWeChatReply}</div>
+                      <div className="text-[12px] text-gray-500">{t.allowWeChatDesc}</div>
+                    </div>
+                  </label>
+                </div>
+              )}
+
+              <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-4">
+                <Button type="button" variant="outline" onClick={handleCancel}>
+                  {t.cancel}
                 </Button>
-                {prepareError && (
-                  <div className="text-[12px] text-red-600 break-all">{prepareError}</div>
+                <Button type="submit" disabled={loading} className="bg-[#00b899] hover:bg-[#00a77f]">
+                  {loading ? t.submitting : t.submit}
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : (
+            <div className="space-y-3">
+              <div className="pt-1">
+                {subscribeTemplateId && openTagReady ? (
+                  React.createElement(
+                    'wx-open-subscribe' as any,
+                    {
+                      template: subscribeTemplateId,
+                      id: 'wx-open-subscribe-after-submit',
+                      ref: (node: any) => {
+                        subscribeTagRef.current = node
+                      },
+                    },
+                    React.createElement('script', {
+                      type: 'text/wxtag-template',
+                      dangerouslySetInnerHTML: {
+                        __html: `<button class="wx-subscribe-btn">${locale === 'en' ? 'Allow WeChat Notice' : '同意并开启微信通知'}</button>`,
+                      },
+                    }),
+                    React.createElement('script', {
+                      type: 'text/wxtag-template',
+                      slot: 'style',
+                      dangerouslySetInnerHTML: {
+                        __html:
+                          `.wx-subscribe-btn{width:100%;height:44px;border-radius:12px;background:#00b899;color:#fff;font-size:14px;border:none;}` +
+                          `.wx-subscribe-btn:active{opacity:.9;}`,
+                      },
+                    }),
+                  )
+                ) : (
+                  <div className="space-y-2">
+                    <Button
+                      disabled={!prepareError}
+                      className="w-full"
+                      onClick={() => setPrepareNonce((v) => v + 1)}
+                    >
+                      {prepareError ? (locale === 'en' ? 'Retry' : '重试') : locale === 'en' ? 'Preparing…' : '准备中…'}
+                    </Button>
+                    {prepareError && (
+                      <div className="text-[12px] text-red-600 break-all">{prepareError}</div>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
 
-          <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-3">
-            <Button type="button" variant="outline" onClick={() => setSubscribePromptOpen(false)}>
-              {t.skip}
-            </Button>
-            <Button type="button" onClick={() => setSubscribePromptOpen(false)} className="bg-[#00b899] hover:bg-[#00a77f]">
-              {t.done}
-            </Button>
-          </DialogFooter>
+              <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setStep('form')
+                    onClose()
+                  }}
+                >
+                  {t.skip}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setStep('form')
+                    onClose()
+                  }}
+                  className="bg-[#00b899] hover:bg-[#00a77f]"
+                >
+                  {t.done}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>
