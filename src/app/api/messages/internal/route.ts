@@ -26,9 +26,9 @@ function inferMessageContext(category?: string | null) {
   const c = (category || '').trim()
   const isPark = ['园区对接', 'Park Connection'].includes(c)
   const isPolicy = ['政策咨询', 'Policy Consultation'].includes(c)
-  if (isPark) return { from: 'parks' as const, platform: '园区平台' }
-  if (isPolicy) return { from: 'policy' as const, platform: '政策平台' }
-  return { from: null, platform: '绿色技术平台' }
+  if (isPark) return { from: 'parks' as const, platform: '园区平台', remark: '绿色园区平台' }
+  if (isPolicy) return { from: 'policy' as const, platform: '政策平台', remark: '绿色政策平台' }
+  return { from: null, platform: '技术平台', remark: '绿色技术平台' }
 }
 
 function normalizeOrigin(raw: string) {
@@ -321,7 +321,7 @@ export async function POST(request: NextRequest) {
       if (!cuError) {
           const openId = (customUser?.wechat_openid || (customUser?.user_metadata as any)?.wechat_openid) as string | undefined
         if (openId) {
-          const { from, platform } = inferMessageContext(inserted?.category)
+          const { from, platform, remark } = inferMessageContext(inserted?.category)
           const origin = getPlatformOrigin(request, from)
           const messageId = inserted?.id ? String(inserted.id) : null
           const jumpUrl = buildH5ChatDetailUrl(origin, from, messageId, 'zh')
@@ -332,8 +332,10 @@ export async function POST(request: NextRequest) {
                 openId,
                 // 适配订阅模板：thing(回复内容) / thing(咨询标题) / time(回复时间)
                 title: content.length > 18 ? `${content.slice(0, 18)}…` : content,
-                content: `${platform}｜${title}`.length > 18 ? `${`${platform}｜${title}`.slice(0, 18)}…` : `${platform}｜${title}`,
+                // 新需求：不再拼接“平台｜”，仅展示咨询标题本身
+                content: title.length > 18 ? `${title.slice(0, 18)}…` : title,
                 platform,
+                remark,
                 inquiryContent: inquiryContent ? (inquiryContent.length > 20 ? `${inquiryContent.slice(0, 20)}…` : inquiryContent) : undefined,
                 url: jumpUrl,
               })

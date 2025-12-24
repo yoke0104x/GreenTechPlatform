@@ -43,10 +43,12 @@ const addToRemoveQueue = (toastId: string) => {
     return
   }
 
+  // Radix Toast 会先将 toast 置为 closed，再由这里在稍后移除。
+  // 这里不需要等待太久，否则会造成“进度条结束但 toast 仍停留”的观感问题。
   const timeout = setTimeout(() => {
     toastTimeouts.delete(toastId)
     dispatch({ type: actionTypes.REMOVE_TOAST, toastId: toastId })
-  }, 1_000_000)
+  }, 1_000)
 
   toastTimeouts.set(toastId, timeout)
 }
@@ -137,6 +139,12 @@ function toast(props: Toast) {
     },
   })
 
+  const duration = typeof props.duration === "number" ? props.duration : 4000
+  if (duration > 0 && Number.isFinite(duration)) {
+    // 某些场景下 Provider 的自动关闭可能不触发（或被自定义控制 open 干扰），这里兜底自动 dismiss。
+    setTimeout(() => dismiss(), duration)
+  }
+
   return {
     id: id,
     dismiss,
@@ -155,7 +163,7 @@ function useToast() {
         listeners.splice(index, 1)
       }
     }
-  }, [state])
+  }, [])
 
   return {
     ...state,

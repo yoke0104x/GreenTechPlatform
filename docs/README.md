@@ -644,7 +644,7 @@ node scripts/mcp/run-mcp-tool.js \
   - `WECHAT_SUBSCRIBE_TITLE_KEY`（例如 `thing1`）
   - `WECHAT_SUBSCRIBE_CONTENT_KEY`（例如 `thing4`）
   - `WECHAT_SUBSCRIBE_TIME_KEY`（例如 `time2`，可选）
-  - `WECHAT_SUBSCRIBE_REMARK_KEY`（例如 `thing5`，可选）
+  - `WECHAT_SUBSCRIBE_REMARK_KEY`（例如 `thing5`，可选；用于展示平台：绿色园区平台/绿色技术平台/绿色政策平台）
   - `WECHAT_SUBSCRIBE_INQUIRY_KEY`（例如 `thing14`，可选，用于展示用户留言内容）
   - 注意：微信模板关键词（如 `thing14`）通常有长度限制；过长会导致发送失败，需截断或在 H5 详情页查看完整内容
 - 网关需要实现接口：
