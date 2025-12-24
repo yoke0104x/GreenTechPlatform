@@ -172,6 +172,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let user = await authenticateRequestUser(request)
   let adminOverride = false
+  let inquiryContent: string | null = null
 
   const adminHeader = request.headers.get('x-admin-user')
   const parsedOverride: AdminOverrideUser | null = !user ? parseAdminOverride(adminHeader) : null
@@ -248,18 +249,21 @@ export async function POST(request: NextRequest) {
   let resolvedToUserId: string | null = toUserId
   let resolvedCustomToUserId: string | null = customToUserId
 
-  if (!resolvedToUserId && !resolvedCustomToUserId && contactMessageId) {
+  if (contactMessageId) {
     const { data: cm, error: cmError } = await serviceSupabase
       .from('contact_messages')
-      .select('user_id, custom_user_id')
+      .select('user_id, custom_user_id, message')
       .eq('id', contactMessageId)
       .single()
     if (cmError) {
       console.error('查询联系消息失败:', cmError)
       return NextResponse.json({ success: false, error: '无法解析接收用户' }, { status: 400 })
     }
-    resolvedToUserId = cm?.user_id || null
-    resolvedCustomToUserId = cm?.custom_user_id || null
+    inquiryContent = typeof cm?.message === 'string' ? cm.message : null
+    if (!resolvedToUserId && !resolvedCustomToUserId) {
+      resolvedToUserId = cm?.user_id || null
+      resolvedCustomToUserId = cm?.custom_user_id || null
+    }
   }
 
   if (!resolvedToUserId && !resolvedCustomToUserId) {
@@ -329,6 +333,8 @@ export async function POST(request: NextRequest) {
                 title: content.length > 18 ? `${content.slice(0, 18)}…` : content,
                 content: `${platform}｜${title}`.length > 18 ? `${`${platform}｜${title}`.slice(0, 18)}…` : `${platform}｜${title}`,
                 platform,
+                remark: '点击立即查看',
+                inquiryContent: inquiryContent ? (inquiryContent.length > 50 ? `${inquiryContent.slice(0, 50)}…` : inquiryContent) : undefined,
                 url: jumpUrl,
               })
               wechatSent = true

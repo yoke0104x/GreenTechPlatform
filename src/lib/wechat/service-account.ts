@@ -55,6 +55,8 @@ export interface SendServiceSubscribeMessageOptions {
   title: string
   content: string
   platform?: string
+  remark?: string
+  inquiryContent?: string
   url?: string
   scene?: number
 }
@@ -64,8 +66,10 @@ function getSubscribeConfig() {
   const titleKey = sanitizeHeaderValue(process.env.WECHAT_SUBSCRIBE_TITLE_KEY || '')
   const contentKey = sanitizeHeaderValue(process.env.WECHAT_SUBSCRIBE_CONTENT_KEY || '')
   const platformKey = sanitizeHeaderValue(process.env.WECHAT_SUBSCRIBE_PLATFORM_KEY || '')
+  const remarkKey = sanitizeHeaderValue(process.env.WECHAT_SUBSCRIBE_REMARK_KEY || '')
+  const inquiryKey = sanitizeHeaderValue(process.env.WECHAT_SUBSCRIBE_INQUIRY_KEY || '')
   const timeKey = sanitizeHeaderValue(process.env.WECHAT_SUBSCRIBE_TIME_KEY || '')
-  return { templateId, titleKey, contentKey, platformKey, timeKey }
+  return { templateId, titleKey, contentKey, platformKey, remarkKey, inquiryKey, timeKey }
 }
 
 export function isWeChatSubscribeConfigured() {
@@ -79,7 +83,7 @@ export async function sendWeChatServiceSubscribeMessage(opts: SendServiceSubscri
     throw new Error('缺少 openId，无法发送微信订阅通知')
   }
 
-  const { templateId, titleKey, contentKey, platformKey, timeKey } = getSubscribeConfig()
+  const { templateId, titleKey, contentKey, platformKey, remarkKey, inquiryKey, timeKey } = getSubscribeConfig()
   if (!templateId || !titleKey || !contentKey) {
     throw new Error('WECHAT_SUBSCRIBE_TEMPLATE_ID / WECHAT_SUBSCRIBE_TITLE_KEY / WECHAT_SUBSCRIBE_CONTENT_KEY 未完整配置')
   }
@@ -91,6 +95,12 @@ export async function sendWeChatServiceSubscribeMessage(opts: SendServiceSubscri
 
   if (platformKey && opts.platform) {
     data[platformKey] = { value: opts.platform }
+  }
+  if (remarkKey && opts.remark) {
+    data[remarkKey] = { value: opts.remark }
+  }
+  if (inquiryKey && opts.inquiryContent) {
+    data[inquiryKey] = { value: opts.inquiryContent }
   }
   if (timeKey) {
     data[timeKey] = { value: new Date().toLocaleString('zh-CN', { hour12: false }) }

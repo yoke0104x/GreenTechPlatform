@@ -641,9 +641,11 @@ node scripts/mcp/run-mcp-tool.js \
   - `WECHAT_GATEWAY_SECRET`：Vercel → 云托管的请求签名密钥（用于 HMAC 校验）
   - 以及模板字段映射：
     - `WECHAT_SUBSCRIBE_TEMPLATE_ID`
-    - `WECHAT_SUBSCRIBE_TITLE_KEY`（例如 `thing1`）
-    - `WECHAT_SUBSCRIBE_CONTENT_KEY`（例如 `thing4`）
-    - `WECHAT_SUBSCRIBE_TIME_KEY`（例如 `time2`，可选）
+  - `WECHAT_SUBSCRIBE_TITLE_KEY`（例如 `thing1`）
+  - `WECHAT_SUBSCRIBE_CONTENT_KEY`（例如 `thing4`）
+  - `WECHAT_SUBSCRIBE_TIME_KEY`（例如 `time2`，可选）
+  - `WECHAT_SUBSCRIBE_REMARK_KEY`（例如 `thing5`，可选）
+  - `WECHAT_SUBSCRIBE_INQUIRY_KEY`（例如 `thing14`，可选，用于展示用户留言内容）
 - 网关需要实现接口：
   - `POST /wechat/subscribe-send`
     - 入参：`{ openId, templateId, data, url?, scene? }`
