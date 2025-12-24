@@ -34,8 +34,28 @@ function inferMessageContext(category?: string | null) {
 function normalizeOrigin(raw: string) {
   const v = (raw || '').trim()
   if (!v) return ''
-  if (v.startsWith('http://') || v.startsWith('https://')) return v.replace(/\/+$/, '')
-  return `https://${v.replace(/\/+$/, '')}`
+  const withoutTrailing = v.replace(/\/+$/, '')
+  if (withoutTrailing.startsWith('http://') || withoutTrailing.startsWith('https://')) {
+    try {
+      const u = new URL(withoutTrailing)
+      const host = u.hostname.toLowerCase()
+      const isLocal =
+        host === 'localhost' ||
+        host === '127.0.0.1' ||
+        host === '0.0.0.0' ||
+        host.startsWith('127.') ||
+        host.endsWith('.local')
+      // 微信通知跳转链接建议使用 https；若环境返回 http 且不是本地，自动升级为 https
+      if (!isLocal && u.protocol === 'http:') {
+        u.protocol = 'https:'
+        return u.toString().replace(/\/+$/, '')
+      }
+      return u.toString().replace(/\/+$/, '')
+    } catch {
+      return withoutTrailing
+    }
+  }
+  return `https://${withoutTrailing}`
 }
 
 function getPlatformOrigin(request: NextRequest, from: 'parks' | 'policy' | null) {

@@ -647,6 +647,7 @@ node scripts/mcp/run-mcp-tool.js \
   - `WECHAT_SUBSCRIBE_REMARK_KEY`（例如 `thing5`，可选；用于展示平台：绿色园区平台/绿色技术平台/绿色政策平台）
   - `WECHAT_SUBSCRIBE_INQUIRY_KEY`（例如 `thing14`，可选，用于展示用户留言内容）
   - 注意：微信模板关键词（如 `thing14`）通常有长度限制；过长会导致发送失败，需截断或在 H5 详情页查看完整内容
+  - 注意：订阅通知的“查看详情”入口取决于发送时是否带 `url`/`miniprogram`；且跳转域名需在公众号后台配置为“业务域名”，并建议使用 `https`
 - 网关需要实现接口：
   - `POST /wechat/subscribe-send`
     - 入参：`{ openId, templateId, data, url?, scene? }`
