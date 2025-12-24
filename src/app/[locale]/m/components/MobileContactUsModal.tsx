@@ -121,7 +121,7 @@ export function MobileContactUsModal({
 
   const [loading, setLoading] = useState(false)
   const [allowWeChatReply, setAllowWeChatReply] = useState(true)
-  const [step, setStep] = useState<'form' | 'subscribe'>('form')
+  const [subscribeAfterSubmit, setSubscribeAfterSubmit] = useState(false)
   const [subscribeTemplateId, setSubscribeTemplateId] = useState<string | null>(null)
   const [openTagReady, setOpenTagReady] = useState(false)
   const [prepareError, setPrepareError] = useState<string | null>(null)
@@ -238,10 +238,10 @@ export function MobileContactUsModal({
     }))
   }, [user])
 
-  // 关闭弹窗时重置 step，避免下次打开仍停留在订阅步骤
+  // 关闭弹窗时重置状态，避免下次打开仍停留在订阅状态
   useEffect(() => {
     if (isOpen) return
-    setStep('form')
+    setSubscribeAfterSubmit(false)
     setSubscribeTemplateId(null)
     setOpenTagReady(false)
     setPrepareError(null)
@@ -294,7 +294,7 @@ export function MobileContactUsModal({
 
     const onSuccess = (_e: any) => {
       toast({ title: locale === 'en' ? 'Subscribed' : '订阅成功' })
-      setStep('form')
+      setSubscribeAfterSubmit(false)
       onClose()
     }
     const onError = (e: any) => {
@@ -316,9 +316,9 @@ export function MobileContactUsModal({
     }
   }, [locale, toast, onClose])
 
-  // 进入订阅步骤时：准备 openTagList + 获取 templateId
+  // 提交成功后需要订阅时：准备 openTagList + 获取 templateId
   useEffect(() => {
-    if (step !== 'subscribe') return
+    if (!subscribeAfterSubmit) return
     if (!isWeChatEnv()) return
     if (typeof window === 'undefined') return
 
@@ -369,7 +369,7 @@ export function MobileContactUsModal({
     return () => {
       cancelled = true
     }
-  }, [step, locale, toast, isParkContext, isPolicyContext, prepareNonce])
+  }, [subscribeAfterSubmit, locale, toast, isParkContext, isPolicyContext, prepareNonce])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -402,7 +402,8 @@ export function MobileContactUsModal({
       })
 
       if (shouldPromptSubscribe) {
-        setStep('subscribe')
+        setSubscribeAfterSubmit(true)
+        toast({ title: locale === 'en' ? 'One more step' : '再确认一下', description: locale === 'en' ? 'Tap the button to enable WeChat notices.' : '点击下方按钮即可开启微信通知。' })
       } else {
         onClose()
       }
@@ -415,7 +416,7 @@ export function MobileContactUsModal({
   }
 
   const handleCancel = () => {
-    setStep('form')
+    setSubscribeAfterSubmit(false)
     setFormData({
       contactName: user?.name || '',
       contactPhone: user?.phone || '',
@@ -427,7 +428,7 @@ export function MobileContactUsModal({
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
-      setStep('form')
+      setSubscribeAfterSubmit(false)
       setSubscribeTemplateId(null)
       setOpenTagReady(false)
       setPrepareError(null)
@@ -443,9 +444,7 @@ export function MobileContactUsModal({
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">
-              {step === 'subscribe' ? t.subscribeTitle : t.contactUs}
-            </DialogTitle>
+            <DialogTitle className="text-xl font-semibold">{t.contactUs}</DialogTitle>
             {technologyName && (
               <p className="text-sm text-gray-600 mt-2">
                 {subjectPrefix}
@@ -453,10 +452,64 @@ export function MobileContactUsModal({
                 {companyName && <span className="text-gray-500"> - {companyName}</span>}
               </p>
             )}
-            {step === 'subscribe' && <p className="text-[13px] text-gray-600 mt-2">{t.subscribeDesc}</p>}
           </DialogHeader>
 
-          {step === 'form' ? (
+          {subscribeAfterSubmit ? (
+            <div className="space-y-3">
+              <div className="text-[13px] text-gray-600">{t.subscribeDesc}</div>
+
+              <div className="pt-1">
+                {subscribeTemplateId && openTagReady ? (
+                  React.createElement(
+                    'wx-open-subscribe' as any,
+                    {
+                      template: subscribeTemplateId,
+                      id: 'wx-open-subscribe-after-submit',
+                      ref: (node: any) => {
+                        subscribeTagRef.current = node
+                      },
+                    },
+                    React.createElement('script', {
+                      type: 'text/wxtag-template',
+                      dangerouslySetInnerHTML: {
+                        __html: `<button class="wx-subscribe-btn">${locale === 'en' ? 'Allow WeChat Notice' : '同意并开启微信通知'}</button>`,
+                      },
+                    }),
+                    React.createElement('script', {
+                      type: 'text/wxtag-template',
+                      slot: 'style',
+                      dangerouslySetInnerHTML: {
+                        __html:
+                          `.wx-subscribe-btn{width:100%;height:44px;border-radius:12px;background:#00b899;color:#fff;font-size:14px;border:none;}` +
+                          `.wx-subscribe-btn:active{opacity:.9;}`,
+                      },
+                    }),
+                  )
+                ) : (
+                  <div className="space-y-2">
+                    <Button disabled={!prepareError} className="w-full" onClick={() => setPrepareNonce((v) => v + 1)}>
+                      {prepareError ? (locale === 'en' ? 'Retry' : '重试') : locale === 'en' ? 'Preparing…' : '准备中…'}
+                    </Button>
+                    {prepareError && <div className="text-[12px] text-red-600 break-all">{prepareError}</div>}
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setSubscribeAfterSubmit(false)
+                    onClose()
+                  }}
+                >
+                  {t.skip}
+                </Button>
+              </div>
+            </div>
+          ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="contactName">
@@ -541,74 +594,6 @@ export function MobileContactUsModal({
                 </Button>
               </DialogFooter>
             </form>
-          ) : (
-            <div className="space-y-3">
-              <div className="pt-1">
-                {subscribeTemplateId && openTagReady ? (
-                  React.createElement(
-                    'wx-open-subscribe' as any,
-                    {
-                      template: subscribeTemplateId,
-                      id: 'wx-open-subscribe-after-submit',
-                      ref: (node: any) => {
-                        subscribeTagRef.current = node
-                      },
-                    },
-                    React.createElement('script', {
-                      type: 'text/wxtag-template',
-                      dangerouslySetInnerHTML: {
-                        __html: `<button class="wx-subscribe-btn">${locale === 'en' ? 'Allow WeChat Notice' : '同意并开启微信通知'}</button>`,
-                      },
-                    }),
-                    React.createElement('script', {
-                      type: 'text/wxtag-template',
-                      slot: 'style',
-                      dangerouslySetInnerHTML: {
-                        __html:
-                          `.wx-subscribe-btn{width:100%;height:44px;border-radius:12px;background:#00b899;color:#fff;font-size:14px;border:none;}` +
-                          `.wx-subscribe-btn:active{opacity:.9;}`,
-                      },
-                    }),
-                  )
-                ) : (
-                  <div className="space-y-2">
-                    <Button
-                      disabled={!prepareError}
-                      className="w-full"
-                      onClick={() => setPrepareNonce((v) => v + 1)}
-                    >
-                      {prepareError ? (locale === 'en' ? 'Retry' : '重试') : locale === 'en' ? 'Preparing…' : '准备中…'}
-                    </Button>
-                    {prepareError && (
-                      <div className="text-[12px] text-red-600 break-all">{prepareError}</div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setStep('form')
-                    onClose()
-                  }}
-                >
-                  {t.skip}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setStep('form')
-                    onClose()
-                  }}
-                  className="bg-[#00b899] hover:bg-[#00a77f]"
-                >
-                  {t.done}
-                </Button>
-              </DialogFooter>
-            </div>
           )}
         </DialogContent>
       </Dialog>
