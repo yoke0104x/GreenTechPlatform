@@ -162,7 +162,7 @@ export function MobileContactUsModal({
       successMessage: '您的留言已成功提交，我们会尽快与您联系！',
       errorMessage: '提交失败，请稍后重试',
       subscribeTitle: '开启微信通知',
-      subscribeDesc: '为了将管理员回复推送到你的微信，请在弹窗中确认订阅通知。',
+      subscribeDesc: '为了将管理员回复推送到你的微信，请在微信弹窗中确认订阅通知。',
       skip: '暂不设置',
       done: '完成',
     },
@@ -199,7 +199,7 @@ export function MobileContactUsModal({
       successMessage: 'Your message has been submitted successfully, we will contact you soon!',
       errorMessage: 'Submission failed, please try again later',
       subscribeTitle: 'Enable WeChat Notice',
-      subscribeDesc: 'To receive admin replies on WeChat, please confirm the subscription in the popup.',
+      subscribeDesc: 'To receive admin replies on WeChat, please confirm the subscription in the WeChat popup.',
       skip: 'Skip',
       done: 'Done',
     },
@@ -403,7 +403,10 @@ export function MobileContactUsModal({
 
       if (shouldPromptSubscribe) {
         setSubscribeAfterSubmit(true)
-        toast({ title: locale === 'en' ? 'One more step' : '再确认一下', description: locale === 'en' ? 'Tap the button to enable WeChat notices.' : '点击下方按钮即可开启微信通知。' })
+        toast({
+          title: locale === 'en' ? 'WeChat Notice' : '微信通知',
+          description: locale === 'en' ? 'Please confirm the subscription in WeChat.' : '请在微信弹窗中确认订阅通知。',
+        })
       } else {
         onClose()
       }
@@ -456,35 +459,16 @@ export function MobileContactUsModal({
 
           {subscribeAfterSubmit ? (
             <div className="space-y-3">
-              <div className="text-[13px] text-gray-600">{t.subscribeDesc}</div>
-
+              {/* 使用 wx-open-subscribe 官方默认按钮模板/样式（不自定义 wxtag-template） */}
               <div className="pt-1">
                 {subscribeTemplateId && openTagReady ? (
-                  React.createElement(
-                    'wx-open-subscribe' as any,
-                    {
-                      template: subscribeTemplateId,
-                      id: 'wx-open-subscribe-after-submit',
-                      ref: (node: any) => {
-                        subscribeTagRef.current = node
-                      },
+                  React.createElement('wx-open-subscribe' as any, {
+                    template: subscribeTemplateId,
+                    id: 'wx-open-subscribe-after-submit',
+                    ref: (node: any) => {
+                      subscribeTagRef.current = node
                     },
-                    React.createElement('script', {
-                      type: 'text/wxtag-template',
-                      dangerouslySetInnerHTML: {
-                        __html: `<button class="wx-subscribe-btn">${locale === 'en' ? 'Allow WeChat Notice' : '同意并开启微信通知'}</button>`,
-                      },
-                    }),
-                    React.createElement('script', {
-                      type: 'text/wxtag-template',
-                      slot: 'style',
-                      dangerouslySetInnerHTML: {
-                        __html:
-                          `.wx-subscribe-btn{width:100%;height:44px;border-radius:12px;background:#00b899;color:#fff;font-size:14px;border:none;}` +
-                          `.wx-subscribe-btn:active{opacity:.9;}`,
-                      },
-                    }),
-                  )
+                  })
                 ) : (
                   <div className="space-y-2">
                     <Button disabled={!prepareError} className="w-full" onClick={() => setPrepareNonce((v) => v + 1)}>
@@ -493,20 +477,6 @@ export function MobileContactUsModal({
                     {prepareError && <div className="text-[12px] text-red-600 break-all">{prepareError}</div>}
                   </div>
                 )}
-              </div>
-
-              <div className="pt-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    setSubscribeAfterSubmit(false)
-                    onClose()
-                  }}
-                >
-                  {t.skip}
-                </Button>
               </div>
             </div>
           ) : (
