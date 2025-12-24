@@ -334,7 +334,6 @@ export async function POST(request: NextRequest) {
                 title: content.length > 18 ? `${content.slice(0, 18)}…` : content,
                 content: `${platform}｜${title}`.length > 18 ? `${`${platform}｜${title}`.slice(0, 18)}…` : `${platform}｜${title}`,
                 platform,
-                remark: '点击立即查看',
                 inquiryContent: inquiryContent ? (inquiryContent.length > 20 ? `${inquiryContent.slice(0, 20)}…` : inquiryContent) : undefined,
                 url: jumpUrl,
               })

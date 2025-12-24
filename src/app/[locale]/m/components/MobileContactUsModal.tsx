@@ -130,6 +130,7 @@ export function MobileContactUsModal({
   const [showSubscribe, setShowSubscribe] = useState(false)
   const subscribeTagRef = useRef<HTMLElement | null>(null)
   const autoClickRef = useRef(false)
+  const launchedRef = useRef<number | null>(null)
 
   const translations = {
     zh: {
@@ -289,19 +290,17 @@ export function MobileContactUsModal({
   const shouldPromptSubscribe = useMemo(() => Boolean(isWeChatEnv() && allowWeChatReply), [allowWeChatReply])
 
   useEffect(() => {
-    if (!showSubscribe) return
-    if (typeof document === 'undefined') return
+    if (!showSubscribe || !openTagReady) return
 
-    const el = document.getElementById('subscribe-btn') as any
+    const el = subscribeTagRef.current
     if (!el) return
-
-    subscribeTagRef.current = el
 
     const onSuccess = (e: any) => {
       const detail = e?.detail || {}
       const decision = subscribeTemplateId ? detail?.[subscribeTemplateId] : undefined
       if (decision === 'accept') {
         toast({ title: locale === 'en' ? 'Subscribed' : '订阅成功' })
+        setShowSubscribe(false)
       } else if (decision === 'reject') {
         toast({
           title: locale === 'en' ? 'Not enabled' : '未开启',
@@ -310,7 +309,8 @@ export function MobileContactUsModal({
       } else {
         toast({ title: locale === 'en' ? 'Done' : '已完成' })
       }
-      setShowSubscribe(false)
+      launchedRef.current = null
+      autoClickRef.current = false
     }
     const onError = (e: any) => {
       const detail = e?.detail || {}
@@ -321,6 +321,8 @@ export function MobileContactUsModal({
         description: `${code ? `${code} ` : ''}${msg}`.trim(),
         variant: 'destructive',
       })
+      launchedRef.current = null
+      autoClickRef.current = false
     }
 
     el.addEventListener('success', onSuccess as any)
@@ -329,7 +331,7 @@ export function MobileContactUsModal({
       el.removeEventListener('success', onSuccess as any)
       el.removeEventListener('error', onError as any)
     }
-  }, [showSubscribe, subscribeTemplateId, locale, toast])
+  }, [showSubscribe, openTagReady, subscribeTemplateId, locale, toast])
 
   // 打开弹窗/展示订阅按钮时预热：拿模板ID + wx.config（openTagList）
   useEffect(() => {
@@ -396,15 +398,15 @@ export function MobileContactUsModal({
   useEffect(() => {
     if (!showSubscribe) {
       autoClickRef.current = false
+      launchedRef.current = null
       return
     }
     if (!openTagReady || !subscribeTemplateId) return
     if (autoClickRef.current) return
-    if (typeof document === 'undefined') return
-
-    const el = document.getElementById('subscribe-btn') as any
+    const el = subscribeTagRef.current as any
     if (!el?.click) return
     autoClickRef.current = true
+    launchedRef.current = Date.now()
     setTimeout(() => {
       try {
         el.click()
@@ -413,6 +415,31 @@ export function MobileContactUsModal({
       }
     }, 0)
   }, [showSubscribe, openTagReady, subscribeTemplateId])
+
+  // 兜底：从微信原生授权面板返回时，有些机型不会触发 openTag success/error 事件
+  useEffect(() => {
+    if (!showSubscribe) return
+    if (typeof document === 'undefined') return
+
+    const onVisibility = () => {
+      if (!showSubscribe) return
+      if (document.visibilityState !== 'visible') return
+      const launchedAt = launchedRef.current
+      // 若刚刚触发过授权面板，则在返回可见时自动收起底部订阅层（避免一直遮挡页面）
+      if (launchedAt && Date.now() - launchedAt > 300) {
+        setShowSubscribe(false)
+        launchedRef.current = null
+        autoClickRef.current = false
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pageshow', onVisibility)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pageshow', onVisibility)
+    }
+  }, [showSubscribe])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -595,8 +622,14 @@ export function MobileContactUsModal({
 
       {/* 提交后：在页面底部呈现官方示例的 wx-open-subscribe（用于触发微信原生授权面板） */}
       {showSubscribe && shouldPromptSubscribe && (
-        <div className="fixed left-0 right-0 bottom-0 z-[9999] px-4 pb-6">
-          <div className="mx-auto max-w-md rounded-2xl bg-white/95 backdrop-blur border border-gray-200 p-4 shadow-lg">
+        <div className="fixed inset-0 z-[9999]">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowSubscribe(false)}
+            aria-hidden="true"
+          />
+          <div className="absolute left-0 right-0 bottom-0 px-4 pb-6">
+            <div className="mx-auto max-w-md rounded-2xl bg-white/95 backdrop-blur border border-gray-200 p-4 shadow-lg">
             <div className="text-[14px] font-medium text-gray-900">{t.subscribeTitle}</div>
             <div className="mt-1 text-[12px] text-gray-600">{t.subscribeDesc}</div>
 
@@ -645,6 +678,7 @@ export function MobileContactUsModal({
                   {prepareError ? (locale === 'en' ? 'Retry' : '重试') : locale === 'en' ? 'Preparing…' : '准备中…'}
                 </Button>
               )}
+            </div>
             </div>
           </div>
         </div>
