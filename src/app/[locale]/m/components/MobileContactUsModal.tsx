@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Script from 'next/script'
+import { flushSync } from 'react-dom'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -287,6 +288,17 @@ export function MobileContactUsModal({
 
   const shouldPromptSubscribe = useMemo(() => Boolean(isWeChatEnv() && allowWeChatReply), [allowWeChatReply])
 
+  const triggerWeChatSubscribePanel = () => {
+    if (!subscribeTemplateId || !subscribeTagRef.current) return false
+    try {
+      // 尝试在同一用户手势链路内触发（有的微信版本允许）
+      ;(subscribeTagRef.current as any).click?.()
+      return true
+    } catch {
+      return false
+    }
+  }
+
   // 绑定 wx-open-subscribe success/error 事件
   useEffect(() => {
     const el = subscribeTagRef.current
@@ -295,7 +307,6 @@ export function MobileContactUsModal({
     const onSuccess = () => {
       toast({ title: locale === 'en' ? 'Subscribed' : '订阅成功' })
       setShowSubscribe(false)
-      onClose()
     }
     const onError = (e: any) => {
       const detail = e?.detail || {}
@@ -386,6 +397,16 @@ export function MobileContactUsModal({
     if (!validateForm()) return
 
     setLoading(true)
+
+    // 按你的要求：点击提交后先关闭“联系我们”弹窗，再在底部触发微信原生授权面板
+    const willSubscribe = Boolean(shouldPromptSubscribe && wechatPrepared && subscribeTemplateId)
+    if (willSubscribe) {
+      onClose()
+      flushSync(() => setShowSubscribe(true))
+      // 尝试自动触发（若被微信拦截，页面上也会有官方示例按钮，用户可再点一次）
+      triggerWeChatSubscribePanel()
+    }
+
     try {
       await createContactMessage({
         technology_id: technologyId,
@@ -407,9 +428,7 @@ export function MobileContactUsModal({
         message: '',
       })
 
-      if (shouldPromptSubscribe) {
-        setShowSubscribe(true)
-      } else {
+      if (!willSubscribe) {
         onClose()
       }
     } catch (error) {
@@ -539,56 +558,63 @@ export function MobileContactUsModal({
               <Button type="button" variant="outline" onClick={handleCancel}>
                 {t.cancel}
               </Button>
-              {showSubscribe && shouldPromptSubscribe ? (
-                subscribeTemplateId && openTagReady ? (
-                  // 官方文档写法：wx-open-subscribe + default/style 插槽模板
-                  React.createElement(
-                    'wx-open-subscribe' as any,
-                    {
-                      template: subscribeTemplateId,
-                      id: 'wx-open-subscribe-default',
-                      ref: (node: any) => {
-                        subscribeTagRef.current = node
-                      },
-                    },
-                    React.createElement('script', {
-                      type: 'text/wxtag-template',
-                      dangerouslySetInnerHTML: {
-                        __html: `<button class="wx-open-subscribe-btn">${locale === 'en' ? 'Subscribe' : '订阅通知'}</button>`,
-                      },
-                    }),
-                    React.createElement('script', {
-                      type: 'text/wxtag-template',
-                      slot: 'style',
-                      dangerouslySetInnerHTML: {
-                        __html:
-                          `.wx-open-subscribe-btn{width:100%;height:44px;border-radius:8px;background:#07c160;color:#fff;font-size:14px;border:none;}` +
-                          `.wx-open-subscribe-btn:active{opacity:.9;}`,
-                      },
-                    }),
-                  )
-                ) : (
-                  <Button
-                    type="button"
-                    disabled={!prepareError}
-                    className="bg-[#00b899] hover:bg-[#00a77f]"
-                    onClick={() => setPrepareNonce((v) => v + 1)}
-                  >
-                    {prepareError ? (locale === 'en' ? 'Retry' : '重试') : locale === 'en' ? 'Preparing…' : '准备中…'}
-                  </Button>
-                )
-              ) : (
-                <Button type="submit" disabled={loading} className="bg-[#00b899] hover:bg-[#00a77f]">
-                  {loading ? t.submitting : t.submit}
-                </Button>
-              )}
+              <Button type="submit" disabled={loading} className="bg-[#00b899] hover:bg-[#00a77f]">
+                {loading ? t.submitting : t.submit}
+              </Button>
             </DialogFooter>
-            {showSubscribe && prepareError && (
-              <div className="text-[12px] text-red-600 break-all">{prepareError}</div>
-            )}
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* 提交后：在页面底部呈现官方示例的 wx-open-subscribe（用于触发微信原生授权面板） */}
+      {showSubscribe && shouldPromptSubscribe && (
+        <div className="fixed left-0 right-0 bottom-0 z-[9999] px-4 pb-6">
+          <div className="mx-auto max-w-md rounded-2xl bg-white/95 backdrop-blur border border-gray-200 p-4 shadow-lg">
+            <div className="text-[14px] font-medium text-gray-900">{t.subscribeTitle}</div>
+            <div className="mt-1 text-[12px] text-gray-600">{t.subscribeDesc}</div>
+
+            <div className="mt-3">
+              {subscribeTemplateId && openTagReady ? (
+                React.createElement(
+                  'wx-open-subscribe' as any,
+                  {
+                    template: subscribeTemplateId,
+                    id: 'subscribe-btn',
+                    ref: (node: any) => {
+                      subscribeTagRef.current = node
+                    },
+                  },
+                  // 注意：按官方文档顺序与写法：slot="style" 内包一层 <style>
+                  React.createElement('script', {
+                    type: 'text/wxtag-template',
+                    slot: 'style',
+                    dangerouslySetInnerHTML: {
+                      __html: `<style>.subscribe-btn{color:#fff;background-color:#07c160;border:none;border-radius:8px;height:44px;width:100%;font-size:14px;}</style>`,
+                    },
+                  }),
+                  React.createElement('script', {
+                    type: 'text/wxtag-template',
+                    dangerouslySetInnerHTML: {
+                      __html: `<button class="subscribe-btn">${locale === 'en' ? 'Subscribe' : '一次性模版消息订阅'}</button>`,
+                    },
+                  }),
+                )
+              ) : (
+                <Button type="button" className="w-full" disabled={!prepareError} onClick={() => setPrepareNonce((v) => v + 1)}>
+                  {prepareError ? (locale === 'en' ? 'Retry' : '重试') : locale === 'en' ? 'Preparing…' : '准备中…'}
+                </Button>
+              )}
+            </div>
+
+            {prepareError && <div className="mt-2 text-[12px] text-red-600 break-all">{prepareError}</div>}
+            <div className="mt-3">
+              <Button type="button" variant="outline" className="w-full" onClick={() => setShowSubscribe(false)}>
+                {t.skip}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
