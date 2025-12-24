@@ -295,19 +295,21 @@ export function MobileContactUsModal({
     const el = subscribeTagRef.current
     if (!el) return
 
+    const onClick = () => {
+      launchedRef.current = Date.now()
+    }
+
     const onSuccess = (e: any) => {
       const detail = e?.detail || {}
       const decision = subscribeTemplateId ? detail?.[subscribeTemplateId] : undefined
-      if (decision === 'accept') {
-        toast({ title: locale === 'en' ? 'Subscribed' : '订阅成功' })
-        setShowSubscribe(false)
-      } else if (decision === 'reject') {
+      if (decision === 'reject') {
         toast({
           title: locale === 'en' ? 'Not enabled' : '未开启',
           description: locale === 'en' ? 'You can enable it later.' : '你可以稍后再开启。',
         })
       } else {
-        toast({ title: locale === 'en' ? 'Done' : '已完成' })
+        toast({ title: locale === 'en' ? 'Subscribed' : '订阅成功' })
+        setShowSubscribe(false)
       }
       launchedRef.current = null
       autoClickRef.current = false
@@ -325,9 +327,11 @@ export function MobileContactUsModal({
       autoClickRef.current = false
     }
 
+    el.addEventListener('click', onClick as any)
     el.addEventListener('success', onSuccess as any)
     el.addEventListener('error', onError as any)
     return () => {
+      el.removeEventListener('click', onClick as any)
       el.removeEventListener('success', onSuccess as any)
       el.removeEventListener('error', onError as any)
     }
