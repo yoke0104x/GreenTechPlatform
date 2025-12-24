@@ -39,6 +39,59 @@ async function ensureWxReady() {
   return wx || null
 }
 
+function isInvalidSignatureError(err: unknown) {
+  const raw = err && typeof err === 'object' ? (err as any).errMsg || (err as any).message : ''
+  const msg = String(raw || err || '')
+  return msg.includes('invalid signature') || msg.includes('config:invalid signature')
+}
+
+async function wxConfigWithRetry(wx: any, cfg: { appId: string; timestamp: number; nonceStr: string; signature: string }) {
+  const wxDebug = typeof window !== 'undefined' && window.location.search.includes('wxdebug=1')
+
+  const run = () =>
+    new Promise<void>((resolve, reject) => {
+      try {
+        wx.config({
+          debug: wxDebug,
+          appId: cfg.appId,
+          timestamp: cfg.timestamp,
+          nonceStr: cfg.nonceStr,
+          signature: cfg.signature,
+          jsApiList: [
+            'checkJsApi',
+            'updateAppMessageShareData',
+            'updateTimelineShareData',
+            'onMenuShareAppMessage',
+            'onMenuShareTimeline',
+          ],
+          openTagList: ['wx-open-subscribe'],
+        })
+        wx.ready(() => resolve())
+        wx.error((err: any) => reject(err))
+      } catch (e) {
+        reject(e)
+      }
+    })
+
+  try {
+    await run()
+    return true
+  } catch (e) {
+    if (!isInvalidSignatureError(e)) return false
+
+    // iOS/部分机型：首次进入 URL 与当前 URL 不一致导致签名失败；清理并以当前 URL 重试一次
+    try {
+      const current = window.location.href.split('#')[0]
+      window.sessionStorage.removeItem('wx_sign_url')
+      window.sessionStorage.setItem('wx_sign_url', current)
+    } catch {
+      // ignore
+    }
+    await run().catch(() => null)
+    return true
+  }
+}
+
 function toAbsoluteUrl(input: string) {
   const v = (input || '').trim()
   if (!v) return ''
@@ -97,30 +150,7 @@ export function useWeChatShare(data: WeChatShareData | null, opts?: { enabled?: 
       const title = truncateText(data.title, 48)
       const desc = truncateText(data.desc || data.title, 80)
 
-      await new Promise<void>((resolve, reject) => {
-        try {
-          wx.config({
-            debug: false,
-            appId: cfg.appId,
-            timestamp: cfg.timestamp,
-            nonceStr: cfg.nonceStr,
-            signature: cfg.signature,
-            jsApiList: [
-              'checkJsApi',
-              'updateAppMessageShareData',
-              'updateTimelineShareData',
-              // 兼容老版本
-              'onMenuShareAppMessage',
-              'onMenuShareTimeline',
-            ],
-            openTagList: ['wx-open-subscribe'],
-          })
-          wx.ready(() => resolve())
-          wx.error((err: any) => reject(err))
-        } catch (e) {
-          reject(e)
-        }
-      }).catch(() => null)
+      await wxConfigWithRetry(wx, cfg).catch(() => null)
 
       if (cancelled) return
 
@@ -153,4 +183,3 @@ export function getWeChatShareHint(locale: 'zh' | 'en') {
     ? 'Please tap the top-right menu (⋯) to share.'
     : '请点击右上角“…”进行分享'
 }
-
