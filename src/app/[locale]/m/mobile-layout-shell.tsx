@@ -6,6 +6,18 @@ import { ReactNode, useEffect, useMemo, useState } from 'react'
 import { Home, Upload, MessageSquare, Trophy, User, Grid } from 'lucide-react'
 import { useUnreadMessage } from '@/components/message/unread-message-context'
 
+function captureWeChatSignUrlOnce() {
+  if (typeof window === 'undefined') return
+  try {
+    const key = 'wx_sign_url'
+    if (window.sessionStorage.getItem(key)) return
+    const url = window.location.href.split('#')[0]
+    window.sessionStorage.setItem(key, url)
+  } catch {
+    // ignore
+  }
+}
+
 export function MobileLayoutShell({
   children,
   locale,
@@ -17,6 +29,11 @@ export function MobileLayoutShell({
   const { unreadCount } = useUnreadMessage()
   const [isParksMessages, setIsParksMessages] = useState(false)
    const [isPolicyMessages, setIsPolicyMessages] = useState(false)
+
+  // iOS 微信 JS-SDK：提前记录首次进入页面 URL，避免后续 SPA 路由导致签名不稳定
+  useEffect(() => {
+    captureWeChatSignUrlOnce()
+  }, [])
 
   const isPolicySection = useMemo(
     () => !!pathname && pathname.startsWith(`/${locale}/m/policy`),

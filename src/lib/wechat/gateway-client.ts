@@ -6,11 +6,19 @@ export interface WeChatGatewayConfig {
   secret: string
 }
 
+function normalizeGatewayBaseUrl(input: string) {
+  const trimmed = input.trim().replace(/\/+$/, '')
+  if (!trimmed) return ''
+
+  // Default to HTTPS if scheme is missing.
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+}
+
 export function getWeChatGatewayConfig(): WeChatGatewayConfig | null {
-  const baseUrl = sanitizeHeaderValue(process.env.WECHAT_GATEWAY_URL || '')
+  const baseUrl = normalizeGatewayBaseUrl(sanitizeHeaderValue(process.env.WECHAT_GATEWAY_URL || ''))
   const secret = sanitizeHeaderValue(process.env.WECHAT_GATEWAY_SECRET || '')
   if (!baseUrl || !secret) return null
-  return { baseUrl: baseUrl.replace(/\/+$/, ''), secret }
+  return { baseUrl, secret }
 }
 
 function signBodyHmac(secret: string, timestamp: string, body: string) {
@@ -50,7 +58,7 @@ export async function sendSubscribeMessageViaGateway(payload: GatewaySubscribeSe
       body,
       cache: 'no-store',
       redirect: 'manual',
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(20_000),
     })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -103,7 +111,7 @@ export async function getJsSdkConfigViaGateway(payload: GatewayJsSdkConfigPayloa
       body,
       cache: 'no-store',
       redirect: 'manual',
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(20_000),
     })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)

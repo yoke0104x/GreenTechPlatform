@@ -60,7 +60,15 @@ function getWeChatSignUrl() {
 
 async function ensureWxOpenTagReady() {
   if (typeof window === 'undefined') return false
-  const wx = (window as any).wx
+  let wx = (window as any).wx
+  if (!wx) {
+    // 等待 Script 注入完成（避免用户快速提交后立即打开弹窗时 wx 还未挂载）
+    const start = Date.now()
+    while (!wx && Date.now() - start < 2500) {
+      await new Promise((r) => setTimeout(r, 50))
+      wx = (window as any).wx
+    }
+  }
   if (!wx) throw new Error('微信能力加载中，请稍后再试')
 
   const signUrl = getWeChatSignUrl()
@@ -116,6 +124,8 @@ export function MobileContactUsModal({
   const [subscribePromptOpen, setSubscribePromptOpen] = useState(false)
   const [subscribeTemplateId, setSubscribeTemplateId] = useState<string | null>(null)
   const [openTagReady, setOpenTagReady] = useState(false)
+  const [prepareError, setPrepareError] = useState<string | null>(null)
+  const [prepareNonce, setPrepareNonce] = useState(0)
   const subscribeTagRef = useRef<HTMLElement | null>(null)
 
   const translations = {
@@ -304,6 +314,7 @@ export function MobileContactUsModal({
 
     let cancelled = false
     setOpenTagReady(false)
+    setPrepareError(null)
     ;(async () => {
       try {
         const origin = window.location.origin
@@ -314,12 +325,29 @@ export function MobileContactUsModal({
         if (!cancelled && resp.success && dataAny?.templateId) {
           setSubscribeTemplateId(String(dataAny.templateId))
         }
-        await ensureWxOpenTagReady()
+        try {
+          await ensureWxOpenTagReady()
+        } catch (e) {
+          // iOS 微信常见问题：首次进入 URL 与当前 URL 不一致导致签名失败；清理缓存并重试一次
+          const msg = e instanceof Error ? e.message : String(e)
+          if (msg.includes('invalid signature')) {
+            try {
+              window.sessionStorage.removeItem('wx_sign_url')
+              window.sessionStorage.setItem('wx_sign_url', window.location.href.split('#')[0])
+            } catch {
+              // ignore
+            }
+            await ensureWxOpenTagReady()
+          } else {
+            throw e
+          }
+        }
         if (!cancelled) {
           setOpenTagReady(true)
         }
       } catch (e) {
         if (cancelled) return
+        setPrepareError(e instanceof Error ? e.message : String(e))
         toast({
           title: locale === 'en' ? 'Failed' : '操作失败',
           description: e instanceof Error ? e.message : String(e),
@@ -331,7 +359,7 @@ export function MobileContactUsModal({
     return () => {
       cancelled = true
     }
-  }, [subscribePromptOpen, locale, toast, isParkContext, isPolicyContext])
+  }, [subscribePromptOpen, locale, toast, isParkContext, isPolicyContext, prepareNonce])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -526,9 +554,18 @@ export function MobileContactUsModal({
                 }),
               )
             ) : (
-              <Button disabled className="w-full">
-                {locale === 'en' ? 'Preparing…' : '准备中…'}
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  disabled={!prepareError}
+                  className="w-full"
+                  onClick={() => setPrepareNonce((v) => v + 1)}
+                >
+                  {prepareError ? (locale === 'en' ? 'Retry' : '重试') : locale === 'en' ? 'Preparing…' : '准备中…'}
+                </Button>
+                {prepareError && (
+                  <div className="text-[12px] text-red-600 break-all">{prepareError}</div>
+                )}
+              </div>
             )}
           </div>
 
