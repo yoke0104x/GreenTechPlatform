@@ -139,7 +139,7 @@ export function MobileContactUsModal({
       contactEmail: '联系邮箱',
       message: '留言内容',
       allowWeChatReply: '允许回复消息发送到我的微信',
-      allowWeChatDesc: '勾选后，管理员回复将以微信通知推送到你的微信服务号消息。',
+      allowWeChatDesc: '勾选后，回复将以微信通知推送到您的服务号。',
       required: '*',
       cancel: '取消',
       submit: '提交留言',
@@ -467,7 +467,7 @@ export function MobileContactUsModal({
       <Script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js" strategy="afterInteractive" />
 
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[520px] h-[92vh] max-h-[92vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold">{t.contactUs}</DialogTitle>
             {technologyName && (
@@ -479,8 +479,9 @@ export function MobileContactUsModal({
             )}
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+          <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto pr-1 space-y-3">
+              <div className="space-y-1.5">
               <Label htmlFor="contactName">
                 {t.contactName} <span className="text-red-500">{t.required}</span>
               </Label>
@@ -491,10 +492,11 @@ export function MobileContactUsModal({
                 value={formData.contactName}
                 onChange={(e) => handleInputChange('contactName', e.target.value)}
                 required
+                className="h-10"
               />
-            </div>
+              </div>
 
-            <div className="space-y-2">
+              <div className="space-y-1.5">
               <Label htmlFor="contactPhone">
                 {t.contactPhone} <span className="text-red-500">{t.required}</span>
               </Label>
@@ -505,10 +507,11 @@ export function MobileContactUsModal({
                 value={formData.contactPhone}
                 onChange={(e) => handleInputChange('contactPhone', e.target.value)}
                 required
+                className="h-10"
               />
-            </div>
+              </div>
 
-            <div className="space-y-2">
+              <div className="space-y-1.5">
               <Label htmlFor="contactEmail">
                 {t.contactEmail} <span className="text-red-500">{t.required}</span>
               </Label>
@@ -519,10 +522,11 @@ export function MobileContactUsModal({
                 value={formData.contactEmail}
                 onChange={(e) => handleInputChange('contactEmail', e.target.value)}
                 required
+                className="h-10"
               />
-            </div>
+              </div>
 
-            <div className="space-y-2">
+              <div className="space-y-1.5">
               <Label htmlFor="message">
                 {t.message} <span className="text-red-500">{t.required}</span>
               </Label>
@@ -531,30 +535,31 @@ export function MobileContactUsModal({
                 placeholder={t.placeholders.message}
                 value={formData.message}
                 onChange={(e) => handleInputChange('message', e.target.value)}
-                rows={4}
+                rows={3}
                 className="resize-none"
                 required
               />
+              </div>
+
+              {isWeChatEnv() && (
+                <div className="rounded-xl border border-gray-200 bg-white px-3 py-2">
+                  <label className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={allowWeChatReply}
+                      onChange={(e) => setAllowWeChatReply(e.target.checked)}
+                    />
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-medium text-gray-900">{t.allowWeChatReply}</div>
+                      <div className="text-[12px] text-gray-500">{t.allowWeChatDesc}</div>
+                    </div>
+                  </label>
+                </div>
+              )}
             </div>
 
-            {isWeChatEnv() && (
-              <div className="rounded-xl border border-gray-200 bg-white px-3 py-2">
-                <label className="flex items-start gap-2">
-                  <input
-                    type="checkbox"
-                    className="mt-1"
-                    checked={allowWeChatReply}
-                    onChange={(e) => setAllowWeChatReply(e.target.checked)}
-                  />
-                  <div className="min-w-0">
-                    <div className="text-[13px] font-medium text-gray-900">{t.allowWeChatReply}</div>
-                    <div className="text-[12px] text-gray-500">{t.allowWeChatDesc}</div>
-                  </div>
-                </label>
-              </div>
-            )}
-
-            <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-4">
+            <DialogFooter className="grid grid-cols-2 gap-2 pt-3">
               <Button type="button" variant="outline" onClick={handleCancel}>
                 {t.cancel}
               </Button>
