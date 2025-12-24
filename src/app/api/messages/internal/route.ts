@@ -31,6 +31,36 @@ function inferMessageContext(category?: string | null) {
   return { from: null, platform: '绿色技术平台' }
 }
 
+function normalizeOrigin(raw: string) {
+  const v = (raw || '').trim()
+  if (!v) return ''
+  if (v.startsWith('http://') || v.startsWith('https://')) return v.replace(/\/+$/, '')
+  return `https://${v.replace(/\/+$/, '')}`
+}
+
+function getPlatformOrigin(request: NextRequest, from: 'parks' | 'policy' | null) {
+  const envOrigin =
+    from === 'parks'
+      ? process.env.PARK_H5_ORIGIN
+      : from === 'policy'
+        ? process.env.POLICY_H5_ORIGIN
+        : process.env.TECH_H5_ORIGIN
+  const normalized = normalizeOrigin(envOrigin || '')
+  return normalized || getRequestOrigin(request)
+}
+
+function buildH5ChatDetailUrl(
+  origin: string,
+  from: 'parks' | 'policy' | null,
+  messageId: string | null,
+  locale: 'zh' | 'en' = 'zh',
+) {
+  const base = `${origin}/${locale}/m/chat`
+  if (!messageId) return from ? `${base}?from=${from}` : base
+  const detail = `${base}/${encodeURIComponent(messageId)}`
+  return from ? `${detail}?from=${from}` : detail
+}
+
 function parseAdminOverride(header: string | null): AdminOverrideUser | null {
   if (!header) return null
   try {
@@ -284,14 +314,12 @@ export async function POST(request: NextRequest) {
         .eq('id', resolvedCustomToUserId)
         .single()
       if (!cuError) {
-        const openId = (customUser?.wechat_openid || (customUser?.user_metadata as any)?.wechat_openid) as string | undefined
+          const openId = (customUser?.wechat_openid || (customUser?.user_metadata as any)?.wechat_openid) as string | undefined
         if (openId) {
           const { from, platform } = inferMessageContext(inserted?.category)
-          const origin = getRequestOrigin(request)
-          const messageId = inserted?.id ? String(inserted.id) : ''
-          const detailUrl = messageId
-            ? `${origin}/zh/m/chat/${encodeURIComponent(messageId)}${from ? `?from=${from}` : ''}`
-            : `${origin}/zh/m/chat${from ? `?from=${from}` : ''}`
+          const origin = getPlatformOrigin(request, from)
+          const messageId = inserted?.id ? String(inserted.id) : null
+          const jumpUrl = buildH5ChatDetailUrl(origin, from, messageId, 'zh')
 
           if (isWeChatSubscribeConfigured()) {
             try {
@@ -301,7 +329,7 @@ export async function POST(request: NextRequest) {
                 title: content.length > 18 ? `${content.slice(0, 18)}…` : content,
                 content: `${platform}｜${title}`.length > 18 ? `${`${platform}｜${title}`.slice(0, 18)}…` : `${platform}｜${title}`,
                 platform,
-                url: detailUrl,
+                url: jumpUrl,
               })
               wechatSent = true
             } catch (subscribeErr) {
