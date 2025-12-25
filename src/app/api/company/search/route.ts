@@ -6,6 +6,16 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    const lookupEnabled = process.env.NEXT_PUBLIC_COMPANY_LOOKUP_ENABLED !== 'false'
+    if (!lookupEnabled) {
+      return NextResponse.json({
+        success: true,
+        data: [],
+        total: 0,
+        disabled: true,
+      })
+    }
+
     const { searchParams } = new URL(request.url);
     const searchKey = searchParams.get('q');
 

@@ -33,6 +33,8 @@ export function CompanySearch({
   allowCustom = false,
   customLabel = "自定义输入企业名称"
 }: CompanySearchProps) {
+  const lookupEnabled = process.env.NEXT_PUBLIC_COMPANY_LOOKUP_ENABLED !== 'false'
+
   const [suggestions, setSuggestions] = useState<CompanySearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -98,6 +100,7 @@ export function CompanySearch({
 
   // 防抖搜索
   useEffect(() => {
+    if (!lookupEnabled) return
     if (customMode || isSelected) return; // 如果在自定义模式或已选择企业，不执行搜索
 
     const timeoutId = setTimeout(() => {
@@ -144,6 +147,7 @@ export function CompanySearch({
   };
 
   const handleInputFocus = () => {
+    if (!lookupEnabled) return
     if (customMode || isSelected) return; // 自定义模式或已选择企业时不显示下拉框
     if (suggestions.length > 0 || allowCustom) {
       setShowDropdown(true);
@@ -154,9 +158,11 @@ export function CompanySearch({
     <div className={`relative ${className}`}>
       {/* 搜索输入框 */}
       <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Search className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''} text-gray-400`} />
-        </div>
+        {lookupEnabled && (
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''} text-gray-400`} />
+          </div>
+        )}
         <input
           ref={inputRef}
           type="text"
@@ -164,9 +170,9 @@ export function CompanySearch({
           onChange={handleInputChange}
           onFocus={handleInputFocus}
           placeholder={placeholder}
-          className="w-full h-10 rounded-xl border border-gray-200 px-3 pl-10 bg-white text-[14px] focus:ring-2 focus:ring-[#00b899] focus:border-transparent outline-none transition-all"
+          className={`w-full h-10 rounded-xl border border-gray-200 px-3 ${lookupEnabled ? 'pl-10' : ''} bg-white text-[14px] focus:ring-2 focus:ring-[#00b899] focus:border-transparent outline-none transition-all`}
         />
-        {isLoading && (
+        {lookupEnabled && isLoading && (
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#00b899]"></div>
           </div>
@@ -174,7 +180,7 @@ export function CompanySearch({
       </div>
 
       {/* 搜索提示下拉框 */}
-      {(showDropdown || searchError || notFound) && (
+      {lookupEnabled && (showDropdown || searchError || notFound) && (
         <div 
           ref={dropdownRef}
           className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto"
