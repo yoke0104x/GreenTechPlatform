@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, Suspense, useEffect } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import Image from 'next/image'
 import { Eye, EyeOff } from 'lucide-react'
@@ -27,6 +27,7 @@ export default function MobileLoginPage() {
 function LoginContent() {
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const t = useTranslations('auth')
   const th = useTranslations('home')
   const tf = useTranslations('footer')
@@ -62,19 +63,10 @@ function LoginContent() {
   const goAfterLogin = () => router.replace(`/${locale}/m`)
   const goAfterRegister = () => router.push(`/${locale}/company-profile`)
 
-  // 从 URL 解析 ?register=1，避免使用 useSearchParams 触发 Suspense 限制
+  // 从 URL 解析 ?register=1（支持仅 query 变化导致的路由更新）
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      setIsRegister(false)
-      return
-    }
-    try {
-      const sp = new URLSearchParams(window.location.search)
-      setIsRegister(sp.get('register') === '1')
-    } catch {
-      setIsRegister(false)
-    }
-  }, [pathname])
+    setIsRegister(searchParams.get('register') === '1')
+  }, [searchParams])
 
   // 微信登录
   async function handleWeChatLogin() {
