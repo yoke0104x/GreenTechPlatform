@@ -143,6 +143,8 @@ export default function MobilePortalPage({
     },
   ]
 
+  const initial = user ? (displayName?.charAt(0)?.toUpperCase() || 'U') : null
+
   return (
     <section className="min-h-dvh flex flex-col" style={{ backgroundColor: '#edeef7' }}>
       {/* 顶部欢迎区：企业 logo + 欢迎文案 + 语言切换 */}
@@ -153,17 +155,25 @@ export default function MobilePortalPage({
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative w-10 h-10 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center">
-              {company?.logoUrl ? (
-                <Image
-                  src={company.logoUrl}
-                  alt={company.name}
-                  fill
-                  className="object-cover"
-                  sizes="48px"
-                  priority
-                />
+              {user?.avatar_url ? (
+                <>
+                  <div className="absolute inset-0 flex items-center justify-center text-[14px] font-semibold text-gray-600">
+                    {initial}
+                  </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={user.avatar_url}
+                    alt={displayName}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                </>
               ) : (
-                <User className="w-6 h-6 text-gray-400" />
+                <div className="w-full h-full flex items-center justify-center text-[14px] font-semibold text-gray-600">
+                  {user ? initial : <User className="w-6 h-6 text-gray-400" />}
+                </div>
               )}
             </div>
             <div className="flex flex-col min-w-0">

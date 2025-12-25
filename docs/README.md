@@ -39,7 +39,7 @@
 ├── src/                       # 前端源代码
 │   ├── app/                   # Next.js App Router
 │   │   ├── [locale]/m/         # 移动端(H5)路由（与Web并存）
-│   │   │   ├── (auth)/login/page.tsx   # 移动端登录
+│   │   │   ├── (auth)/login/page.tsx   # 移动端登录（微信登录按钮灰底圆角 + “推荐”标识）
 │   │   │   ├── (auth)/wechat/callback/page.tsx # 移动端微信登录回调页
 │   │   │   ├── components/             # 移动端(H5)复用组件
 │   │   │   │   └── MobileContactUsModal.tsx # H5「联系咨询」弹窗（含“允许回复推送到微信”勾选 + 提交后弹出订阅授权）
@@ -48,7 +48,7 @@
 │   │   │   ├── hooks/                  # 移动端(H5) Hooks
 │   │   │   │   └── useWeChatShare.ts   # 微信H5分享（JS-SDK签名+设置好友/群聊&朋友圈分享数据）
 │   │   │   ├── layout.tsx              # 移动端共享布局（底部Tab：技术/政策/园区共用，园区入口下“消息”指向园区对接消息中心）
-│   │   │   ├── page.tsx                # 重定向到 /home
+│   │   │   ├── page.tsx                # 移动端 Portal（左上角头像使用用户头像，入口到技术/园区/政策）
 │   │   │   ├── home/page.tsx           # 移动端首页（绿色技术平台）
 │   │   │   ├── chat/page.tsx           # 移动端消息中心（复用Web端接口与逻辑，H5样式重构；园区入口下分类文案为“园区对接/用户反馈”，增加请求ID防重复加载控制与登录态恢复重试）
 │   │   │   ├── company-profile/page.tsx # 移动端企业信息完善（与Web逻辑一致，含Logo上传）

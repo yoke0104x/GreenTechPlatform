@@ -397,10 +397,22 @@ function LoginContent() {
       {!isRegister && (
         <>
           {/* 微信登录（仅登录模式显示） */}
-          <div className="mt-5 text-center">
-            <button type="button" onClick={handleWeChatLogin} className="inline-flex items-center gap-2 text-gray-700 text-[14px]">
-              <img src="/images/icons/微信.png" alt="wechat" className="w-4 h-4"/>
-              <span className="text-[12px]">{locale==='en' ? 'WeChat Login' : '微信登录'}</span>
+          <div className="mt-5">
+            <button
+              type="button"
+              onClick={handleWeChatLogin}
+              className="w-full h-11 rounded-xl bg-[#f2f3f7] inline-flex items-center justify-center gap-2 active:opacity-90"
+            >
+              <img src="/images/icons/微信.png" alt="wechat" className="w-6 h-6" />
+              <span className="inline-flex items-center gap-1">
+                <span className="text-[14px] font-normal text-[#07c160]">
+                  {locale === 'en' ? 'WeChat Login' : '微信登录'}
+                </span>
+                <span className="relative -top-[8px] inline-flex items-center rounded-md bg-[#f8d34a] px-1.5 py-0.5 text-[10px] leading-none text-[#5b533a]">
+                  {locale === 'en' ? 'Recommended' : '推荐'}
+                  <span className="absolute left-0.5 bottom-0 h-0 w-0 origin-top-left rotate-[30deg] translate-y-[3px] border-r-[8px] border-t-[8px] border-r-transparent border-t-[#f8d34a]" />
+                </span>
+              </span>
             </button>
           </div>
         </>
