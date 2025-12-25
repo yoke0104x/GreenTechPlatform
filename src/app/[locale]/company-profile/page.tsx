@@ -99,7 +99,9 @@ export default function CompanyProfilePage({ params }: PageProps) {
   const requirements = [
     t('requirements.publishTech'),
     t('requirements.findTech'),
-    t('requirements.industryInsights')
+    t('requirements.industryInsights'),
+    t('requirements.latestPolicy'),
+    t('requirements.parkInfo')
   ];
 
   const { 

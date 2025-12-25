@@ -208,6 +208,8 @@ export default function MobileCompanyProfilePage() {
                 <option value="publishTech">{t('requirements.publishTech')}</option>
                 <option value="findTech">{t('requirements.findTech')}</option>
                 <option value="industryInsights">{t('requirements.industryInsights')}</option>
+                <option value="latestPolicy">{t('requirements.latestPolicy')}</option>
+                <option value="parkInfo">{t('requirements.parkInfo')}</option>
               </select>
             </Field>
             {/* 企业名称 + 企查查搜索 */}

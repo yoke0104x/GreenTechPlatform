@@ -216,7 +216,9 @@
     "requirements": {
       "publishTech": "Publish my green low-carbon technology",
       "findTech": "Find specific green low-carbon technology",
-      "industryInsights": "Learn about industry insights"
+      "industryInsights": "Learn about industry insights",
+      "latestPolicy": "Learn about latest policies",
+      "parkInfo": "Get parks information"
     },
     "step1": {
       "requirement": "Your Requirements",

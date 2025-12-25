@@ -154,7 +154,9 @@
     "requirements": {
       "publishTech": "发布我的绿色低碳技术",
       "findTech": "寻找特定绿色低碳技术",
-      "industryInsights": "了解业界前沿动态"
+      "industryInsights": "了解业界前沿动态",
+      "latestPolicy": "了解最新政策",
+      "parkInfo": "获取园区信息"
     },
     "step1": {
       "requirement": "您的需求",
