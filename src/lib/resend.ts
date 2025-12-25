@@ -172,6 +172,61 @@ export const emailTemplates = {
 © 2024 绿色技术平台 版权所有
     `
   })
+  ,
+
+  bindEmail: (code: string): EmailTemplate => ({
+    subject: '绑定邮箱验证码 - 绿色技术平台',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+        <div style="background-color: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <div style="text-align: center; margin-bottom: 40px;">
+            <h1 style="color: #00b899; margin: 0; font-size: 28px;">绿色技术平台</h1>
+            <p style="color: #666; margin-top: 10px; font-size: 16px;">绑定邮箱验证码</p>
+          </div>
+          
+          <div style="background-color: #f8f9fa; padding: 30px; border-radius: 8px; text-align: center; margin: 30px 0;">
+            <h2 style="color: #333; margin: 0 0 20px 0; font-size: 24px;">您的验证码</h2>
+            <div style="font-size: 36px; font-weight: bold; color: #00b899; letter-spacing: 8px; padding: 20px; background-color: white; border-radius: 6px; border: 2px dashed #00b899;">
+              ${code}
+            </div>
+            <p style="color: #666; margin-top: 20px; font-size: 14px;">验证码有效期为 5 分钟</p>
+          </div>
+          
+          <div style="margin: 30px 0;">
+            <p style="color: #333; font-size: 16px; line-height: 1.6;">
+              您正在绑定（或修改）绿色技术平台账户邮箱。请在页面中输入上述验证码完成验证。
+            </p>
+            <p style="color: #666; font-size: 14px; line-height: 1.6; margin-top: 20px;">
+              如果您未进行此操作，请忽略此邮件并检查账户安全。
+            </p>
+          </div>
+          
+          <div style="border-top: 1px solid #eee; margin-top: 40px; padding-top: 20px; text-align: center;">
+            <p style="color: #999; font-size: 12px; margin: 0;">
+              此邮件由系统自动发送，请勿直接回复。
+            </p>
+            <p style="color: #999; font-size: 12px; margin: 5px 0 0 0;">
+              © 2024 绿色技术平台 版权所有
+            </p>
+          </div>
+        </div>
+      </div>
+    `,
+    text: `
+绿色技术平台 - 绑定邮箱验证码
+
+您的验证码是：${code}
+
+验证码有效期为 5 分钟。
+
+您正在绑定（或修改）绿色技术平台账户邮箱。请在页面中输入上述验证码完成验证。
+
+如果您未进行此操作，请忽略此邮件并检查账户安全。
+
+此邮件由系统自动发送，请勿直接回复。
+© 2024 绿色技术平台 版权所有
+    `
+  })
 };
 
 // 生成6位数字验证码
@@ -289,6 +344,32 @@ export async function sendLoginCode(email: string): Promise<{
     return {
       success: true,
       code, // 返回验证码供后端存储
+      data: result.data
+    };
+  } else {
+    return {
+      success: false,
+      error: result.error
+    };
+  }
+}
+
+// 发送绑定邮箱验证码
+export async function sendBindEmailCode(email: string): Promise<{
+  success: boolean;
+  code?: string;
+  data?: { id: string };
+  error?: string;
+}> {
+  const code = generateOTP();
+  const template = emailTemplates.bindEmail(code);
+  
+  const result = await sendEmail(email, template);
+  
+  if (result.success) {
+    return {
+      success: true,
+      code,
       data: result.data
     };
   } else {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabaseAuthApi, User } from '@/api/supabaseAuth'
+import type { User } from '@/api/supabaseAuth'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -11,13 +11,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ImageUpload } from '@/components/admin/forms/image-upload'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { isValidEmail, isValidPhone, emailError, phoneError } from '@/lib/validators'
+import { profileApi } from '@/api/profile'
 
 interface BasicInfoProps {
   locale: string
 }
 
 export default function BasicInfo({ locale }: BasicInfoProps) {
-  const { user: authUser, loading: authLoading } = useAuthContext()
+  const { user: authUser, loading: authLoading, checkUser } = useAuthContext()
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
@@ -59,14 +60,17 @@ export default function BasicInfo({ locale }: BasicInfoProps) {
   }, [authUser, authLoading, locale])
 
   // 发送邮箱验证码
-  const sendEmailCode = () => {
+  const sendEmailCode = async () => {
     if (!isValidEmail(newEmail)) {
       alert(emailError(locale as 'en' | 'zh'))
       return
     }
+    const resp = await profileApi.sendBindEmailCode(newEmail)
+    if (!resp.success) {
+      alert(resp.error || (locale === 'en' ? 'Failed to send code' : '发送验证码失败'))
+      return
+    }
     setIsEmailCodeSent(true)
-    // TODO: 调用发送邮箱验证码的API
-    console.log('发送邮箱验证码到:', newEmail)
     
     // 开始倒计时
     setEmailCountdown(60)
@@ -82,14 +86,17 @@ export default function BasicInfo({ locale }: BasicInfoProps) {
   }
 
   // 发送手机验证码
-  const sendPhoneCode = () => {
+  const sendPhoneCode = async () => {
     if (!isValidPhone(newPhone, '+86')) {
       alert(phoneError(locale as 'en' | 'zh'))
       return
     }
+    const resp = await profileApi.sendBindPhoneCode({ phone: newPhone, countryCode: '+86' })
+    if (!resp.success) {
+      alert(resp.error || (locale === 'en' ? 'Failed to send code' : '发送验证码失败'))
+      return
+    }
     setIsPhoneCodeSent(true)
-    // TODO: 调用发送手机验证码的API
-    console.log('发送手机验证码到:', newPhone)
     
     // 开始倒计时
     setPhoneCountdown(60)
@@ -111,8 +118,21 @@ export default function BasicInfo({ locale }: BasicInfoProps) {
         alert(emailError(locale as 'en' | 'zh'))
         return
       }
-      // TODO: 调用修改邮箱的API
-      console.log('修改邮箱:', { newEmail, emailCode })
+      if (!emailCode) {
+        alert(locale === 'en' ? 'Please enter verification code' : '请输入验证码')
+        return
+      }
+      const resp = await profileApi.confirmBindEmail({ email: newEmail, code: emailCode })
+      if (!resp.success) {
+        const attemptsLeft = (resp as any).attemptsLeft
+        const msg = attemptsLeft != null
+          ? `${resp.error || (locale === 'en' ? 'Verification failed' : '验证失败')}（${locale === 'en' ? 'Attempts left' : '剩余次数'}: ${attemptsLeft}）`
+          : (resp.error || (locale === 'en' ? 'Verification failed' : '验证失败'))
+        alert(msg)
+        return
+      }
+
+      await checkUser()
       setIsEmailDialogOpen(false)
       setNewEmail('')
       setEmailCode('')
@@ -120,6 +140,7 @@ export default function BasicInfo({ locale }: BasicInfoProps) {
       setEmailCountdown(0)
     } catch (error) {
       console.error('修改邮箱失败:', error)
+      alert(locale === 'en' ? 'Operation failed' : '操作失败')
     }
   }
 
@@ -130,8 +151,21 @@ export default function BasicInfo({ locale }: BasicInfoProps) {
         alert(phoneError(locale as 'en' | 'zh'))
         return
       }
-      // TODO: 调用修改手机号的API
-      console.log('修改手机号:', { newPhone, phoneCode })
+      if (!phoneCode) {
+        alert(locale === 'en' ? 'Please enter verification code' : '请输入验证码')
+        return
+      }
+      const resp = await profileApi.confirmBindPhone({ phone: newPhone, code: phoneCode, countryCode: '+86' })
+      if (!resp.success) {
+        const attemptsLeft = (resp as any).attemptsLeft
+        const msg = attemptsLeft != null
+          ? `${resp.error || (locale === 'en' ? 'Verification failed' : '验证失败')}（${locale === 'en' ? 'Attempts left' : '剩余次数'}: ${attemptsLeft}）`
+          : (resp.error || (locale === 'en' ? 'Verification failed' : '验证失败'))
+        alert(msg)
+        return
+      }
+
+      await checkUser()
       setIsPhoneDialogOpen(false)
       setNewPhone('')
       setPhoneCode('')
@@ -139,20 +173,26 @@ export default function BasicInfo({ locale }: BasicInfoProps) {
       setPhoneCountdown(0)
     } catch (error) {
       console.error('修改手机号失败:', error)
+      alert(locale === 'en' ? 'Operation failed' : '操作失败')
     }
   }
 
   // 头像更换处理
   const handleAvatarChange = async (newAvatarUrl: string) => {
     try {
-      // TODO: 调用更新头像的API
-      console.log('更换头像:', newAvatarUrl)
+      const resp = await profileApi.updateAvatar(newAvatarUrl)
+      if (!resp.success) {
+        alert(resp.error || (locale === 'en' ? 'Failed to update avatar' : '更换头像失败'))
+        return
+      }
       if (user) {
         setUser({ ...user, avatar: newAvatarUrl })
       }
+      await checkUser()
       setIsAvatarDialogOpen(false)
     } catch (error) {
       console.error('更换头像失败:', error)
+      alert(locale === 'en' ? 'Operation failed' : '操作失败')
     }
   }
 

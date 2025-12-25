@@ -2,6 +2,10 @@
 
 一个致力于环保技术创新与可持续发展的现代化Web平台。
 
+## 协作纪律（重要）
+
+- 任何代码改动（新增/删除/修改文件、改动逻辑/样式/接口）必须先征求你的同意，并先确认改动方案后再动手修改。
+
 ## 技术栈
 
 - **前端框架**: Next.js 14 (App Router)
@@ -78,6 +82,7 @@
 │   │   └── api/              # API路由
 │   │       ├── auth/         # 认证相关API
 │   │       ├── company/      # 企业信息相关API
+│   │       ├── profile/      # 用户基础信息API（头像/绑定邮箱/绑定手机号，Web+H5复用）
 │   │       ├── user/         # 用户侧API
 │   │       │   └── favorites/route.ts  # 用户收藏CRUD接口
 │   │       ├── policy/       # 政策前台API
@@ -183,7 +188,8 @@
 │       ├── policy.ts         # 政策H5相关API
 │       ├── parks.ts          # 园区H5相关API（列表/详情/政策/收藏）
 │       ├── favorites.ts      # 用户收藏API封装
-│       └── company.ts        # 企业信息API
+│       ├── company.ts        # 企业信息API
+│       └── profile.ts        # 用户基础信息API（头像/绑定邮箱/绑定手机号，Web+H5复用）
 ├── package.json              # 项目依赖配置
 ├── scripts/
 │   ├── parse-green-taxonomy.js   # 解析 docs/green-taxo.md，生成结构化产业分类JSON
