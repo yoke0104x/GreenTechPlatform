@@ -39,6 +39,32 @@ async function ensureWxReady() {
   return wx || null
 }
 
+function getCachedJsSdkConfig(signUrl: string) {
+  if (typeof window === 'undefined') return null
+  try {
+    const key = `wx_js_sdk_cfg:${encodeURIComponent(signUrl).slice(0, 160)}`
+    const raw = window.sessionStorage.getItem(key)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { fetchedAt: number; cfg: any }
+    if (!parsed?.fetchedAt || !parsed?.cfg) return null
+    // 缓存 10 分钟，减少重复请求签名接口
+    if (Date.now() - parsed.fetchedAt > 10 * 60 * 1000) return null
+    return parsed.cfg as { appId: string; timestamp: number; nonceStr: string; signature: string }
+  } catch {
+    return null
+  }
+}
+
+function setCachedJsSdkConfig(signUrl: string, cfg: any) {
+  if (typeof window === 'undefined') return
+  try {
+    const key = `wx_js_sdk_cfg:${encodeURIComponent(signUrl).slice(0, 160)}`
+    window.sessionStorage.setItem(key, JSON.stringify({ fetchedAt: Date.now(), cfg }))
+  } catch {
+    // ignore
+  }
+}
+
 function isInvalidSignatureError(err: unknown) {
   const raw = err && typeof err === 'object' ? (err as any).errMsg || (err as any).message : ''
   const msg = String(raw || err || '')
@@ -143,11 +169,16 @@ export function useWeChatShare(data: WeChatShareData | null, opts?: { enabled?: 
         if (cancelled || !wx) return
 
         const signUrl = getWeChatSignUrl()
-        const cfgRes = await fetch(`/api/wechat/js-sdk-config?url=${encodeURIComponent(signUrl)}`, { cache: 'no-store' })
-        const cfgJson = (await cfgRes.json().catch(() => null)) as any
-        if (!cfgRes.ok || !cfgJson?.success || !cfgJson?.data) return
+        const cached = getCachedJsSdkConfig(signUrl)
+        let cfg = cached
+        if (!cfg) {
+          const cfgRes = await fetch(`/api/wechat/js-sdk-config?url=${encodeURIComponent(signUrl)}`, { cache: 'no-store' })
+          const cfgJson = (await cfgRes.json().catch(() => null)) as any
+          if (!cfgRes.ok || !cfgJson?.success || !cfgJson?.data) return
+          cfg = cfgJson.data as { appId: string; timestamp: number; nonceStr: string; signature: string }
+          setCachedJsSdkConfig(signUrl, cfg)
+        }
 
-        const cfg = cfgJson.data as { appId: string; timestamp: number; nonceStr: string; signature: string }
         const link = (data.link || (typeof window !== 'undefined' ? window.location.href : '')).split('#')[0]
         const imgUrl = toAbsoluteUrl(data.imgUrl || '/images/portal-tech.jpg')
         const title = truncateText(data.title, 48)

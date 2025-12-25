@@ -44,6 +44,7 @@
 │   │   │   ├── components/             # 移动端(H5)复用组件
 │   │   │   │   └── MobileContactUsModal.tsx # H5「联系咨询」弹窗（含“允许回复推送到微信”勾选 + 提交后弹出订阅授权）
 │   │   │   │   └── WeChatShareHintOverlay.tsx # 微信内分享引导（遮罩+顶部提示+指向右上角箭头）
+│   │   │   ├── head.tsx                # H5 Head（预连接并预加载微信 JS-SDK 脚本，加快 window.wx 可用速度）
 │   │   │   ├── hooks/                  # 移动端(H5) Hooks
 │   │   │   │   └── useWeChatShare.ts   # 微信H5分享（JS-SDK签名+设置好友/群聊&朋友圈分享数据）
 │   │   │   ├── layout.tsx              # 移动端共享布局（底部Tab：技术/政策/园区共用，园区入口下“消息”指向园区对接消息中心）

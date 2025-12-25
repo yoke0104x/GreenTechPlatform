@@ -35,6 +35,7 @@ function MobileMessageDetailPage({ id }: { id: string }) {
   const router = useRouter()
   const locale: 'en' | 'zh' = pathname.startsWith('/en') ? 'en' : 'zh'
   const [context, setContext] = useState<'default' | 'parks' | 'policy'>('default')
+  const [explicitFrom, setExplicitFrom] = useState<'parks' | 'policy' | null>(null)
   const isParkContext = context === 'parks'
   const isPolicyContext = context === 'policy'
   const allowedCategories = useMemo(() => {
@@ -60,14 +61,21 @@ function MobileMessageDetailPage({ id }: { id: string }) {
   useEffect(() => {
     if (typeof window === 'undefined') {
       setContext('default')
+      setExplicitFrom(null)
       return
     }
     try {
       const sp = new URLSearchParams(window.location.search)
       const from = sp.get('from')
-      if (from === 'parks') setContext('parks')
-      else if (from === 'policy') setContext('policy')
+      if (from === 'parks') {
+        setContext('parks')
+        setExplicitFrom('parks')
+      } else if (from === 'policy') {
+        setContext('policy')
+        setExplicitFrom('policy')
+      }
       else {
+        setExplicitFrom(null)
         const stored = window.sessionStorage.getItem('m_chat_context')
         if (stored === 'parks') setContext('parks')
         else if (stored === 'policy') setContext('policy')
@@ -75,8 +83,28 @@ function MobileMessageDetailPage({ id }: { id: string }) {
       }
     } catch {
       setContext('default')
+      setExplicitFrom(null)
     }
   }, [pathname])
+
+  const listHref = useMemo(() => {
+    const base = `/${locale}/m/chat`
+    const from = explicitFrom || (context === 'parks' ? 'parks' : context === 'policy' ? 'policy' : null)
+    return from ? `${base}?from=${from}` : base
+  }, [context, explicitFrom, locale])
+
+  const handleBackToList = () => {
+    if (typeof window !== 'undefined') {
+      const ref = document.referrer || ''
+      const origin = window.location.origin
+      const looksLikeCameFromList = ref.startsWith(origin) && ref.includes(`/${locale}/m/chat`)
+      if (looksLikeCameFromList && window.history.length > 1) {
+        router.back()
+        return
+      }
+    }
+    router.push(listHref)
+  }
 
   useEffect(() => {
     const loadMessage = async () => {
@@ -173,7 +201,7 @@ function MobileMessageDetailPage({ id }: { id: string }) {
         title: locale === 'en' ? 'Success' : '操作成功',
         description: locale === 'en' ? 'Message deleted' : '消息已删除'
       })
-      router.back()
+      handleBackToList()
     } catch (error) {
       console.error('Delete failed:', error)
       toast({
@@ -313,7 +341,7 @@ function MobileMessageDetailPage({ id }: { id: string }) {
           <div className="flex items-center gap-2">
             {/* Back Button */}
             <button
-              onClick={() => router.back()}
+              onClick={handleBackToList}
               aria-label={locale === 'en' ? 'Back' : '返回'}
               className="h-10 w-10 rounded-full bg-white border border-gray-200 text-gray-800 inline-flex items-center justify-center transition-colors hover:bg-gray-50 active:bg-gray-100"
             >
