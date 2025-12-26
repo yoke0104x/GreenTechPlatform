@@ -278,7 +278,9 @@ function LoginContent() {
         <div className="mx-auto w-12 h-12 relative rounded-md overflow-hidden shadow-sm">
           <Image src="/images/logo/绿盟logo.png" alt="logo" fill className="object-contain" />
         </div>
-        <h1 className="mt-2 text-[15px] font-medium text-gray-900">{th('heroTitle')}</h1>
+        <h1 className="mt-2 text-[15px] font-medium text-gray-900">
+          {locale === 'en' ? 'GPIPC Think Tank' : '绿盟云智库平台'}
+        </h1>
       </div>
 
       {/* 卡片容器（更靠下 + 毛玻璃效果） */}

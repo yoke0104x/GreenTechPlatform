@@ -21,6 +21,8 @@ export default function MobileCompanyProfilePage() {
   const tCommon = useTranslations('common')
   const { user, loading, checkUser } = useAuthContext()
   const hasLocalAuth = typeof window !== 'undefined' && (localStorage.getItem('custom_auth_token') || localStorage.getItem('access_token'))
+  const companyLookupEnabled = process.env.NEXT_PUBLIC_COMPANY_LOOKUP_ENABLED !== 'false'
+  const optionalText = locale === 'en' ? '(Optional)' : '（选填）'
 
   // step state — 完全复用 Web 端两步交互
   const [step, setStep] = useState<1 | 2>(1)
@@ -202,7 +204,7 @@ export default function MobileCompanyProfilePage() {
         {step === 1 ? (
           <div className="rounded-2xl bg-white p-3 border border-gray-100">
             {/* 需求目的 */}
-            <Field label={t('step1.requirement')} error={errors.requirement}>
+            <Field label={t('step1.requirement')} required error={errors.requirement}>
               <select value={formData.requirement} onChange={(e)=>handleInputChange('requirement', e.target.value)} className="w-full h-10 rounded-xl border border-gray-200 px-3 bg-white text-[14px]">
                 <option value="">{t('step1.selectRequirement')}</option>
                 <option value="publishTech">{t('requirements.publishTech')}</option>
@@ -213,7 +215,7 @@ export default function MobileCompanyProfilePage() {
               </select>
             </Field>
             {/* 企业名称 + 企查查搜索 */}
-            <Field label={t('step1.companyName')} error={errors.companyName}>
+            <Field label={t('step1.companyName')} required error={errors.companyName}>
               <CompanySearch
                 value={formData.companyName}
                 onChange={(v)=>handleInputChange('companyName', v)}
@@ -227,9 +229,9 @@ export default function MobileCompanyProfilePage() {
                   setQccDataFetched(true) // 标记已获取企查查数据
                   if (!formData.logoFile && c.name) generateLogoPreview(c.name)
                 }}
-                placeholder={locale==='en'?'Enter company name keywords for auto search':'输入企业名称关键词自动搜索匹配'}
+                placeholder={companyLookupEnabled ? t('step1.companyNamePlaceholder') : t('step1.companyNamePlaceholderManual')}
                 className="mt-0"
-                allowCustom
+                allowCustom={companyLookupEnabled}
                 customLabel={locale==='en' ? 'Custom company name' : '自定义输入企业名称'}
               />
               {qccDataFetched && (
@@ -242,20 +244,20 @@ export default function MobileCompanyProfilePage() {
 
             {/* 国家/省份/经开区 */}
             <div className="grid grid-cols-2 gap-x-2 gap-y-3 mt-2">
-              <Field label={t('step1.country')} error={errors.country}>
+              <Field label={t('step1.country')} required error={errors.country}>
                 <select value={formData.country} onChange={(e)=>handleInputChange('country', e.target.value)} className="w-full h-10 rounded-xl border border-gray-200 px-3 bg-white text-[14px]">
                   <option value="">{t('step1.selectCountry')}</option>
                   {(transformed.countries||[]).map(c => (<option key={c.value} value={c.value}>{c.label}</option>))}
                 </select>
               </Field>
-              <Field label={t('step1.province')} error={errors.province}>
+              <Field label={t('step1.province')} required error={errors.province}>
                 <select value={formData.province} onChange={(e)=>handleInputChange('province', e.target.value)} disabled={formData.country!=='china'} className="w-full h-10 rounded-xl border border-gray-200 px-3 bg-white text-[14px]">
                   <option value="">{t('step1.selectProvince')}</option>
                   {(transformed.provinces||[]).map(p => (<option key={p.value} value={p.value}>{p.label}</option>))}
                 </select>
               </Field>
             </div>
-            <Field label={t('step1.economicZone')}>
+            <Field label={t('step1.economicZone')} optionalText={optionalText}>
               <select value={formData.economicZone} onChange={(e)=>handleInputChange('economicZone', e.target.value)} disabled={!formData.province} className="w-full h-10 rounded-xl border border-gray-200 px-3 bg-white text-[14px]">
                 <option value="">{t('step1.selectEconomicZone')}</option>
                 <option value="none">{locale==='en'?'Not in national development zone':'不在国家级经开区内'}</option>
@@ -264,7 +266,7 @@ export default function MobileCompanyProfilePage() {
             </Field>
 
             {/* Logo 上传：与“我的-企业信息”统一，直接上传到 Supabase，获得可持久化URL */}
-            <Field label={t('step1.logo')}>
+            <Field label={t('step1.logo')} optionalText={optionalText}>
               <div className="space-y-2">
                 <I18nCompactImageUpload
                   value={formData.logoUrl}
@@ -290,7 +292,7 @@ export default function MobileCompanyProfilePage() {
           </div>
         ) : (
           <div className="rounded-2xl bg-white p-3 border border-gray-100">
-            <Field label={t('step2.companyType')} error={errors.companyType}>
+            <Field label={t('step2.companyType')} required error={errors.companyType}>
               <div className="relative">
                 <select value={formData.companyType} onChange={(e)=>handleInputChange('companyType', e.target.value)} className="w-full h-10 rounded-xl border border-gray-200 px-3 bg-white text-[14px] appearance-none">
                   <option value="">{t('step2.selectCompanyType')}</option>
@@ -301,26 +303,26 @@ export default function MobileCompanyProfilePage() {
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
             </Field>
-            <Field label={t('step2.address')}>
+            <Field label={t('step2.address')} optionalText={optionalText}>
               <input value={formData.address} onChange={(e)=>handleInputChange('address', e.target.value)} className="w-full h-10 rounded-xl border border-gray-200 px-3 text-[14px]" />
             </Field>
             <div className="grid grid-cols-2 gap-x-2 gap-y-3">
-              <Field label={t('step2.industryCode')}>
+              <Field label={t('step2.industryCode')} optionalText={optionalText}>
                 <input value={formData.industryCode} onChange={(e)=>handleInputChange('industryCode', e.target.value)} className="w-full h-10 rounded-xl border border-gray-200 px-3 text-[14px]" />
               </Field>
-              <Field label={t('step2.annualOutput')}>
+              <Field label={t('step2.annualOutput')} optionalText={optionalText}>
                 <input type="number" value={formData.annualOutput} onChange={(e)=>handleInputChange('annualOutput', e.target.value)} className="w-full h-10 rounded-xl border border-gray-200 px-3 text-[14px]" />
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-x-2 gap-y-3">
-              <Field label={t('step2.contactPerson')} error={errors.contactPerson}>
+              <Field label={t('step2.contactPerson')} required error={errors.contactPerson}>
                 <input value={formData.contactPerson} onChange={(e)=>handleInputChange('contactPerson', e.target.value)} className="w-full h-10 rounded-xl border border-gray-200 px-3 text-[14px]" />
               </Field>
-              <Field label={t('step2.contactPhone')} error={errors.contactPhone}>
+              <Field label={t('step2.contactPhone')} required error={errors.contactPhone}>
                 <input value={formData.contactPhone} onChange={(e)=>handleInputChange('contactPhone', e.target.value)} className="w-full h-10 rounded-xl border border-gray-200 px-3 text-[14px]" />
               </Field>
             </div>
-            <Field label={t('step2.contactEmail')} error={errors.contactEmail}>
+            <Field label={t('step2.contactEmail')} required error={errors.contactEmail}>
               <input type="email" value={formData.contactEmail} onChange={(e)=>handleInputChange('contactEmail', e.target.value)} className="w-full h-10 rounded-xl border border-gray-200 px-3 text-[14px]" />
             </Field>
             <div className="flex items-center gap-2 mt-2">
@@ -334,10 +336,26 @@ export default function MobileCompanyProfilePage() {
   )
 }
 
-function Field({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) {
+function Field({
+  label,
+  children,
+  error,
+  required,
+  optionalText,
+}: {
+  label: string
+  children: React.ReactNode
+  error?: string
+  required?: boolean
+  optionalText?: string
+}) {
   return (
     <label className="block mb-3">
-      <div className="mb-1.5 text-[12px] text-gray-600">{label}</div>
+      <div className="mb-1.5 text-[12px] text-gray-600">
+        {label}
+        {required ? <span className="ml-1 text-red-500">*</span> : null}
+        {!required && optionalText ? <span className="ml-1 text-[11px] text-gray-400">{optionalText}</span> : null}
+      </div>
       {children}
       {error ? <div className="mt-1 text-[12px] text-red-500">{error}</div> : null}
     </label>

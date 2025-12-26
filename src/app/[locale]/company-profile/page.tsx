@@ -21,6 +21,7 @@ export default function CompanyProfilePage({ params }: PageProps) {
   const { user, loading, checkUser } = useAuthContext();
   const t = useTranslations('companyProfile');
   const tCommon = useTranslations('common');
+  const companyLookupEnabled = process.env.NEXT_PUBLIC_COMPANY_LOOKUP_ENABLED !== 'false'
   
   // 页面初始化时检查认证状态
   useEffect(() => {
@@ -418,7 +419,7 @@ export default function CompanyProfilePage({ params }: PageProps) {
                   value={formData.companyName}
                   onChange={(value) => handleInputChange('companyName', value)}
                   onSelect={handleCompanySelect}
-                  placeholder={t('step1.companyNamePlaceholder')}
+                  placeholder={companyLookupEnabled ? t('step1.companyNamePlaceholder') : t('step1.companyNamePlaceholderManual')}
                 />
                 {renderError('companyName')}
                 {formData.creditCode && (

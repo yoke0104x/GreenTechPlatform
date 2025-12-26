@@ -163,6 +163,7 @@
       "selectRequirement": "请选择您的需求",
       "companyName": "企业名称",
       "companyNamePlaceholder": "请输入企业名称，系统将自动搜索匹配",
+      "companyNamePlaceholderManual": "请输入企业完整名称",
       "autoFillSuccess": "已自动获取企业工商信息",
       "country": "国别",
       "selectCountry": "请选择国别",

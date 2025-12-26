@@ -163,6 +163,9 @@ export function MobileLayoutShell({
     (pathname.startsWith(`/${locale}/m/login`) || pathname.startsWith(`/${locale}/m/forgot`))
   )
 
+  // 企业信息完善流程不展示底部导航，避免用户中途跳出流程
+  const isCompanyProfile = !!(pathname && pathname.startsWith(`/${locale}/m/company-profile`))
+
   // 详情页不展示底部导航（使用独立操作栏）
   const isTechDetail = !!(
     pathname &&
@@ -186,6 +189,7 @@ export function MobileLayoutShell({
   const isPortalPage = pathname === `/${locale}/m`
   const showNav =
     !isAuthPage &&
+    !isCompanyProfile &&
     !isTechDetail &&
     !isMessageDetail &&
     !isPolicyDetail &&

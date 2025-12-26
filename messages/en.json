@@ -225,6 +225,7 @@
       "selectRequirement": "Please select your requirements",
       "companyName": "Company Name",
       "companyNamePlaceholder": "Enter company name, system will auto-search for matches",
+      "companyNamePlaceholderManual": "Enter full company name",
       "autoFillSuccess": "Company information auto-filled successfully",
       "country": "Country",
       "selectCountry": "Please select country",
