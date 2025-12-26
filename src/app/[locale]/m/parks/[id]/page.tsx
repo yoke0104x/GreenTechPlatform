@@ -19,7 +19,7 @@ import {
   type ParkPolicyItem,
 } from '@/api/parks'
 
-type TabKey = 'basic' | 'stats' | 'policies' | 'companies' | 'news'
+type TabKey = 'basic' | 'stats' | 'policies' | 'companies'
 
 function isWeChatEnv() {
   if (typeof navigator === 'undefined') return false
@@ -355,10 +355,9 @@ export default function MobileParkDetailPage({
         <div className="rounded-2xl bg-white border border-gray-100 p-1 flex items-center justify-between mb-3">
           {([
             { key: 'basic', zh: '基本信息', en: 'Basic Info' },
-            { key: 'stats', zh: '统计数据', en: 'Statistics' },
+            { key: 'stats', zh: '发展情况', en: 'Development' },
             { key: 'policies', zh: '园区政策', en: 'Policies' },
-            { key: 'companies', zh: '入驻企业', en: 'Companies' },
-            { key: 'news', zh: '资讯动态', en: 'News' },
+            { key: 'companies', zh: '绿色企业', en: 'Green Companies' },
           ] as { key: TabKey; zh: string; en: string }[]).map((tab) => {
             const active = activeTab === tab.key
             return (
@@ -583,7 +582,7 @@ export default function MobileParkDetailPage({
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-1.5 h-4 bg-[#00b899]" />
                     <h3 className="text-[13px] font-semibold text-gray-900">
-                      {isEn ? 'Brand & Honors' : '品牌与荣誉'}
+                      {isEn ? 'Key Achievements' : '主要成就'}
                     </h3>
                   </div>
                   <div className="mt-1 ml-[14px]">
@@ -857,29 +856,13 @@ export default function MobileParkDetailPage({
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-1.5 h-4 bg-[#00b899]" />
                 <h3 className="text-[13px] font-semibold text-gray-900">
-                  {isEn ? 'Resident Companies' : '入驻企业'}
+                  {isEn ? 'Green Companies' : '绿色企业'}
                 </h3>
               </div>
               <p className="text-[12px] text-gray-500">
                 {isEn
                   ? 'Company list API and schema will be added later.'
                   : '入驻企业列表的接口和字段将后续补充，本阶段先不在前端造测试数据。'}
-              </p>
-            </section>
-          )}
-
-          {activeTab === 'news' && (
-            <section className="rounded-2xl bg-white border border-gray-100 p-3 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-1.5 h-4 bg-[#00b899]" />
-                <h3 className="text-[13px] font-semibold text-gray-900">
-                  {isEn ? 'News & Updates' : '资讯动态'}
-                </h3>
-              </div>
-              <p className="text-[12px] text-gray-500">
-                {isEn
-                  ? 'News list API and schema will be added later.'
-                  : '园区资讯列表的接口和字段将后续补充，本阶段先不在前端造测试数据。'}
               </p>
             </section>
           )}

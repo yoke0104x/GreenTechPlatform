@@ -117,7 +117,7 @@ export default function MobilePortalPage({
     {
       key: 'tech',
       href: `/${locale}/m/home`,
-      title: isEn ? 'Green Tech Platform' : '绿色技术平台',
+      title: isEn ? 'Green Tech Library' : '绿色技术库',
       count: techCount,
       suffix: isEn ? ' green technologies' : ' 项绿色技术',
       Icon: Cpu,
@@ -126,16 +126,16 @@ export default function MobilePortalPage({
     {
       key: 'parks',
       href: `/${locale}/m/parks`,
-      title: isEn ? 'Green Parks Platform' : '绿色园区平台',
+      title: isEn ? 'Park Info Library' : '园区资讯库',
       count: parkCount,
-      suffix: isEn ? ' green parks' : ' 个绿色园区',
+      suffix: isEn ? ' industrial parks' : ' 个工业园区',
       Icon: Building2,
       image: '/images/green-parks.jpg',
     },
     {
       key: 'policy',
       href: `/${locale}/m/policy`,
-      title: isEn ? 'Green Policy Platform' : '绿色政策平台',
+      title: isEn ? 'Green Policy Library' : '绿色政策库',
       count: policyCount,
       suffix: isEn ? ' green policies' : ' 项绿色政策',
       Icon: ScrollText,
