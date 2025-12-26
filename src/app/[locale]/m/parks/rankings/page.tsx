@@ -128,14 +128,17 @@ const RankingCard = React.forwardRef<HTMLDivElement, {
                 >
                   <RankNumber value={row.rank} />
                   <RankChangeIndicator current={row.rank} previous={row.previousRank} />
-                  <div className="w-9 h-9 relative rounded-lg overflow-hidden bg-gray-100 ml-4">
-                    {park?.logoUrl ? (
-                      <Image src={park.logoUrl} alt={name} fill className="object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Building2 className="w-4 h-4 text-gray-400" />
-                      </div>
-                    )}
+                  {/* 保持“排名变化列”和“园区名称列”的位置不变，仅调整 Logo 在中间的相对位置 */}
+                  <div className="w-[54px] flex items-center pl-3">
+                    <div className="w-8 h-8 relative rounded-lg overflow-hidden bg-gray-100">
+                      {park?.logoUrl ? (
+                        <Image src={park.logoUrl} alt={name} fill className="object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Building2 className="w-4 h-4 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm text-gray-900 truncate">{name}</div>

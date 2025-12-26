@@ -40,6 +40,7 @@
 │   ├── test-huaweicloud-rds.bat      # Windows测试脚本
 │   └── test-huaweicloud-rds.sh       # Linux/Mac测试脚本
 ├── docs/                      # 项目文档
+│   └── H5_MOBILE_USER_GUIDE.md # H5 移动端使用指南（技术库/园区资讯库/政策库）
 ├── src/                       # 前端源代码
 │   ├── app/                   # Next.js App Router
 │   │   ├── [locale]/m/         # 移动端(H5)路由（与Web并存）
