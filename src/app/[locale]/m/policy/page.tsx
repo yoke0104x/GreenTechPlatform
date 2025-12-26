@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import Image from 'next/image'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Search, SlidersHorizontal, ArrowUpDown, ArrowUpAZ, ArrowDownAZ, Clock, ChevronUp, RotateCcw } from 'lucide-react'
 import { LanguageSwitcher } from '@/components/common/language-switcher'
 import Link from 'next/link'
@@ -44,6 +44,7 @@ const PRIORITY_MINISTRY_UNITS = [
 export default function MobilePolicyHomePage() {
   const pathname = usePathname()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const locale = pathname.startsWith('/en') ? 'en' : 'zh'
   const { showLoading, hideLoading } = useLoadingOverlay()
 
@@ -77,6 +78,37 @@ export default function MobilePolicyHomePage() {
     () => transformFilterDataForComponents(fd, locale),
     [fd, locale],
   )
+
+  const replaceFiltersInUrl = (next?: Partial<{
+    q: string
+    level: PolicyLevel | ''
+    tags: string[]
+    ministryUnit: string
+    province: string
+    zone: string
+    sort: 'publishDateDesc' | 'publishDateAsc' | 'nameAsc' | 'nameDesc'
+  }>) => {
+    const sp = new URLSearchParams()
+    const qv = next?.q ?? keyword
+    const levelv = next?.level ?? level
+    const tagsv = next?.tags ?? selectedTags
+    const ministryv = next?.ministryUnit ?? selectedMinistryUnit
+    const provincev = next?.province ?? selectedProvince
+    const zonev = next?.zone ?? selectedZone
+    const sortv = next?.sort ?? currentSort
+
+    if (qv.trim()) sp.set('q', qv.trim())
+    if (levelv) sp.set('level', levelv)
+    if (tagsv.length) sp.set('tags', tagsv.join(','))
+    if (ministryv) sp.set('ministry', ministryv)
+    if (provincev) sp.set('province', provincev)
+    if (zonev) sp.set('zone', zonev)
+    if (sortv && sortv !== 'publishDateDesc') sp.set('sort', sortv)
+
+    const base = `/${locale}/m/policy`
+    const qs = sp.toString()
+    router.replace(qs ? `${base}?${qs}` : base)
+  }
 
   // 自动加载中国省份列表，确保省份筛选有完整选项（与 /m/home 一致）
   useEffect(() => {
@@ -158,6 +190,7 @@ export default function MobilePolicyHomePage() {
       ministryUnit?: string
       province?: string
       zone?: string
+      sortBy?: 'publishDateDesc' | 'publishDateAsc' | 'nameAsc' | 'nameDesc'
       force?: boolean
     },
   ) => {
@@ -189,6 +222,10 @@ export default function MobilePolicyHomePage() {
       hasOverrides && Object.prototype.hasOwnProperty.call(overrides!, 'zone')
         ? (overrides!.zone ?? '')
         : selectedZone
+    const effectiveSort =
+      hasOverrides && Object.prototype.hasOwnProperty.call(overrides!, 'sortBy')
+        ? (overrides!.sortBy ?? 'publishDateDesc')
+        : currentSort
 
     const nextPage = resetPage ? 1 : page + 1
     setLoadingList(true)
@@ -206,7 +243,7 @@ export default function MobilePolicyHomePage() {
         developmentZone: effectiveZone || undefined,
         page: nextPage,
         pageSize: PAGE_SIZE,
-        sortBy: currentSort as any, // 前端扩展了 nameAsc/nameDesc，后端仅识别部分字段
+        sortBy: effectiveSort as any, // 前端扩展了 nameAsc/nameDesc，后端仅识别部分字段
       })
       if (token !== fetchTokenRef.current) return
       if (res.success && res.data) {
@@ -237,15 +274,51 @@ export default function MobilePolicyHomePage() {
     }
   }
 
+  // Hydrate filters from URL query (so back from detail preserves state) + initial fetch
   useEffect(() => {
-    fetchPolicies(true)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSort])
+    const qv = searchParams.get('q') ?? ''
+    const levelv = (searchParams.get('level') ?? '') as PolicyLevel | ''
+    const tagsRaw = searchParams.get('tags') ?? ''
+    const tagsv = tagsRaw ? tagsRaw.split(',').filter(Boolean) : []
+    const ministryv = searchParams.get('ministry') ?? ''
+    const provincev = searchParams.get('province') ?? ''
+    const zonev = searchParams.get('zone') ?? ''
+    const sortv = (searchParams.get('sort') ?? '') as 'publishDateDesc' | 'publishDateAsc' | 'nameAsc' | 'nameDesc'
+    const allowedSorts: Array<'publishDateDesc' | 'publishDateAsc' | 'nameAsc' | 'nameDesc'> = [
+      'publishDateDesc',
+      'publishDateAsc',
+      'nameAsc',
+      'nameDesc',
+    ]
+    const effectiveSort = allowedSorts.includes(sortv) ? sortv : 'publishDateDesc'
 
-  useEffect(() => {
-    fetchLevelCounts()
+    setKeyword(qv)
+    setLevel(levelv)
+    setSelectedTags(tagsv)
+    setSelectedMinistryUnit(ministryv)
+    setSelectedProvince(provincev)
+    setSelectedZone(zonev)
+    setCurrentSort(effectiveSort)
+
+    fetchPolicies(true, {
+      keyword: qv,
+      level: levelv,
+      tags: tagsv,
+      ministryUnit: ministryv,
+      province: provincev,
+      zone: zonev,
+      sortBy: effectiveSort,
+      force: true,
+    })
+    fetchLevelCounts({
+      keyword: qv,
+      tags: tagsv,
+      ministryUnit: ministryv,
+      province: provincev,
+      zone: zonev,
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [searchParams])
 
   const canLoadMore = policies.length < total
 
@@ -322,14 +395,10 @@ export default function MobilePolicyHomePage() {
                   if (newLevel !== 'ministry') {
                     setSelectedMinistryUnit('')
                   }
-                  fetchPolicies(true, {
-                    keyword,
+                  replaceFiltersInUrl({
                     level: newLevel,
-                    tags: selectedTags,
-                    ministryUnit: selectedMinistryUnit,
-                    province: selectedProvince,
-                    zone: selectedZone,
-                    force: true,
+                    ministryUnit: newLevel !== 'ministry' ? '' : selectedMinistryUnit,
+                    sort: currentSort,
                   })
                   if (newLevel !== 'ministry') {
                     setShowAllMinistryUnits(false)
@@ -375,7 +444,7 @@ export default function MobilePolicyHomePage() {
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') fetchPolicies(true)
+              if (e.key === 'Enter') replaceFiltersInUrl()
             }}
             placeholder={
               locale === 'en'
@@ -648,17 +717,15 @@ export default function MobilePolicyHomePage() {
                 setTotal(0)
                 setPage(1)
                 setFilterOpen(false)
-                setTimeout(() => {
-                  fetchPolicies(true, {
-                    keyword: '',
-                    level: '',
-                    tags: [],
-                    ministryUnit: '',
-                    province: '',
-                    zone: '',
-                    force: true,
-                  })
-                }, 0)
+                replaceFiltersInUrl({
+                  q: '',
+                  level: '',
+                  tags: [],
+                  ministryUnit: '',
+                  province: '',
+                  zone: '',
+                  sort: currentSort,
+                })
               }}
               className="h-8 px-3 rounded-full text-[12px] border border-gray-200 text-gray-600 bg-white inline-flex items-center gap-1"
             >
@@ -668,7 +735,7 @@ export default function MobilePolicyHomePage() {
             <button
               type="button"
               onClick={() => {
-                fetchPolicies(true)
+                replaceFiltersInUrl()
                 setFilterOpen(false)
               }}
               className="h-8 px-4 rounded-full text-[12px] bg-[#00b899] text-white"
@@ -703,25 +770,25 @@ export default function MobilePolicyHomePage() {
               <>
                 <div className="absolute right-0 mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
                   <button
-                    onClick={()=>{ setCurrentSort('publishDateDesc'); setSortOpen(false); fetchPolicies(true) }}
+                    onClick={()=>{ setCurrentSort('publishDateDesc'); setSortOpen(false); replaceFiltersInUrl({ sort: 'publishDateDesc' }) }}
                     className={`w-full px-3 h-9 text-left text-[12px] hover:bg-gray-50 inline-flex items-center gap-2 ${currentSort==='publishDateDesc'?'text-[#00b899] font-semibold':''}`}
                   >
                     <Clock className="w-4 h-4" />{locale==='en'?'Publish date (newest)':'发布日期（最新）'}
                   </button>
                   <button
-                    onClick={()=>{ setCurrentSort('publishDateAsc'); setSortOpen(false); fetchPolicies(true) }}
+                    onClick={()=>{ setCurrentSort('publishDateAsc'); setSortOpen(false); replaceFiltersInUrl({ sort: 'publishDateAsc' }) }}
                     className={`w-full px-3 h-9 text-left text-[12px] hover:bg-gray-50 inline-flex items-center gap-2 ${currentSort==='publishDateAsc'?'text-[#00b899] font-semibold':''}`}
                   >
                     <Clock className="w-4 h-4" />{locale==='en'?'Publish date (oldest)':'发布日期（最早）'}
                   </button>
                   <button
-                    onClick={()=>{ setCurrentSort('nameAsc'); setSortOpen(false); fetchPolicies(true) }}
+                    onClick={()=>{ setCurrentSort('nameAsc'); setSortOpen(false); replaceFiltersInUrl({ sort: 'nameAsc' }) }}
                     className={`w-full px-3 h-9 text-left text-[12px] hover:bg-gray-50 inline-flex items-center gap-2 ${currentSort==='nameAsc'?'text-[#00b899] font-semibold':''}`}
                   >
                     <ArrowUpAZ className="w-4 h-4" />{locale==='en'?'Name A-Z':'名称升序'}
                   </button>
                   <button
-                    onClick={()=>{ setCurrentSort('nameDesc'); setSortOpen(false); fetchPolicies(true) }}
+                    onClick={()=>{ setCurrentSort('nameDesc'); setSortOpen(false); replaceFiltersInUrl({ sort: 'nameDesc' }) }}
                     className={`w-full px-3 h-9 text-left text-[12px] hover:bg-gray-50 inline-flex items-center gap-2 ${currentSort==='nameDesc'?'text-[#00b899] font-semibold':''}`}
                   >
                     <ArrowDownAZ className="w-4 h-4" />{locale==='en'?'Name Z-A':'名称降序'}

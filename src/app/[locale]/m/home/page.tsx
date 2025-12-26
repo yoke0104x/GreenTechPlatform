@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { useTranslations } from 'next-intl'
 import { Search, SlidersHorizontal, Clock, ArrowDownAZ, ArrowUpAZ, ArrowUpDown, Leaf, Zap, Factory, Car, Menu } from 'lucide-react'
@@ -27,6 +27,7 @@ type H5FilterData = {
 export default function MobileHomePage() {
   const pathname = usePathname()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const tHome = useTranslations('home')
   const locale = pathname.startsWith('/en') ? 'en' : 'zh'
   const modalLocale: 'en' | 'zh' = locale === 'en' ? 'en' : 'zh'
@@ -76,9 +77,64 @@ export default function MobileHomePage() {
   const [expandProvince, setExpandProvince] = useState(false)
   const [expandZone, setExpandZone] = useState(false)
 
+  const [filtersHydrated, setFiltersHydrated] = useState(false)
+
   // Shared Web filter data (categories/countries/provinces/zones)
   const { data: fd, isLoading: fdLoading, loadProvinces, loadDevelopmentZones } = useFilterData()
   const transformed = useMemo(() => transformFilterDataForComponents(fd, locale), [fd, locale])
+
+  const replaceFiltersInUrl = (next?: Partial<{
+    q: string
+    cat: string
+    sub: string
+    country: string
+    province: string
+    zone: string
+    sort: SortType
+  }>) => {
+    const sp = new URLSearchParams()
+    const qv = next?.q ?? q
+    const catv = next?.cat ?? selectedCategory
+    const subv = next?.sub ?? selectedSubcategory
+    const countryv = next?.country ?? selectedCountry
+    const provincev = next?.province ?? selectedProvince
+    const zonev = next?.zone ?? selectedZone
+    const sortv = next?.sort ?? currentSort
+
+    if (qv.trim()) sp.set('q', qv.trim())
+    if (catv) sp.set('cat', catv)
+    if (subv) sp.set('sub', subv)
+    if (countryv) sp.set('country', countryv)
+    if (provincev) sp.set('province', provincev)
+    if (zonev) sp.set('zone', zonev)
+    if (sortv && sortv !== 'updateTime') sp.set('sort', sortv)
+
+    const base = `/${locale}/m/home`
+    const qs = sp.toString()
+    router.replace(qs ? `${base}?${qs}` : base)
+  }
+
+  // Hydrate filters from URL query (so back from detail preserves state)
+  useEffect(() => {
+    const qv = searchParams.get('q') ?? ''
+    const catv = searchParams.get('cat') ?? ''
+    const subv = searchParams.get('sub') ?? ''
+    const countryv = searchParams.get('country') ?? ''
+    const provincev = searchParams.get('province') ?? ''
+    const zonev = searchParams.get('zone') ?? ''
+    const sortv = (searchParams.get('sort') ?? '') as SortType
+    const allowedSorts: SortType[] = ['updateTime', 'nameAsc', 'nameDesc']
+
+    setQ(qv)
+    setSelectedCategory(catv)
+    setSelectedSubcategory(subv)
+    setSelectedCountry(countryv)
+    setSelectedProvince(provincev)
+    setSelectedZone(zonev)
+    setCurrentSort(allowedSorts.includes(sortv) ? sortv : 'updateTime')
+    setFiltersHydrated(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   // Load carousel
   useEffect(() => {
@@ -145,7 +201,7 @@ export default function MobileHomePage() {
     return true
   }
 
-  const performSearch = async (resetPage = true) => {
+  const performSearch = async (resetPage = true, opts?: { sortBy?: SortType }) => {
     // Prevent overlapping requests that can duplicate results
     if (searchLoading) return
     const nextPage = resetPage ? 1 : page + 1
@@ -156,7 +212,7 @@ export default function MobileHomePage() {
       country: selectedCountry || undefined,
       province: selectedProvince || undefined,
       developmentZone: selectedZone || undefined,
-      sortBy: currentSort,
+      sortBy: opts?.sortBy ?? currentSort,
       page: nextPage,
       pageSize,
     }
@@ -190,12 +246,13 @@ export default function MobileHomePage() {
 
   useEffect(() => {
     // initial search when shared filter data is ready
-    if (!fdLoading) performSearch(true)
+    if (!fdLoading && filtersHydrated) performSearch(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fdLoading])
+  }, [fdLoading, filtersHydrated])
 
   // Fallback: trigger an initial search on mount even if filter data is slow or fails
   useEffect(() => {
+    if (!filtersHydrated) return
     let timer: any = setTimeout(() => {
       if (!searchLoading && items.length === 0) {
         performSearch(true)
@@ -203,7 +260,7 @@ export default function MobileHomePage() {
     }, 1200)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [filtersHydrated])
 
   const pageContent = (
     <section className="min-h-dvh" style={{ backgroundColor: '#edeef7' }}>
@@ -368,7 +425,7 @@ export default function MobileHomePage() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e)=>{ if(e.key==='Enter') performSearch(true) }}
+            onKeyDown={(e)=>{ if(e.key==='Enter') { replaceFiltersInUrl(); performSearch(true) } }}
             placeholder={tHome('searchPlaceholder')}
             className="flex-1 bg-transparent outline-none text-[14px]"
           />
@@ -412,13 +469,13 @@ export default function MobileHomePage() {
             {sortOpen && (
               <>
                 <div className="absolute right-0 mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
-                  <button onClick={()=>{ setCurrentSort('updateTime'); setSortOpen(false); performSearch(true) }} className={`w-full px-3 h-9 text-left text-[12px] hover:bg-gray-50 inline-flex items-center gap-2 ${currentSort==='updateTime'?'text-[#00b899] font-semibold':''}`}>
+                  <button onClick={()=>{ setCurrentSort('updateTime'); setSortOpen(false); replaceFiltersInUrl({ sort: 'updateTime' }); performSearch(true, { sortBy: 'updateTime' }) }} className={`w-full px-3 h-9 text-left text-[12px] hover:bg-gray-50 inline-flex items-center gap-2 ${currentSort==='updateTime'?'text-[#00b899] font-semibold':''}`}>
                   <Clock className="w-4 h-4" />{locale==='en'?'Updated':'更新时间'}
                   </button>
-                  <button onClick={()=>{ setCurrentSort('nameAsc'); setSortOpen(false); performSearch(true) }} className={`w-full px-3 h-9 text-left text-[12px] hover:bg-gray-50 inline-flex items-center gap-2 ${currentSort==='nameAsc'?'text-[#00b899] font-semibold':''}`}>
+                  <button onClick={()=>{ setCurrentSort('nameAsc'); setSortOpen(false); replaceFiltersInUrl({ sort: 'nameAsc' }); performSearch(true, { sortBy: 'nameAsc' }) }} className={`w-full px-3 h-9 text-left text-[12px] hover:bg-gray-50 inline-flex items-center gap-2 ${currentSort==='nameAsc'?'text-[#00b899] font-semibold':''}`}>
                     <ArrowUpAZ className="w-4 h-4" />{locale==='en'?'Name A-Z':'名称升序'}
                   </button>
-                  <button onClick={()=>{ setCurrentSort('nameDesc'); setSortOpen(false); performSearch(true) }} className={`w-full px-3 h-9 text-left text-[12px] hover:bg-gray-50 inline-flex items-center gap-2 ${currentSort==='nameDesc'?'text-[#00b899] font-semibold':''}`}>
+                  <button onClick={()=>{ setCurrentSort('nameDesc'); setSortOpen(false); replaceFiltersInUrl({ sort: 'nameDesc' }); performSearch(true, { sortBy: 'nameDesc' }) }} className={`w-full px-3 h-9 text-left text-[12px] hover:bg-gray-50 inline-flex items-center gap-2 ${currentSort==='nameDesc'?'text-[#00b899] font-semibold':''}`}>
                     <ArrowDownAZ className="w-4 h-4" />{locale==='en'?'Name Z-A':'名称降序'}
                   </button>
                 </div>
@@ -749,7 +806,7 @@ export default function MobileHomePage() {
             )}
             <div className="flex items-center gap-2 mt-2">
               <button onClick={()=>{ setSelectedCategory(''); setSelectedSubcategory(''); setSelectedCountry(''); setSelectedProvince(''); setSelectedZone(''); setExpandCategory(false); setExpandSubcategory(false); setExpandCountry(false); setExpandProvince(false); setExpandZone(false); }} className="flex-1 h-10 rounded-xl border border-gray-200 text-[14px]">{locale==='en'?'Reset':'重置'}</button>
-              <button onClick={()=>{ setShowFilter(false); performSearch(true) }} className="flex-1 h-10 rounded-xl bg-[#00b899] text-white text-[14px]">{locale==='en'?'Apply':'确定'}</button>
+              <button onClick={()=>{ setShowFilter(false); replaceFiltersInUrl(); performSearch(true) }} className="flex-1 h-10 rounded-xl bg-[#00b899] text-white text-[14px]">{locale==='en'?'Apply':'确定'}</button>
             </div>
           </div>
         </div>

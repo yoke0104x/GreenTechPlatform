@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { Search, SlidersHorizontal, ArrowUpDown, ArrowUpAZ, ArrowDownAZ, Clock, ChevronUp, RotateCcw, ChevronRight, Menu } from 'lucide-react'
 import { LanguageSwitcher } from '@/components/common/language-switcher'
@@ -37,6 +37,7 @@ const PARK_LEVEL_OPTIONS: { value: string; labelZh: string; labelEn: string }[] 
 export default function MobileParksHomePage() {
   const pathname = usePathname()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const locale = pathname.startsWith('/en') ? 'en' : 'zh'
   const { showLoading, hideLoading } = useLoadingOverlay()
 
@@ -132,6 +133,31 @@ export default function MobileParksHomePage() {
     return () => clearInterval(timer)
   }, [carousel.length])
 
+  const replaceFiltersInUrl = (next?: Partial<{
+    q: string
+    level: string
+    province: string
+    tags: string[]
+    sort: 'default' | 'updatedAtDesc' | 'nameAsc' | 'nameDesc'
+  }>) => {
+    const sp = new URLSearchParams()
+    const qv = next?.q ?? keyword
+    const levelv = next?.level ?? level
+    const provincev = next?.province ?? selectedProvince
+    const tagsv = next?.tags ?? selectedTags
+    const sortv = next?.sort ?? currentSort
+
+    if (qv.trim()) sp.set('q', qv.trim())
+    if (levelv) sp.set('level', levelv)
+    if (provincev) sp.set('province', provincev)
+    if (tagsv.length) sp.set('tags', tagsv.join(','))
+    if (sortv && sortv !== 'default') sp.set('sort', sortv)
+
+    const base = `/${locale}/m/parks`
+    const qs = sp.toString()
+    router.replace(qs ? `${base}?${qs}` : base)
+  }
+
   const loadParks = async (
     resetPage = true,
     overrides?: {
@@ -174,10 +200,36 @@ export default function MobileParksHomePage() {
     }
   }
 
+  // Hydrate filters from URL query (so back from detail preserves state) + initial fetch
   useEffect(() => {
-    loadParks(true)
+    const qv = searchParams.get('q') ?? ''
+    const levelv = searchParams.get('level') ?? ''
+    const provincev = searchParams.get('province') ?? ''
+    const tagsvRaw = searchParams.get('tags') ?? ''
+    const tagsv = tagsvRaw ? tagsvRaw.split(',').filter(Boolean) : []
+    const sortv = (searchParams.get('sort') ?? '') as 'default' | 'updatedAtDesc' | 'nameAsc' | 'nameDesc'
+    const allowedSorts: Array<'default' | 'updatedAtDesc' | 'nameAsc' | 'nameDesc'> = [
+      'default',
+      'updatedAtDesc',
+      'nameAsc',
+      'nameDesc',
+    ]
+
+    setKeyword(qv)
+    setLevel(levelv)
+    setSelectedProvince(provincev)
+    setSelectedTags(tagsv)
+    setCurrentSort(allowedSorts.includes(sortv) ? sortv : 'default')
+
+    loadParks(true, {
+      keyword: qv,
+      level: levelv,
+      province: provincev,
+      tags: tagsv,
+      sortBy: allowedSorts.includes(sortv) ? sortv : 'default',
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSort])
+  }, [searchParams])
 
   const handleProvinceChange = (code: string) => {
     setSelectedProvince(code)
@@ -272,7 +324,7 @@ export default function MobileParksHomePage() {
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') loadParks(true)
+              if (e.key === 'Enter') replaceFiltersInUrl()
             }}
             placeholder={
               isEn
@@ -435,12 +487,7 @@ export default function MobileParksHomePage() {
                   setSelectedProvince('')
                   setPage(1)
                   setFilterOpen(false)
-                  loadParks(true, {
-                    keyword: '',
-                    level: '',
-                    province: '',
-                    tags: [],
-                  })
+                  replaceFiltersInUrl({ q: '', level: '', province: '', tags: [], sort: currentSort })
                 }}
                 className="h-8 px-3 rounded-full text-[12px] border border-gray-200 text-gray-600 bg-white inline-flex items-center gap-1"
               >
@@ -450,7 +497,7 @@ export default function MobileParksHomePage() {
               <button
                 type="button"
                 onClick={() => {
-                  loadParks(true)
+                  replaceFiltersInUrl()
                   setFilterOpen(false)
                 }}
                 className="h-8 px-4 rounded-full text-[12px] bg-[#00b899] text-white"
@@ -491,7 +538,7 @@ export default function MobileParksHomePage() {
                   onClick={() => {
                     setCurrentSort('default')
                     setSortOpen(false)
-                    loadParks(true)
+                    replaceFiltersInUrl({ sort: 'default' })
                   }}
                   className={`w-full px-3 h-9 text-left text-[12px] hover:bg-gray-50 inline-flex items-center gap-2 ${
                     currentSort === 'default' ? 'text-[#00b899] font-semibold' : ''
@@ -504,7 +551,7 @@ export default function MobileParksHomePage() {
                   onClick={() => {
                     setCurrentSort('updatedAtDesc')
                     setSortOpen(false)
-                    loadParks(true)
+                    replaceFiltersInUrl({ sort: 'updatedAtDesc' })
                   }}
                   className={`w-full px-3 h-9 text-left text-[12px] hover:bg-gray-50 inline-flex items-center gap-2 ${
                     currentSort === 'updatedAtDesc' ? 'text-[#00b899] font-semibold' : ''
@@ -517,7 +564,7 @@ export default function MobileParksHomePage() {
                   onClick={() => {
                     setCurrentSort('nameAsc')
                     setSortOpen(false)
-                    loadParks(true)
+                    replaceFiltersInUrl({ sort: 'nameAsc' })
                   }}
                   className={`w-full px-3 h-9 text-left text-[12px] hover:bg-gray-50 inline-flex items-center gap-2 ${
                     currentSort === 'nameAsc' ? 'text-[#00b899] font-semibold' : ''
@@ -530,7 +577,7 @@ export default function MobileParksHomePage() {
                   onClick={() => {
                     setCurrentSort('nameDesc')
                     setSortOpen(false)
-                    loadParks(true)
+                    replaceFiltersInUrl({ sort: 'nameDesc' })
                   }}
                   className={`w-full px-3 h-9 text-left text-[12px] hover:bg-gray-50 inline-flex items-center gap-2 ${
                     currentSort === 'nameDesc' ? 'text-[#00b899] font-semibold' : ''
