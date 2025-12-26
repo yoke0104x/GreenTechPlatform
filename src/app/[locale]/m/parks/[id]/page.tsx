@@ -76,8 +76,6 @@ export default function MobileParkDetailPage({
     const load = async () => {
       setLoading(true)
       showLoading()
-      // 避免 SPA 切换 id 时短暂沿用上一条园区数据（会导致微信分享使用上一次的标题/封面）
-      setPark(null)
       try {
         const [detail, favStatus] = await Promise.all([
           getParkDetail(id),
@@ -98,32 +96,16 @@ export default function MobileParkDetailPage({
     }
   }, [id, hideLoading, showLoading])
 
-  // 微信分享：在新园区数据未加载完成前，先用当前页面的兜底分享信息覆盖掉“上一次页面”的配置
-  const shareData = useMemo(() => {
-    const link =
-      typeof window !== 'undefined' ? window.location.href.split('#')[0] : undefined
-
-    if (park && park.id === id) {
-      return {
-        title: park.name,
-        desc:
-          (isEn ? park.briefEn || park.briefZh : park.briefZh || park.briefEn) ||
-          park.name,
-        imgUrl: park.logoUrl || '/images/green-parks.jpg',
-        link,
-      }
-    }
-
-    return {
-      title: isEn ? 'Park Detail' : '园区详情',
-      desc: isEn ? 'View park details' : '查看园区详情',
-      imgUrl: '/images/green-parks.jpg',
-      link,
-    }
-  }, [park, id, isEn])
-
   useWeChatShare(
-    shareData,
+    park
+      ? {
+          title: park.name,
+          desc:
+            (isEn ? park.briefEn || park.briefZh : park.briefZh || park.briefEn) ||
+            park.name,
+          imgUrl: park.logoUrl || '/images/green-parks.jpg',
+        }
+      : null,
   )
 
   useEffect(() => {
