@@ -39,7 +39,14 @@ const PARK_LEVEL_OPTIONS = [
   { value: '其他', label: '其他' },
 ]
 
-type TabKey = 'basic' | 'honors' | 'stats' | 'policies' | 'companies' | 'news'
+type TabKey =
+  | 'basic'
+  | 'english'
+  | 'honors'
+  | 'stats'
+  | 'policies'
+  | 'companies'
+  | 'news'
 
 export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
   const [formData, setFormData] = useState({
@@ -51,23 +58,34 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
     province_id: '',
     development_zone_id: '',
     city: '',
+    city_en: '',
     address: '',
+    address_en: '',
     website_url: '',
     wechat_official_account: '',
     leading_industries: '',
+    leading_industries_en: '',
     leading_companies: '',
+    leading_companies_en: '',
     alias: '',
+    alias_en: '',
     dialect: '',
+    dialect_en: '',
     climate: '',
+    climate_en: '',
     region_desc: '',
+    region_desc_en: '',
     license_plate_code: '',
     phone_area_code: '',
     postal_code: '',
     brief_zh: '',
     brief_en: '',
     nearby_airports: '',
+    nearby_airports_en: '',
     nearby_railway_stations: '',
+    nearby_railway_stations_en: '',
     famous_scenic_spots: '',
+    famous_scenic_spots_en: '',
     area_km2: undefined as number | undefined,
     population: undefined as number | undefined,
     established_date: '',
@@ -87,12 +105,14 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
   const [newHonor, setNewHonor] = useState<{
     year: string
     title: string
+    title_en: string
     type: ParkBrandHonorType | ''
     approved_at: string
     sort_order: string
   }>({
     year: '',
     title: '',
+    title_en: '',
     type: '',
     approved_at: '',
     sort_order: '',
@@ -123,23 +143,34 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
       province_id: park?.province_id || '',
       development_zone_id: park?.development_zone_id || '',
       city: park?.city || '',
+      city_en: park?.city_en || '',
       address: park?.address || '',
+      address_en: park?.address_en || '',
       website_url: park?.website_url || '',
       wechat_official_account: park?.wechat_official_account || '',
       leading_industries: park?.leading_industries || '',
+      leading_industries_en: park?.leading_industries_en || '',
       leading_companies: park?.leading_companies || '',
+      leading_companies_en: park?.leading_companies_en || '',
       alias: park?.alias || '',
+      alias_en: park?.alias_en || '',
       dialect: park?.dialect || '',
+      dialect_en: park?.dialect_en || '',
       climate: park?.climate || '',
+      climate_en: park?.climate_en || '',
       region_desc: park?.region_desc || '',
+      region_desc_en: park?.region_desc_en || '',
       license_plate_code: park?.license_plate_code || '',
       phone_area_code: park?.phone_area_code || '',
       postal_code: park?.postal_code || '',
       brief_zh: park?.brief_zh || '',
       brief_en: park?.brief_en || '',
       nearby_airports: park?.nearby_airports || '',
+      nearby_airports_en: park?.nearby_airports_en || '',
       nearby_railway_stations: park?.nearby_railway_stations || '',
+      nearby_railway_stations_en: park?.nearby_railway_stations_en || '',
       famous_scenic_spots: park?.famous_scenic_spots || '',
+      famous_scenic_spots_en: park?.famous_scenic_spots_en || '',
       area_km2: park?.area_km2 ?? undefined,
       population: park?.population ?? undefined,
       established_date: park?.established_date || '',
@@ -231,17 +262,28 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
         province_id: formData.province_id || undefined,
         development_zone_id: formData.development_zone_id || undefined,
         city: formData.city.trim() || undefined,
+        city_en: formData.city_en.trim() || undefined,
         address: formData.address.trim() || undefined,
+        address_en: formData.address_en.trim() || undefined,
         website_url: formData.website_url.trim() || undefined,
         wechat_official_account:
           formData.wechat_official_account.trim() || undefined,
         leading_industries:
           formData.leading_industries.trim() || undefined,
+        leading_industries_en:
+          formData.leading_industries_en.trim() || undefined,
         leading_companies:
           formData.leading_companies.trim() || undefined,
+        leading_companies_en:
+          formData.leading_companies_en.trim() || undefined,
         alias: formData.alias.trim() || undefined,
+        alias_en: formData.alias_en.trim() || undefined,
+        dialect: formData.dialect.trim() || undefined,
+        dialect_en: formData.dialect_en.trim() || undefined,
         climate: formData.climate.trim() || undefined,
+        climate_en: formData.climate_en.trim() || undefined,
         region_desc: formData.region_desc.trim() || undefined,
+        region_desc_en: formData.region_desc_en.trim() || undefined,
         license_plate_code:
           formData.license_plate_code.trim() || undefined,
         phone_area_code: formData.phone_area_code.trim() || undefined,
@@ -249,10 +291,16 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
         brief_zh: formData.brief_zh.trim() || undefined,
         brief_en: formData.brief_en.trim() || undefined,
         nearby_airports: formData.nearby_airports.trim() || undefined,
+        nearby_airports_en:
+          formData.nearby_airports_en.trim() || undefined,
         nearby_railway_stations:
           formData.nearby_railway_stations.trim() || undefined,
+        nearby_railway_stations_en:
+          formData.nearby_railway_stations_en.trim() || undefined,
         famous_scenic_spots:
           formData.famous_scenic_spots.trim() || undefined,
+        famous_scenic_spots_en:
+          formData.famous_scenic_spots_en.trim() || undefined,
         area_km2:
           formData.area_km2 === undefined || Number.isNaN(formData.area_km2)
             ? undefined
@@ -287,7 +335,7 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
 
   const handleHonorFieldChange = (
     id: string,
-    field: 'year' | 'title' | 'type' | 'approved_at' | 'sort_order',
+    field: 'year' | 'title' | 'title_en' | 'type' | 'approved_at' | 'sort_order',
     value: string,
   ) => {
     setBrandHonors((prev) =>
@@ -313,6 +361,9 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
           if (Number.isNaN(parsed)) return h
           return { ...h, sort_order: parsed }
         }
+        if (field === 'title_en') {
+          return { ...h, title_en: value }
+        }
         return { ...h, title: value }
       }),
     )
@@ -328,6 +379,7 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
       setHonorSubmittingId(honor.id)
       const payload: Partial<AdminParkBrandHonor> = {
         title: honor.title.trim(),
+        title_en: honor.title_en?.trim() ? honor.title_en.trim() : null,
         year:
           typeof honor.year === 'number' && !Number.isNaN(honor.year)
             ? honor.year
@@ -377,6 +429,9 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
         park_id: park.id,
         title: newHonor.title.trim(),
       }
+      if (newHonor.title_en.trim()) {
+        payload.title_en = newHonor.title_en.trim()
+      }
       if (newHonor.year.trim()) {
         const parsed = Number(newHonor.year.trim())
         if (!Number.isNaN(parsed)) payload.year = parsed
@@ -393,7 +448,14 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
       }
       const created = await createParkBrandHonorApi(payload)
       setBrandHonors((prev) => [created, ...prev])
-      setNewHonor({ year: '', title: '', type: '', approved_at: '', sort_order: '' })
+      setNewHonor({
+        year: '',
+        title: '',
+        title_en: '',
+        type: '',
+        approved_at: '',
+        sort_order: '',
+      })
     } catch (error) {
       console.error('新增品牌荣誉失败:', error)
       alert('新增品牌荣誉失败，请稍后重试')
@@ -425,6 +487,7 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
           <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-3">
             {[
               { key: 'basic', label: '基本信息' },
+              { key: 'english', label: '英文内容' },
               { key: 'honors', label: '品牌与荣誉' },
               { key: 'stats', label: '统计数据' },
               { key: 'policies', label: '园区政策' },
@@ -481,23 +544,6 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
                           {errors.name_zh}
                         </p>
                       )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        园区英文名称
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.name_en}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            name_en: e.target.value,
-                          }))
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="例如：Suzhou Industrial Park"
-                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -632,11 +678,11 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
                       如果该园区级别为“国家级经济技术开发区”，则必须选择对应经开区。
                     </p>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        所在城市（可选）
-                      </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          所在城市（可选）
+                        </label>
                       <input
                         type="text"
                         value={formData.city}
@@ -966,7 +1012,6 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
                       />
                     </div>
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1021,23 +1066,6 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
                       placeholder="请输入园区简介，支持换行"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      简要介绍（英文）
-                    </label>
-                    <textarea
-                      value={formData.brief_en}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          brief_en: e.target.value,
-                        }))
-                      }
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus-border-transparent"
-                      placeholder="English brief for international users (optional)"
-                    />
-                  </div>
                 </div>
               </div>
 
@@ -1063,6 +1091,264 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
                 </label>
               </div>
             </>
+          )}
+
+          {activeTab === 'english' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">
+                  英文内容
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  留空则英文站点会自动回退到中文内容。
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      园区英文名称（可选）
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name_en}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          name_en: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      placeholder="e.g. Suzhou Industrial Park"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        所在城市（英文，可选）
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.city_en}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            city_en: e.target.value,
+                          }))
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        placeholder="e.g. Suzhou"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        详细地址（英文，可选）
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.address_en}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            address_en: e.target.value,
+                          }))
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        placeholder="e.g. 333 Xinghu Street, SIP, Suzhou"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        主导产业（英文，可选）
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.leading_industries_en}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            leading_industries_en: e.target.value,
+                          }))
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus-border-transparent"
+                        placeholder="e.g. Smart manufacturing, New materials"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        代表企业（英文，可选）
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.leading_companies_en}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            leading_companies_en: e.target.value,
+                          }))
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus-border-transparent"
+                        placeholder="e.g. Company A, Company B"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        别名（英文，可选）
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.alias_en}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            alias_en: e.target.value,
+                          }))
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus-border-transparent"
+                        placeholder="e.g. SIP"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        方言（英文，可选）
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.dialect_en}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            dialect_en: e.target.value,
+                          }))
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus-border-transparent"
+                        placeholder="e.g. Wu Chinese"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        气候条件（英文，可选）
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.climate_en}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            climate_en: e.target.value,
+                          }))
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus-border-transparent"
+                        placeholder="e.g. Subtropical monsoon climate"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        区域描述（英文，可选）
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.region_desc_en}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            region_desc_en: e.target.value,
+                          }))
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus-border-transparent"
+                        placeholder="e.g. Located in the Yangtze River Delta"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        附近机场（英文，可选）
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.nearby_airports_en}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            nearby_airports_en: e.target.value,
+                          }))
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        placeholder="Separate with commas"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        火车站（英文，可选）
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.nearby_railway_stations_en}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            nearby_railway_stations_en: e.target.value,
+                          }))
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        placeholder="Separate with commas"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      著名景点（英文，可选）
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.famous_scenic_spots_en}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          famous_scenic_spots_en: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      placeholder="Separate with commas"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      简要介绍（英文，可选）
+                    </label>
+                    <textarea
+                      value={formData.brief_en}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          brief_en: e.target.value,
+                        }))
+                      }
+                      rows={5}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus-border-transparent"
+                      placeholder="English brief for international users (optional)"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           {activeTab === 'honors' && (
@@ -1103,7 +1389,7 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
                         {brandHonors.map((honor) => (
                           <div
                             key={honor.id}
-                            className="grid grid-cols-1 md:grid-cols-[80px,1fr,160px,140px,90px,100px] gap-3 items-center rounded-md border border-gray-200 px-3 py-2"
+                            className="grid grid-cols-1 md:grid-cols-[80px,1fr,1fr,160px,140px,90px,100px] gap-3 items-center rounded-md border border-gray-200 px-3 py-2"
                           >
                             <div>
                               <label className="block text-xs text-gray-500 mb-1">
@@ -1144,6 +1430,24 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
                                 }
                                 className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm"
                                 placeholder="例如：国家生态工业示范园区"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">
+                                英文名称（可选）
+                              </label>
+                              <input
+                                type="text"
+                                value={honor.title_en || ''}
+                                onChange={(e) =>
+                                  handleHonorFieldChange(
+                                    honor.id,
+                                    'title_en',
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm"
+                                placeholder="e.g. National Eco-industrial Demonstration Park"
                               />
                             </div>
                             <div>
@@ -1232,7 +1536,7 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
                     <span className="block text-sm font-medium text-gray-800 mb-2">
                       新增品牌荣誉
                     </span>
-                    <div className="grid grid-cols-1 md:grid-cols-[80px,1fr,160px,140px,100px,100px] gap-3 items-end">
+                    <div className="grid grid-cols-1 md:grid-cols-[80px,1fr,1fr,160px,140px,100px,100px] gap-3 items-end">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">
                           年份
@@ -1265,6 +1569,23 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
                           }
                           className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm"
                           placeholder="例如：国家生态工业示范园区"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          英文名称（可选）
+                        </label>
+                        <input
+                          type="text"
+                          value={newHonor.title_en}
+                          onChange={(e) =>
+                            setNewHonor((prev) => ({
+                              ...prev,
+                              title_en: e.target.value,
+                            }))
+                          }
+                          className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm"
+                          placeholder="e.g. National Eco-industrial Demonstration Park"
                         />
                       </div>
                       <div>
@@ -1337,7 +1658,7 @@ export function ParkForm({ park, onSuccess, onCancel }: ParkFormProps) {
             </div>
           )}
 
-          {activeTab !== 'basic' && activeTab !== 'honors' && (
+          {activeTab !== 'basic' && activeTab !== 'english' && activeTab !== 'honors' && (
             <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-6 text-sm text-gray-600">
               {activeTab === 'stats' && '统计数据暂未在此表单维护，后续会接入 park_economic_stats 后台编辑。'}
               {activeTab === 'policies' && '园区政策的维护请在政策管理模块进行，后续可在此联动。'}

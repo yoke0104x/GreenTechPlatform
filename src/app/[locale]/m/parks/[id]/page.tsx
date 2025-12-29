@@ -195,13 +195,13 @@ export default function MobileParkDetailPage({
   const basicInfoExtra = useMemo(() => {
     if (!park) return []
     const extras: { label: string; value?: string | null }[] = [
-      { label: isEn ? 'Alias' : '别名', value: park.alias },
-      { label: isEn ? 'Dialect' : '方言', value: park.dialect },
-      { label: isEn ? 'Climate' : '气候条件', value: park.climate },
-      { label: isEn ? 'Region' : '所属地区', value: park.regionDesc },
-      { label: isEn ? 'Nearby airports' : '附近机场', value: park.nearbyAirports },
-      { label: isEn ? 'Nearby stations' : '火车站', value: park.nearbyRailwayStations },
-      { label: isEn ? 'Scenic spots' : '著名景点', value: park.famousScenicSpots },
+      { label: isEn ? 'Alias' : '别名', value: isEn ? park.aliasEn || park.alias : park.alias },
+      { label: isEn ? 'Dialect' : '方言', value: isEn ? park.dialectEn || park.dialect : park.dialect },
+      { label: isEn ? 'Climate' : '气候条件', value: isEn ? park.climateEn || park.climate : park.climate },
+      { label: isEn ? 'Region' : '所属地区', value: isEn ? park.regionDescEn || park.regionDesc : park.regionDesc },
+      { label: isEn ? 'Nearby airports' : '附近机场', value: isEn ? park.nearbyAirportsEn || park.nearbyAirports : park.nearbyAirports },
+      { label: isEn ? 'Nearby stations' : '火车站', value: isEn ? park.nearbyRailwayStationsEn || park.nearbyRailwayStations : park.nearbyRailwayStations },
+      { label: isEn ? 'Scenic spots' : '著名景点', value: isEn ? park.famousScenicSpotsEn || park.famousScenicSpots : park.famousScenicSpots },
       { label: isEn ? 'Plate code' : '车牌代码', value: park.licensePlateCode },
       { label: isEn ? 'Phone code' : '电话区号', value: park.phoneAreaCode },
       { label: isEn ? 'Postal code' : '邮政编码', value: park.postalCode },
@@ -225,7 +225,8 @@ export default function MobileParkDetailPage({
     const otherLabel = isEn ? 'Other' : '其他'
 
     for (const honor of park.brandHonors) {
-      if (!honor || !honor.title) continue
+      const title = isEn ? honor.titleEn || honor.title : honor.title
+      if (!honor || !title) continue
       const yearKey =
         typeof honor.year === 'number' && !Number.isNaN(honor.year)
           ? String(honor.year)
@@ -236,7 +237,7 @@ export default function MobileParkDetailPage({
         ...existing,
         {
           id: honor.id,
-          title: honor.title,
+          title,
           type: honor.type ?? null,
         },
       ]
@@ -321,7 +322,7 @@ export default function MobileParkDetailPage({
             {park.logoUrl ? (
               <Image
                 src={park.logoUrl}
-                alt={park.name}
+                alt={isEn ? park.nameEn || park.name : park.name}
                 width={64}
                 height={64}
                 className="w-full h-full object-cover"
@@ -334,7 +335,7 @@ export default function MobileParkDetailPage({
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-[16px] font-semibold text-gray-900 leading-snug line-clamp-2">
-              {park.name}
+              {isEn ? park.nameEn || park.name : park.name}
             </h2>
             <div className="mt-1 flex flex-wrap gap-1.5">
               {park.level && (
@@ -344,7 +345,7 @@ export default function MobileParkDetailPage({
               )}
               {park.province && (
                 <span className="px-2 h-6 inline-flex items-center rounded-lg bg-[#eef2ff] text-[#4b50d4] text-[11px]">
-                  {park.province.name}
+                  {isEn ? park.province.nameEn || park.province.name : park.province.name}
                 </span>
               )}
             </div>
@@ -411,17 +412,23 @@ export default function MobileParkDetailPage({
                         {isEn ? 'Province / City' : '所在省市'}：
                       </span>
                       <span className="flex-1 text-gray-950">
-                        {park.province.name}
-                        {park.city ? ` · ${park.city}` : ''}
+                        {isEn
+                          ? park.province.nameEn || park.province.name
+                          : park.province.name}
+                        {(isEn ? park.cityEn || park.city : park.city)
+                          ? ` · ${isEn ? park.cityEn || park.city : park.city}`
+                          : ''}
                       </span>
                     </div>
                   )}
-                  {park.address && (
+                  {(isEn ? park.addressEn || park.address : park.address) && (
                     <div className="flex">
                       <span className="w-20 text-gray-400 shrink-0">
                         {isEn ? 'Address' : '地址'}：
                       </span>
-                      <span className="flex-1 text-gray-950">{park.address}</span>
+                      <span className="flex-1 text-gray-950">
+                        {isEn ? park.addressEn || park.address : park.address}
+                      </span>
                     </div>
                   )}
                   {park.areaKm2 != null && (
@@ -452,20 +459,24 @@ export default function MobileParkDetailPage({
                       <span className="flex-1 text-gray-950">{park.establishedDate}</span>
                     </div>
                   )}
-                  {park.leadingIndustries && (
+                  {(isEn ? park.leadingIndustriesEn || park.leadingIndustries : park.leadingIndustries) && (
                     <div className="flex">
                       <span className="w-20 text-gray-400 shrink-0">
                         {isEn ? 'Leading industries' : '主导产业'}：
                       </span>
-                      <span className="flex-1 text-gray-950">{park.leadingIndustries}</span>
+                      <span className="flex-1 text-gray-950">
+                        {isEn ? park.leadingIndustriesEn || park.leadingIndustries : park.leadingIndustries}
+                      </span>
                     </div>
                   )}
-                  {park.leadingCompanies && (
+                  {(isEn ? park.leadingCompaniesEn || park.leadingCompanies : park.leadingCompanies) && (
                     <div className="flex">
                       <span className="w-20 text-gray-400 shrink-0">
                         {isEn ? 'Leading companies' : '龙头企业'}：
                       </span>
-                      <span className="flex-1 text-gray-950">{park.leadingCompanies}</span>
+                      <span className="flex-1 text-gray-950">
+                        {isEn ? park.leadingCompaniesEn || park.leadingCompanies : park.leadingCompanies}
+                      </span>
                     </div>
                   )}
                   {park.websiteUrl && (
@@ -938,8 +949,8 @@ export default function MobileParkDetailPage({
         isOpen={contactOpen}
         onClose={() => setContactOpen(false)}
         technologyId={park.id}
-        technologyName={park.name}
-        companyName={park.province?.name}
+        technologyName={isEn ? park.nameEn || park.name : park.name}
+        companyName={isEn ? park.province?.nameEn || park.province?.name : park.province?.name}
         locale={locale}
         category="园区对接"
         source="park"

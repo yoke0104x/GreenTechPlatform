@@ -21,6 +21,8 @@ export interface ParkListItem {
   levelCode?: string | null
   logoUrl?: string | null
   brief?: string | null
+  briefZh?: string | null
+  briefEn?: string | null
   updatedAt?: string | null
   province: ParkLocation | null
   developmentZone: ParkLocation | null
@@ -65,6 +67,7 @@ export interface ParkBrandHonor {
   id: string
   year?: number | null
   title: string
+  titleEn?: string | null
   type?: ParkBrandHonorType | null
   approvedAt?: string | null
 }
@@ -79,21 +82,32 @@ export interface ParkDetail {
   province: ParkLocation | null
   developmentZone: ParkLocation | null
   city?: string | null
+  cityEn?: string | null
   address?: string | null
+  addressEn?: string | null
   areaKm2?: number | null
   population?: number | null
   establishedDate?: string | null
   websiteUrl?: string | null
   wechatOfficialAccount?: string | null
   leadingIndustries?: string | null
+  leadingIndustriesEn?: string | null
   leadingCompanies?: string | null
+  leadingCompaniesEn?: string | null
   alias?: string | null
+  aliasEn?: string | null
   dialect?: string | null
+  dialectEn?: string | null
   climate?: string | null
+  climateEn?: string | null
   regionDesc?: string | null
+  regionDescEn?: string | null
   nearbyAirports?: string | null
+  nearbyAirportsEn?: string | null
   nearbyRailwayStations?: string | null
+  nearbyRailwayStationsEn?: string | null
   famousScenicSpots?: string | null
+  famousScenicSpotsEn?: string | null
   licensePlateCode?: string | null
   phoneAreaCode?: string | null
   postalCode?: string | null

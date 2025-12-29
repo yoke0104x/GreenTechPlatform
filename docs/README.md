@@ -249,6 +249,7 @@
 - 新增数据清洗脚本 `data/agency_policy_clean.sql`：在原始 `data/agency_policy.sql` 的基础上去除 `content` 字段中的 HTML 标签，仅保留正文文本。
 - 为适配 Supabase SQL Editor 单次脚本大小限制，将园区政策清洗结果拆分为多份脚本：`data/agency_policy_clean_part1.sql` ~ `data/agency_policy_clean_part9.sql`，其中第 4 份进一步拆分为 `data/agency_policy_clean_part4_1.sql`、`data/agency_policy_clean_part4_2.sql`、`data/agency_policy_clean_part4_3.sql`，可分批导入 `data.agency_policy`。
 - 新增管理端园区管理：`/admin/parks` 页面及 `/api/admin/parks`、`/api/admin/parks/[id]` CRUD 接口，用于维护 `public.parks` 基本信息（目前仅覆盖“基本信息”版块，统计数据/政策/入驻企业/资讯等留待后续迭代）。
+- 园区基础信息国际化字段：新增 SQL 脚本 `data/add-parks-english-fields.sql`，为 `public.parks` 增加多项 `*_en` 字段，并为 `public.park_brand_honors` 增加 `title_en`；管理端表单支持维护英文内容，H5 会根据 locale 优先展示英文并自动回退到中文。
 - 调整体系统中政策 `park_id` 语义：从指向 `admin_development_zones.id` 升级为指向 `public.parks.id`；国家级经济技术开发区园区通过 `parks.development_zone_id` 继续关联 `admin_development_zones.id`，政策列表与收藏等接口已兼容新旧两种数据。
 - 删除园区联动规则：当删除级别为“国家级经济技术开发区”的园区且已绑定 `admin_development_zones` 时，同步将对应 `admin_development_zones.is_active` 置为 `false`；TODO：补充一条数据库迁移脚本，将早期 `policy.park_id = admin_development_zones.id` 的记录批量迁移至对应 `parks.id`，彻底完成语义切换。
 middle_process_scripts/      # 中间处理脚本暂存目录（可按需迁移脚本）

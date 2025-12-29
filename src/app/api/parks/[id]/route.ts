@@ -50,6 +50,7 @@ interface HonorRow {
   id: string
   year: number | null
   title: string
+  title_en?: string | null
   type: string | null
   approved_at: string | null
   sort_order: number | null
@@ -146,7 +147,7 @@ export async function GET(
 
     const { data: honorRows, error: honorError } = await supabaseAdmin
       .from('park_brand_honors')
-      .select('id, park_id, year, title, type, approved_at, sort_order')
+      .select('id, park_id, year, title, title_en, type, approved_at, sort_order')
       .eq('park_id', park.id)
       .eq('is_active', true)
       .order('sort_order', { ascending: true, nullsFirst: true })
@@ -205,6 +206,7 @@ export async function GET(
         id: row.id,
         year: row.year,
         title: row.title,
+        titleEn: row.title_en,
         type: row.type,
         approvedAt: row.approved_at,
         sortOrder: row.sort_order,
@@ -249,21 +251,32 @@ export async function GET(
       province,
       developmentZone,
       city: park.city,
+      cityEn: park.city_en,
       address: park.address,
+      addressEn: park.address_en,
       areaKm2: park.area_km2,
       population: park.population,
       establishedDate: park.established_date,
       websiteUrl: park.website_url,
       wechatOfficialAccount: park.wechat_official_account,
       leadingIndustries: park.leading_industries,
+      leadingIndustriesEn: park.leading_industries_en,
       leadingCompanies: park.leading_companies,
+      leadingCompaniesEn: park.leading_companies_en,
       alias: park.alias,
+      aliasEn: park.alias_en,
       dialect: park.dialect,
+      dialectEn: park.dialect_en,
       climate: park.climate,
+      climateEn: park.climate_en,
       regionDesc: park.region_desc,
+      regionDescEn: park.region_desc_en,
       nearbyAirports: park.nearby_airports,
+      nearbyAirportsEn: park.nearby_airports_en,
       nearbyRailwayStations: park.nearby_railway_stations,
+      nearbyRailwayStationsEn: park.nearby_railway_stations_en,
       famousScenicSpots: park.famous_scenic_spots,
+      famousScenicSpotsEn: park.famous_scenic_spots_en,
       licensePlateCode: park.license_plate_code,
       phoneAreaCode: park.phone_area_code,
       postalCode: park.postal_code,

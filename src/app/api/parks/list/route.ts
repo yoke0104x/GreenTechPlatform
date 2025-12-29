@@ -294,6 +294,8 @@ export async function GET(request: NextRequest) {
         levelCode: p.level_code,
         logoUrl: p.logo_url,
         brief: p.brief_zh || p.brief_en,
+        briefZh: p.brief_zh,
+        briefEn: p.brief_en,
         updatedAt: p.updated_at,
         province: province
           ? {

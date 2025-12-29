@@ -29,8 +29,15 @@ export function AdminAuthGuard({ children }: AdminAuthGuardProps) {
       try {
         const { data } = await supabase.auth.getSession();
         const user = data.session?.user;
-        const metaRole = user?.user_metadata?.role;
-        if (user && metaRole === 'admin') {
+
+        if (!user) {
+          setIsAuthenticated(false);
+          setShowLoginForm(true);
+          return;
+        }
+
+        const metaRole = user.user_metadata?.role as string | undefined;
+        if (metaRole === 'admin') {
           // 保持 admin_user/admin_mode，供站内信等功能复用
           const adminUser = {
             id: user.id,
@@ -42,14 +49,51 @@ export function AdminAuthGuard({ children }: AdminAuthGuardProps) {
           localStorage.setItem('admin_mode', 'true');
           setIsAuthenticated(true);
           setShowLoginForm(false);
-          setIsLoading(false);
           return;
         }
 
-        // 兜底：如果没有 session，则展示登录表单
+        // user_metadata 未写入 role 时，回退读取 public.users.role（很多环境仅在该表维护管理员角色）
+        try {
+          const { data: profile } = await supabase
+            .from('users')
+            .select('role, name')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          if (profile?.role === 'admin') {
+            const resolvedName =
+              profile?.name || (user.user_metadata?.name as string | undefined) || user.email || 'Admin';
+
+            // 写入本地管理员模式（站内信等功能复用）
+            const adminUser = {
+              id: user.id,
+              email: user.email || '',
+              name: resolvedName,
+              role: 'admin',
+            };
+            localStorage.setItem('admin_user', JSON.stringify(adminUser));
+            localStorage.setItem('admin_mode', 'true');
+
+            // 尝试把 role 写回 user_metadata，避免每次都查 public.users
+            try {
+              await supabase.auth.updateUser({ data: { role: 'admin', name: resolvedName } });
+            } catch {
+              // ignore: 某些环境可能禁用 updateUser 或网络异常
+            }
+
+            setIsAuthenticated(true);
+            setShowLoginForm(false);
+            return;
+          }
+        } catch (error) {
+          console.warn('读取 public.users.role 失败:', error);
+        }
+
+        setIsAuthenticated(false);
         setShowLoginForm(true);
       } catch (error) {
         console.error('检查管理员认证状态失败:', error);
+        setIsAuthenticated(false);
         setShowLoginForm(true);
       } finally {
         setIsLoading(false);
@@ -109,6 +153,15 @@ export function AdminAuthGuard({ children }: AdminAuthGuardProps) {
       };
       localStorage.setItem('admin_user', JSON.stringify(adminUser));
       localStorage.setItem('admin_mode', 'true');
+
+      // 把 role 写回 user_metadata，避免后续路由切换/刷新频繁触发“验证管理员权限”
+      try {
+        await supabase.auth.updateUser({
+          data: { role: 'admin', name: adminUser.name },
+        })
+      } catch {
+        // ignore
+      }
 
       // 也写一份兼容旧逻辑的标记（若某些 API 仍检查）
       const currentTime = Date.now().toString();

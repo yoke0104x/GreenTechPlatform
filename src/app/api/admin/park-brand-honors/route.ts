@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { park_id, year, title, type, approved_at } = body || {}
+    const { park_id, year, title, title_en, type, approved_at } = body || {}
 
     if (!park_id || typeof park_id !== 'string') {
       return NextResponse.json(
@@ -159,6 +159,7 @@ export async function POST(request: NextRequest) {
     const insertPayload: {
       park_id: string
       title: string
+      title_en?: string | null
       year?: number | null
       type?: string | null
       approved_at?: string | null
@@ -166,6 +167,12 @@ export async function POST(request: NextRequest) {
     } = {
       park_id,
       title: title.trim(),
+    }
+    if (typeof title_en === 'string') {
+      const trimmed = title_en.trim()
+      insertPayload.title_en = trimmed ? trimmed : null
+    } else if (title_en === null) {
+      insertPayload.title_en = null
     }
 
     if (typeof year === 'number') {
@@ -232,7 +239,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id, year, title, type, is_active, approved_at } = body || {}
+    const { id, year, title, title_en, type, is_active, approved_at } = body || {}
 
     if (!id || typeof id !== 'string') {
       return NextResponse.json(
@@ -244,6 +251,7 @@ export async function PUT(request: NextRequest) {
     const updatePayload: {
       updated_at: string
       title?: string
+      title_en?: string | null
       year?: number | null
       type?: string | null
       is_active?: boolean
@@ -255,6 +263,12 @@ export async function PUT(request: NextRequest) {
 
     if (typeof title === 'string') {
       updatePayload.title = title.trim()
+    }
+    if (typeof title_en === 'string') {
+      const trimmed = title_en.trim()
+      updatePayload.title_en = trimmed ? trimmed : null
+    } else if (title_en === null) {
+      updatePayload.title_en = null
     }
 
     if (typeof year === 'number') {

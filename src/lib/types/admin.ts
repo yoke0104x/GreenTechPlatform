@@ -117,21 +117,32 @@ export interface AdminPark extends BaseEntity {
   development_zone_id?: string | null
 
   city?: string | null
+  city_en?: string | null
   address?: string | null
+  address_en?: string | null
   area_km2?: number | null
   population?: number | null
   established_date?: string | null
   website_url?: string | null
   wechat_official_account?: string | null
   leading_industries?: string | null
+  leading_industries_en?: string | null
   leading_companies?: string | null
+  leading_companies_en?: string | null
   alias?: string | null
+  alias_en?: string | null
   dialect?: string | null
+  dialect_en?: string | null
   climate?: string | null
+  climate_en?: string | null
   region_desc?: string | null
+  region_desc_en?: string | null
   nearby_airports?: string | null
+  nearby_airports_en?: string | null
   nearby_railway_stations?: string | null
+  nearby_railway_stations_en?: string | null
   famous_scenic_spots?: string | null
+  famous_scenic_spots_en?: string | null
   license_plate_code?: string | null
   phone_area_code?: string | null
   postal_code?: string | null
@@ -165,6 +176,7 @@ export interface AdminParkBrandHonor extends BaseEntity {
   park_id: string
   year?: number | null
   title: string
+  title_en?: string | null
   type?: ParkBrandHonorType | null
   approved_at?: string | null
   sort_order?: number | null

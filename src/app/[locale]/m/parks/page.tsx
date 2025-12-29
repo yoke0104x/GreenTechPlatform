@@ -636,7 +636,7 @@ export default function MobileParksHomePage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="text-[15px] font-semibold text-gray-900 line-clamp-2">
-                        {p.name}
+                        {isEn ? p.nameEn || p.name : p.name}
                       </h3>
                       <button
                         type="button"
@@ -652,7 +652,9 @@ export default function MobileParksHomePage() {
                     </div>
                     {p.brief && (
                       <p className="mt-1 text-[12px] text-gray-600 line-clamp-5">
-                        {p.brief}
+                        {isEn
+                          ? p.briefEn || p.brief || p.briefZh
+                          : p.briefZh || p.brief || p.briefEn}
                       </p>
                     )}
                   </div>
@@ -668,7 +670,7 @@ export default function MobileParksHomePage() {
                     )}
                     {p.province && (
                       <span className="px-2 h-6 inline-flex items-center rounded-lg bg-[#eef2ff] text-[#4b50d4] text-[11px]">
-                        {p.province.name}
+                        {isEn ? p.province.nameEn || p.province.name : p.province.name}
                       </span>
                     )}
                     {p.tags.slice(0, 2).map((tag) => (
