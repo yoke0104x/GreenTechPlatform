@@ -624,8 +624,7 @@ export function MobileContactUsModal({
       {showSubscribe && shouldPromptSubscribe && (
         <div className="fixed inset-0 z-[9999]">
           <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setShowSubscribe(false)}
+            className="absolute inset-0 bg-black/65"
             aria-hidden="true"
           />
           <div className="absolute left-0 right-0 bottom-0 px-4 pb-6">
