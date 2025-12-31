@@ -322,10 +322,29 @@ export default function MobileParkRankingsPage() {
 
   const [brandTags, setBrandTags] = useState<string[]>([])
   const [brandTitle, setBrandTitle] = useState<string>('all')
+  const [brandTagsExpanded, setBrandTagsExpanded] = useState(false)
   const [brandItems, setBrandItems] = useState<BrandDirectoryItem[]>([])
   const [expandedBrandIds, setExpandedBrandIds] = useState<Record<string, boolean>>({})
   const brandCardRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [brandSortOrders, setBrandSortOrders] = useState<Record<string, 'asc' | 'desc'>>({})
+
+  const collapsedBrandTags = useMemo(() => {
+    if (brandTagsExpanded) return brandTags
+    const tags = brandTags || []
+    const selected = brandTitle !== 'all' ? brandTitle : null
+    const out: string[] = []
+    if (selected && tags.includes(selected)) out.push(selected)
+    for (const t of tags) {
+      if (out.length >= 2) break
+      if (t === selected) continue
+      out.push(t)
+    }
+    return out
+  }, [brandTags, brandTagsExpanded, brandTitle])
+
+  const collapsedMoreCount = useMemo(() => {
+    return Math.max(0, (brandTags || []).length - 2)
+  }, [brandTags])
 
   const selectedYearLabel = useMemo(() => {
     if (typeof year === 'number') {
@@ -382,6 +401,7 @@ export default function MobileParkRankingsPage() {
         setBrandTags(res.tags || [])
         setBrandItems(res.items || [])
         setExpandedBrandIds({})
+        setBrandTagsExpanded(false)
       } catch (e) {
         console.error('加载品牌名录失败:', e)
         if (!alive) return
@@ -401,6 +421,7 @@ export default function MobileParkRankingsPage() {
     if (kind === 'ranking') {
       setBrandTitle('all')
       setExpandedBrandIds({})
+      setBrandTagsExpanded(false)
     } else {
       setSelectedListId('all')
       setExpandedIds({})
@@ -534,30 +555,59 @@ export default function MobileParkRankingsPage() {
           </div>
         ) : (
           // 品牌名录：标签筛选
-          <div className="flex items-center gap-2 overflow-x-auto -mx-1 px-1 pb-1">
-            <button
-              type="button"
-              onClick={() => setBrandTitle('all')}
+          <div className="flex items-start gap-2">
+            <div
               className={cn(
-                'shrink-0 h-7 px-3 rounded-md text-xs bg-gray-100 text-gray-600',
-                brandTitle === 'all' && 'bg-[#00B899]/10 text-[#00B899] font-semibold',
+                'flex-1 min-w-0',
+                brandTagsExpanded ? 'overflow-visible' : 'overflow-hidden',
               )}
             >
-              {locale === 'en' ? 'All' : '全部'}
-            </button>
-            {brandTags.map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setBrandTitle(t)}
+              <div
                 className={cn(
-                  'shrink-0 h-7 px-3 rounded-md text-xs bg-gray-100 text-gray-600',
-                  brandTitle === t && 'bg-[#00B899]/10 text-[#00B899] font-semibold',
+                  'flex gap-2',
+                  brandTagsExpanded ? 'flex-wrap' : 'flex-nowrap overflow-hidden',
                 )}
               >
-                {t}
+                <button
+                  type="button"
+                  onClick={() => setBrandTitle('all')}
+                  className={cn(
+                    'h-7 px-3 rounded-md text-xs bg-gray-100 text-gray-600 whitespace-nowrap shrink-0',
+                    brandTitle === 'all' && 'bg-[#00B899]/10 text-[#00B899] font-semibold',
+                  )}
+                >
+                  {locale === 'en' ? 'All' : '全部'}
+                </button>
+                {collapsedBrandTags.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setBrandTitle(t)}
+                    className={cn(
+                      'h-7 px-3 rounded-md text-xs bg-gray-100 text-gray-600 whitespace-nowrap',
+                      !brandTagsExpanded && 'max-w-[150px] truncate',
+                      brandTitle === t && 'bg-[#00B899]/10 text-[#00B899] font-semibold',
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {brandTags.length > 2 && (
+              <button
+                type="button"
+                onClick={() => setBrandTagsExpanded((v) => !v)}
+                className="h-7 px-2 rounded-md text-xs bg-gray-100 text-[#2563eb] whitespace-nowrap hover:underline flex-none"
+              >
+                {brandTagsExpanded
+                  ? (locale === 'en' ? 'Collapse' : '收起')
+                  : (locale === 'en'
+                      ? `More ${collapsedMoreCount}...`
+                      : `更多${collapsedMoreCount}项...`)}
               </button>
-            ))}
+            )}
           </div>
         )}
       </div>
