@@ -760,11 +760,11 @@ export default function MobileParkDetailPage({
                         className={cn(
                           'grid gap-x-1 gap-y-2 items-center',
                           isEn
-                            ? 'grid-cols-[88px_minmax(0,1fr)_12px_88px_minmax(0,1fr)]'
-                            : 'grid-cols-[64px_minmax(0,1fr)_12px_64px_minmax(0,1fr)]',
+                            ? 'grid-cols-[110px_minmax(0,1fr)_12px_110px_minmax(0,1fr)]'
+                            : 'grid-cols-[88px_minmax(0,1fr)_12px_88px_minmax(0,1fr)]',
                         )}
                       >
-                        <span className="text-gray-500">{left.label}：</span>
+                        <span className="text-gray-500 truncate">{left.label}：</span>
                         <span className="text-gray-950 font-semibold text-right tabular-nums truncate">
                           {left.value}
                         </span>
@@ -772,7 +772,7 @@ export default function MobileParkDetailPage({
 
                         {right ? (
                           <>
-                            <span className="text-gray-500">{right.label}：</span>
+                            <span className="text-gray-500 truncate">{right.label}：</span>
                             <span className="text-gray-950 font-semibold text-right tabular-nums truncate">
                               {right.value}
                             </span>
