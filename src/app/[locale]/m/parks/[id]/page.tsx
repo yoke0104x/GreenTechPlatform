@@ -688,7 +688,7 @@ export default function MobileParkDetailPage({
                   {isEn ? 'No economic data for 2024 yet.' : '暂未维护2024年经济数据。'}
                 </p>
               ) : (
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[12px] text-gray-700">
+                <div className="text-[12px] text-gray-700 space-y-2">
                   {(() => {
                     const stat = economicStats2024[0]
                     const rows = [
@@ -750,12 +750,38 @@ export default function MobileParkDetailPage({
                         value: stat?.worldTop500Count != null ? `${stat.worldTop500Count}` : '--',
                       },
                     ]
-                    return rows.map((row) => (
-                      <div key={row.label} className="flex items-center gap-4">
-                        <span className={cn('text-gray-500 shrink-0', isEn ? 'w-32' : 'w-24')}>
-                          {row.label}：
+                    const pairs: Array<[typeof rows[number], typeof rows[number] | null]> = []
+                    for (let i = 0; i < rows.length; i += 2) {
+                      pairs.push([rows[i], rows[i + 1] || null])
+                    }
+                    return pairs.map(([left, right]) => (
+                      <div
+                        key={`${left.label}-${right?.label || 'x'}`}
+                        className={cn(
+                          'grid gap-x-2 gap-y-2 items-center',
+                          isEn
+                            ? 'grid-cols-[92px_minmax(0,1fr)_92px_minmax(0,1fr)]'
+                            : 'grid-cols-[72px_minmax(0,1fr)_72px_minmax(0,1fr)]',
+                        )}
+                      >
+                        <span className="text-gray-500">{left.label}：</span>
+                        <span className="text-gray-950 font-semibold text-right tabular-nums truncate">
+                          {left.value}
                         </span>
-                        <span className="flex-1 text-gray-950 font-semibold text-right">{row.value}</span>
+
+                        {right ? (
+                          <>
+                            <span className="text-gray-500">{right.label}：</span>
+                            <span className="text-gray-950 font-semibold text-right tabular-nums truncate">
+                              {right.value}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span />
+                            <span />
+                          </>
+                        )}
                       </div>
                     ))
                   })()}
