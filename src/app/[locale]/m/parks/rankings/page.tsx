@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
 import { ArrowUpDown, Award, Building2, ChevronDown, ChevronUp, Triangle, Trophy } from 'lucide-react'
 import {
   Select,
@@ -141,7 +142,16 @@ const RankingCard = React.forwardRef<HTMLDivElement, {
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm text-gray-900 truncate">{name}</div>
+                    {park?.id ? (
+                      <Link
+                        href={`/${locale}/m/parks/${park.id}`}
+                        className="block text-sm text-[#2563eb] truncate hover:underline"
+                      >
+                        {name}
+                      </Link>
+                    ) : (
+                      <div className="text-sm text-gray-900 truncate">{name}</div>
+                    )}
                   </div>
                   <div className="text-sm text-gray-500 whitespace-nowrap">{provinceLabel}</div>
                 </div>
@@ -256,7 +266,16 @@ const BrandDirectoryCard = React.forwardRef<HTMLDivElement, {
                       )}
                     </div>
                     <div className="flex-1 min-w-0 flex items-center gap-0.5">
-                      <div className="truncate">{name}</div>
+                      {park?.id ? (
+                        <Link
+                          href={`/${locale}/m/parks/${park.id}`}
+                          className="block min-w-0 truncate text-[#2563eb] hover:underline"
+                        >
+                          {name}
+                        </Link>
+                      ) : (
+                        <div className="truncate">{name}</div>
+                      )}
                     </div>
                   </div>
                   <div className="text-left whitespace-nowrap pl-[18px] pr-1 truncate">
