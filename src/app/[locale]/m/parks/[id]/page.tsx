@@ -765,14 +765,14 @@ export default function MobileParkDetailPage({
                         )}
                       >
                         <span className="text-gray-500">{left.label}：</span>
-                        <span className="text-gray-950 font-semibold text-right tabular-nums truncate">
+                        <span className="text-gray-950 font-semibold text-right tabular-nums truncate pr-2">
                           {left.value}
                         </span>
 
                         {right ? (
                           <>
-                            <span className="text-gray-500">{right.label}：</span>
-                            <span className="text-gray-950 font-semibold text-right tabular-nums truncate">
+                            <span className="text-gray-500 pl-1">{right.label}：</span>
+                            <span className="text-gray-950 font-semibold text-right tabular-nums truncate pr-2">
                               {right.value}
                             </span>
                           </>
