@@ -11,6 +11,7 @@ import { getParks } from '@/api/parks'
 import { getPolicyList } from '@/api/policy'
 import { getUserCompanyInfo } from '@/api/company'
 import { useAuthContext } from '@/components/auth/auth-provider'
+import { getPortalStats } from '@/api/portal'
 
 export default function MobilePortalPage({
   params: { locale },
@@ -36,6 +37,18 @@ export default function MobilePortalPage({
   useEffect(() => {
     let cancelled = false
     ;(async () => {
+      try {
+        // 优先使用聚合接口（Upstash Redis + CDN 缓存），加快三个卡片标签数量加载
+        const portalStats = await getPortalStats()
+        if (!cancelled && portalStats.success) {
+          setTechCount(portalStats.data.techCount)
+          setParkCount(portalStats.data.parkCount)
+          setPolicyCount(portalStats.data.policyCount)
+          return
+        }
+      } catch {
+        // ignore, fallback below
+      }
       try {
         // 技术总数
         const statsResp = await getSearchStats({})

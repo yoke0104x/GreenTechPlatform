@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "backfill:locations": "node scripts/backfill-location-translations.js",
+    "backfill:parks-en": "node scripts/backfill-parks-en.js",
     "crawl:nbc": "node scripts/playwright/crawl-nbc-business.js",
     "crawl:wipo:article": "node scripts/playwright/scrape-wipo-article.js",
     "crawl:wipo:csv:first3": "node scripts/playwright/batch-scrape-wipo-from-csv.js data/search-results-2025-09-04.csv --limit 3",
