@@ -760,8 +760,8 @@ export default function MobileParkDetailPage({
                         className={cn(
                           'grid gap-x-1 gap-y-2 items-center',
                           isEn
-                            ? 'grid-cols-[110px_minmax(0,1fr)_12px_110px_minmax(0,1fr)]'
-                            : 'grid-cols-[88px_minmax(0,1fr)_12px_88px_minmax(0,1fr)]',
+                            ? 'grid-cols-[110px_minmax(0,1fr)_20px_110px_minmax(0,1fr)]'
+                            : 'grid-cols-[88px_minmax(0,1fr)_20px_88px_minmax(0,1fr)]',
                         )}
                       >
                         <span className="text-gray-500 truncate">{left.label}：</span>
