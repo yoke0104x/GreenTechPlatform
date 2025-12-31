@@ -9,6 +9,7 @@ import { MobileContactUsModal } from '@/app/[locale]/m/components/MobileContactU
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { useWeChatShare } from '@/app/[locale]/m/hooks/useWeChatShare'
 import { WeChatShareHintOverlay } from '@/app/[locale]/m/components/WeChatShareHintOverlay'
+import { cn } from '@/lib/utils'
 import {
   getParkDetail,
   getParkPolicies,
@@ -110,9 +111,12 @@ export default function MobileParkDetailPage({
 
   useEffect(() => {
     if (!park?.economicStats?.length) return
-    const years = [...new Set(park.economicStats.map((s) => s.year))].sort((a, b) => a - b)
-    // 默认选最新年份
-    setSelectedYear(years[years.length - 1] ?? null)
+    const has2024 = park.economicStats.some((s) => s.year === 2024)
+    setSelectedYear(has2024 ? 2024 : null)
+  }, [park?.economicStats])
+
+  const economicStats2024 = useMemo(() => {
+    return (park?.economicStats || []).filter((s) => s.year === 2024)
   }, [park?.economicStats])
 
   const handleBackNavigation = () => {
@@ -663,38 +667,30 @@ export default function MobileParkDetailPage({
                     {isEn ? 'Economic Indicators' : '经济数据'}
                   </h3>
                 </div>
-                {park.economicStats.length > 0 && (
+                {economicStats2024.length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {[...new Set(park.economicStats.map((s) => s.year))]
-                      .sort((a, b) => a - b)
-                      .map((year) => {
-                        const active = selectedYear === year
-                        return (
-                          <button
-                            key={year}
-                            type="button"
-                            onClick={() => setSelectedYear(year)}
-                            className={`px-2 h-7 rounded-full text-[11px] border ${
-                              active
-                                ? 'bg-[#e6fffa] border-[#00b899] text-[#007f66]'
-                                : 'bg-white border-gray-200 text-gray-700'
-                            }`}
-                          >
-                            {year}
-                          </button>
-                        )
-                      })}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedYear(2024)}
+                      className={`px-2 h-7 rounded-full text-[11px] border ${
+                        selectedYear === 2024
+                          ? 'bg-[#e6fffa] border-[#00b899] text-[#007f66]'
+                          : 'bg-white border-gray-200 text-gray-700'
+                      }`}
+                    >
+                      2024
+                    </button>
                   </div>
                 )}
               </div>
-              {park.economicStats.length === 0 ? (
+              {economicStats2024.length === 0 ? (
                 <p className="text-[12px] text-gray-500">
-                  {isEn ? 'No economic data yet.' : '暂未维护经济数据。'}
+                  {isEn ? 'No economic data for 2024 yet.' : '暂未维护2024年经济数据。'}
                 </p>
               ) : (
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[12px] text-gray-700">
                   {(() => {
-                    const stat = park.economicStats.find((s) => s.year === selectedYear) || park.economicStats[0]
+                    const stat = economicStats2024[0]
                     const rows = [
                       {
                         label: isEn ? 'GDP' : 'GDP',
@@ -708,7 +704,7 @@ export default function MobileParkDetailPage({
                             : '--',
                       },
                       {
-                        label: isEn ? 'Industrial output' : '工业总产值',
+                        label: isEn ? 'Industrial value added' : '工业增加值',
                         value:
                           stat?.industrialOutputBillion != null
                             ? `${stat.industrialOutputBillion}${isEn ? ' bn RMB' : ' 亿元'}`
@@ -755,9 +751,11 @@ export default function MobileParkDetailPage({
                       },
                     ]
                     return rows.map((row) => (
-                      <div key={row.label} className="flex">
-                        <span className="w-28 text-gray-500 shrink-0">{row.label}：</span>
-                        <span className="flex-1 text-gray-950 font-semibold">{row.value}</span>
+                      <div key={row.label} className="flex items-center gap-4">
+                        <span className={cn('text-gray-500 shrink-0', isEn ? 'w-32' : 'w-24')}>
+                          {row.label}：
+                        </span>
+                        <span className="flex-1 text-gray-950 font-semibold text-right">{row.value}</span>
                       </div>
                     ))
                   })()}
