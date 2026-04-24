@@ -6,7 +6,7 @@ import { Toaster } from '@/components/ui/toaster'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: '国家级经济技术开发区绿色技术产品推广平台',
+  title: '绿盟云智库',
   description: '国家级经济技术开发区绿色技术产品推广平台，推动可持续发展，共建绿色未来',
   icons: {
     icon: [
